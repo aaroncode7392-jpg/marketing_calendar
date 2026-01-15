@@ -244,8 +244,15 @@
         .custom-btn { transition: all 0.3s; position: relative; overflow: hidden; }
         .custom-btn:hover { transform: translateY(-2px); filter: brightness(1.1); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
         .btn-insta { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color: white; }
-        .btn-blog { background-color: #6B7280; color: white; }
-        body.dark-mode .btn-blog { background-color: #4B5563; }
+        
+        /* [색상 변경됨] 블로그 버튼: 인디고 (강조) */
+        .btn-blog { background-color: #4F46E5; color: white; }
+        body.dark-mode .btn-blog { background-color: #4338CA; }
+        
+        /* [색상 변경됨] UTM 버튼: 그레이 (보조) */
+        .btn-utm { background-color: #6B7280; color: white; }
+        body.dark-mode .btn-utm { background-color: #4B5563; }
+
         .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
         #hyperModeContent { max-height: 0; opacity: 0; overflow: hidden; transition: max-height 0.5s ease-in-out, opacity 0.4s ease-in-out; }
@@ -302,9 +309,17 @@
                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
                     마케팅 인스타그램 바로가기
                 </a>
+                
                 <a href="https://marketking.tistory.com/" target="_blank" class="custom-btn btn-blog w-full py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 shadow-sm">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>
                     마케팅 블로그 바로가기
+                </a>
+                
+                <a href="#" target="_blank" class="custom-btn btn-utm w-full py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 shadow-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                    </svg>
+                    UTM Builder 바로가기
                 </a>
             </div>
 
@@ -940,7 +955,7 @@
                         bar.classList.add('rounded-r-none');
                     }
                     if (evt.isContinuesLeft && evt.isContinuesRight) {
-                         bar.style.width = `calc(${evt.duration * 14.28}%)`;
+                            bar.style.width = `calc(${evt.duration * 14.28}%)`;
                     }
                     
                     // Mobile Expand Click
