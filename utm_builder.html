@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>UTM_builder</title>
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --bg-light: #fafafa;
+      --bg-dark:  #191919;
+      --text-light: #111;
+      --text-dark: #0f0;
+      --border-light: #ddd;
+      --border-dark: #444;
+      --heading-dark: #95BE76;
+      --placeholder-light: #888;
+      --placeholder-dark: #aaa;
+      --btn-gray: #e0e0e0;
+    }
+    html[data-theme="light"] { background: var(--bg-light); color: var(--text-light); }
+    html[data-theme="dark"] {
+      background: var(--bg-dark); color: var(--text-dark);
+      background-image:
+        radial-gradient(rgba(0,255,0,0.05) 1px, transparent 1px),
+        radial-gradient(rgba(0,255,0,0.05) 1px, transparent 1px);
+      background-size:50px 50px;
+      background-position:0 0,25px 25px;
+    }
+    body {
+      margin:0; padding:2rem;
+      font-family:'Varela Round',sans-serif;
+      display:flex; gap:2rem;
+      transition:background .3s,color .3s;
+    }
+    .container {
+      flex:1; display:flex;
+      flex-direction:column; gap:1.5rem;
+    }
+    h1 {
+      margin:0; font-weight:500;
+      color:var(--heading-dark);
+    }
+    html[data-theme="light"] h1,
+    html[data-theme="light"] .field-label,
+    html[data-theme="light"] .section-title { color:#111; }
+    .field-label, .section-title {
+      font-size:.9rem; font-weight:500;
+      margin:.5rem 0 .2rem;
+      color:var(--heading-dark);
+    }
+    .section { display:flex; flex-direction:column; gap:1rem; }
+    .group { display:flex; flex-direction:column; gap:.5rem; }
+    .row { display:flex; gap:1rem; }
+    input, select, textarea {
+      font-family:inherit; font-size:.95rem;
+      padding:.6rem; border:1px solid var(--border-light);
+      border-radius:6px; background:#fff; color:#111;
+      resize:none; appearance:none;
+      transition:border .3s,background .3s;
+    }
+    html[data-theme="dark"] input,
+    html[data-theme="dark"] select,
+    html[data-theme="dark"] textarea {
+      background:#252525; color:#eee; border:1px solid #555;
+    }
+    select option.placeholder { color:var(--placeholder-light); }
+    html[data-theme="dark"] select option.placeholder { color:var(--placeholder-dark); }
+
+    /* file upload */
+    input[type="file"] {
+      font-size:.8rem; padding:0; background:none;
+    }
+    input[type="file"]::file-selector-button {
+      padding:.3rem .5rem; font-size:.75rem; margin-right:.3rem;
+      border:1px solid var(--border-light); border-radius:6px;
+      background:#fff; color:#111; cursor:pointer;
+      transition:background .3s;
+    }
+    input[type="file"]::file-selector-button:hover { background:#e0e0e0; }
+    html[data-theme="dark"] input[type="file"]::file-selector-button {
+      background:#333; color:#eee; border:1px solid #555;
+    }
+    html[data-theme="dark"] input[type="file"]::file-selector-button:hover {
+      background:#444;
+    }
+
+    /* inline add */
+    .inline-row { display:flex; gap:.5rem; align-items:center; }
+    .add-btn {
+      padding:.4rem .8rem; font-size:.75rem;
+      background:#000; color:#fff; border:none; border-radius:4px;
+      cursor:pointer; transition:background .3s;
+    }
+    .add-btn:hover { background:#333; }
+    .inline-input {
+      width:80px; padding:.6rem .8rem;
+      font-size:.85rem; font-family:monospace;
+      border:1px solid var(--border-light);
+      border-radius:6px; background:#fff; color:#111;
+      transition:width .3s ease;
+    }
+    .inline-input:focus { width:150px; outline:none; font-size:.9rem; }
+    html[data-theme="dark"] .inline-input {
+      background:#252525; color:#eee; border:1px solid #555;
+    }
+
+    /* action buttons */
+    .inline-btns button, .bottom-btns button {
+      padding:.4rem .8rem; font-size:.75rem;
+      background:#111; color:#fff; border:none; border-radius:4px;
+      cursor:pointer; transition:background .3s,opacity .3s;
+      opacity:.7;
+    }
+    .inline-btns button:hover, .bottom-btns button:hover {
+      background:#333; opacity:1;
+    }
+
+    /* output & history */
+    .output-container { margin-top:3rem; position:relative; }
+    .output, .history {
+      font-family:monospace; padding:.6rem;
+      border:1px solid var(--border-light); border-radius:6px;
+      background:#fff; color:#111;
+      white-space:pre-wrap; word-break:break-word;
+      max-height:200px; overflow:auto;
+      transition:background .3s,color .3s;
+    }
+    html[data-theme="dark"] .output,
+    html[data-theme="dark"] .history {
+      background:#111; color:var(--text-dark);
+      border:1px solid #555;
+    }
+    .clear-output-btn {
+      position:absolute; top:4px; right:4px;
+      background:var(--btn-gray); border:none;
+      padding:2px 6px; color:#111; font-size:.75rem;
+      cursor:pointer; border-radius:4px;
+    }
+    .clear-output-btn:hover { background:#d0d0d0; }
+
+    /* download button */
+    .bottom-btns button#downloadBtn {
+      background:var(--btn-gray); color:#111;
+    }
+    .bottom-btns button#downloadBtn:hover {
+      background:#d0d0d0;
+    }
+
+    /* dark-only guide */
+    .guide { display:none; margin-top:1rem; font-size:.9rem; line-height:1.4; }
+    html[data-theme="dark"] .guide { display:block; }
+    .guide ol { padding-left:1.2rem; margin:0; }
+    .guide li { margin-bottom:.4rem; }
+    .guide .note { color:#555; font-size:.85rem; margin-top:.6rem; }
+
+    /* toggle switch */
+    .toggle-switch {
+      width:60px; height:30px; background:#ccc;
+      border-radius:15px; position:fixed;
+      top:1rem; right:1rem; cursor:pointer;
+      transition:background .3s;
+    }
+    .toggle-switch::after {
+      content:'☀️'; position:absolute;
+      width:18px; height:18px;
+      top:8px; left:6px;
+      display:flex; align-items:center; justify-content:center;
+      transition:left .3s,content .3s;
+    }
+    .toggle-switch.active { background:#555; }
+    .toggle-switch.active::after {
+      content:'💻'; left:36px; top:4px;
+    }
+
+    /* top-clock next to toggle */
+    .toggle-clock {
+      position:fixed; top:1rem; right:6.5rem;
+      font-family:monospace; font-size:1rem;
+      background:rgba(0,0,0,0.02); color:#333;
+      padding:.4rem .8rem; border-radius:6px;
+      transition:background .3s,color .3s;
+    }
+    html[data-theme="dark"] .toggle-clock {
+      background:rgba(255,255,255,0.04); color:#cfcfcf;
+    }
+
+    /* generate button */
+    .generate-btn {
+      background:#e0e0e0; color:#000;
+      border:none; border-radius:30px;
+      padding:1rem 1.8rem; font-size:1rem;
+      cursor:pointer;
+      transition:background .25s ease,transform .2s ease;
+    }
+    .generate-btn:hover {
+      background:#d4d4d4; transform:translateY(-2px);
+    }
+  </style>
+</head>
+<body>
+  <!-- 현재 시간 (토글 왼쪽) -->
+  <div class="toggle-clock" id="nowClockToggle">현재 시간: --:--:--</div>
+  <!-- 다크/라이트 토글 -->
+  <div id="darkToggle" class="toggle-switch"></div>
+
+  <!-- UTM Builder -->
+  <div class="container">
+    <h1>UTM_builder</h1>
+    <div class="section">
+      <!-- 기본 URL -->
+      <div class="group">
+        <p class="field-label">기본 URL</p>
+        <input id="baseUrl" type="text" placeholder="https://example.com">
+      </div>
+      <!-- source & medium -->
+      <div class="row">
+        <div class="group">
+          <p class="field-label">매체 (utm_source)*</p>
+          <div class="inline-row inline-row-source">
+            <select id="medium">
+              <option value="" class="placeholder">select</option>
+              <option>naver</option><option>kakao</option><option>google</option>
+              <option>instagram</option><option>facebook</option>
+            </select>
+            <button id="addSourceBtn" class="add-btn">add_source</button>
+          </div>
+        </div>
+        <div class="group">
+          <p class="field-label">유형 (utm_medium)*</p>
+          <div class="inline-row inline-row-medium">
+            <select id="type">
+              <option value="" class="placeholder">select</option><option>sa</option><option>da</option>
+            </select>
+            <button id="addMediumBtn" class="add-btn">add_medium</button>
+          </div>
+        </div>
+      </div>
+      <!-- campaign -->
+      <div class="group">
+        <p class="field-label">캠페인 (utm_campaign)*</p>
+        <div class="row">
+          <input id="brand" type="text" placeholder="브랜드명">
+          <textarea id="selling" rows="1" placeholder="셀링포인트 (띄어쓰기 구분)"></textarea>
+        </div>
+        <div class="row">
+          <input id="age" type="text" placeholder="연령 (예: 2534)">
+          <select id="gender">
+            <option value="f">여성(f)</option><option value="m">남성(m)</option><option value="all">전체(all)</option>
+          </select>
+        </div>
+        <input id="date" type="text" placeholder="광고일자 (YYMMDD)">
+      </div>
+      <!-- keywords -->
+      <div class="group">
+        <p class="field-label">키워드 (띄어쓰기 구분)</p>
+        <textarea id="keywords" rows="2" placeholder="키워드를 띄어쓰기로 입력"></textarea>
+      </div>
+      <!-- excel upload -->
+      <div class="group">
+        <p class="field-label">키워드 업로드 (Excel)</p>
+        <input id="excelFile" type="file" accept=".xlsx,.xls">
+      </div>
+      <!-- content -->
+      <div class="group">
+        <p class="field-label">UTM Content (utm_content)</p>
+        <textarea id="content" rows="2" placeholder="콘텐츠 구분 요소 입력"></textarea>
+      </div>
+      <!-- generate -->
+      <button class="generate-btn" onclick="generateUTM()">generate</button>
+    </div>
+  </div>
+
+  <!-- 출력 & 이력 -->
+  <div class="container output-container">
+    <p class="section-title">출력</p>
+    <div id="utmOutput" class="output"></div>
+    <button class="clear-output-btn" onclick="clearOutput()">초기화</button>
+    <div class="inline-btns">
+      <button id="copyBtn" onclick="copyToClipboard()">copy</button>
+      <button id="shortenBtn" onclick="shortenURL()">shorten</button>
+      <button id="openBtn" onclick="openAll()">open links</button>
+    </div>
+
+    <p class="section-title">이력</p>
+    <div id="utmHistory" class="history"></div>
+    <div class="bottom-btns">
+      <button id="downloadBtn" onclick="downloadExcel()">download_excel</button>
+    </div>
+
+    <div class="guide">
+      <p><strong>사용 가이드</strong></p>
+      <ol>
+        <li>기본 URL 입력 (예: https://example.com)</li>
+        <li>셀링포인트 또는 키워드 하나만 입력 (띄어쓰기 구분)</li>
+        <li>utm_source 및 utm_medium 선택</li>
+        <li>캠페인 정보 입력</li>
+        <li>옵션: utm_content 입력</li>
+        <li>generate 클릭 → copy/shorten/open/download 기능 사용</li>
+      </ol>
+      <p class="note">* 셀링포인트와 키워드를 동시에 여러 개 입력하면 에러 발생</p>
+    </div>
+  </div>
+
+  <script>
+    // 테마 토글
+    document.getElementById('darkToggle').addEventListener('click', ()=>{
+      const root = document.documentElement;
+      const next = root.getAttribute('data-theme')==='light'?'dark':'light';
+      root.setAttribute('data-theme', next);
+      document.getElementById('darkToggle').classList.toggle('active');
+    });
+
+    // 시계 업데이트
+    function updateClock(){
+      const now = new Date();
+      const hh  = String(now.getHours()).padStart(2,'0');
+      const mm  = String(now.getMinutes()).padStart(2,'0');
+      const ss  = String(now.getSeconds()).padStart(2,'0');
+      document.getElementById('nowClockToggle').textContent =
+        `현재 시간: ${hh}:${mm}:${ss}`;
+    }
+    setInterval(updateClock,1000);
+    updateClock();
+
+    // UTM 로직
+    let records = [];
+    function clearOutput(){ document.getElementById('utmOutput').textContent=''; }
+    function clearHistory(){
+      records=[]; document.getElementById('utmHistory').innerHTML=''; clearOutput();
+    }
+    function addOption(id,val){
+      const sel=document.getElementById(id),opt=document.createElement('option');
+      opt.text=val;opt.value=val;sel.add(opt);sel.value=val;
+    }
+    function cleanupInline(row,input,btn){
+      row.removeChild(input);btn.style.display='inline-block';
+    }
+    document.getElementById('addSourceBtn').addEventListener('click',()=>{
+      const row=document.querySelector('.inline-row-source'),
+            btn=document.getElementById('addSourceBtn'),
+            input=document.createElement('input');
+      btn.style.display='none';
+      input.type='text';input.placeholder='추가할 매체 입력 후 Enter';input.className='inline-input';
+      row.appendChild(input);requestAnimationFrame(()=>input.focus());
+      input.addEventListener('keydown',e=>{
+        if(e.key==='Enter'&&input.value.trim()){addOption('medium',input.value.trim());cleanupInline(row,input,btn);}
+        if(e.key==='Escape')cleanupInline(row,input,btn);
+      });
+      input.addEventListener('blur',()=>{if(input.value.trim())addOption('medium',input.value.trim());cleanupInline(row,input,btn);});
+    });
+    document.getElementById('addMediumBtn').addEventListener('click',()=>{
+      const row=document.querySelector('.inline-row-medium'),
+            btn=document.getElementById('addMediumBtn'),
+            input=document.createElement('input');
+      btn.style.display='none';
+      input.type='text';input.placeholder='추가할 유형 입력 후 Enter';input.className='inline-input';
+      row.appendChild(input);requestAnimationFrame(()=>input.focus());
+      input.addEventListener('keydown',e=>{
+        if(e.key==='Enter'&&input.value.trim()){addOption('type',input.value.trim());cleanupInline(row,input,btn);}
+        if(e.key==='Escape')cleanupInline(row,input,btn);
+      });
+      input.addEventListener('blur',()=>{if(input.value.trim())addOption('type',input.value.trim());cleanupInline(row,input,btn);});
+    });
+    function parseExcel(file,cb){
+      const reader=new FileReader();
+      reader.onload=e=>{
+        const data=new Uint8Array(e.target.result),
+              wb=XLSX.read(data,{type:'array'}),
+              sheet=wb.Sheets[wb.SheetNames[0]],
+              arr=XLSX.utils.sheet_to_json(sheet,{header:1}).flat().map(String).filter(Boolean);
+        cb(arr);
+      };
+      reader.readAsArrayBuffer(file);
+    }
+    function generateUTM(){
+      const s=document.getElementById('medium').value,
+            t=document.getElementById('type').value,
+            b=document.getElementById('brand').value.trim(),
+            st=document.getElementById('selling').value.trim(),
+            a=document.getElementById('age').value.trim(),
+            g=document.getElementById('gender').value,
+            d=document.getElementById('date').value.trim();
+      if(!s||!t||!b||!st||!a||!d){
+        return document.getElementById('utmOutput').textContent='error: 필수입력란을 모두 채워주세요.';
+      }
+      const sellArr=st.split(/\s+/).filter(Boolean),
+            kwArr=document.getElementById('keywords').value.trim().split(/\s+/).filter(Boolean).length?document.getElementById('keywords').value.trim().split(/\s+/).filter(Boolean):[''];
+      if(sellArr.length>1&&kwArr.length>1){
+        return document.getElementById('utmOutput').textContent='error: 셀링포인트와 키워드를 동시에 여러 개 입력할 수 없습니다.';
+      }
+      const items=sellArr.length>1?sellArr:kwArr,
+            isSell=sellArr.length>1,
+            excel=document.getElementById('excelFile'),
+            base=document.getElementById('baseUrl').value.trim(),
+            sep=base.includes('?')?'&':'?',
+            build=arr=>buildUTM(arr,base,sep,sellArr,kwArr,isSell);
+      if(excel.files[0]) parseExcel(excel.files[0],build);
+      else build(items);
+    }
+    function buildUTM(items,base,sep,sellArr,kwArr,isSell){
+      const m=document.getElementById('medium').value,
+            t=document.getElementById('type').value,
+            b=document.getElementById('brand').value.trim(),
+            a=document.getElementById('age').value.trim(),
+            g=document.getElementById('gender').value,
+            d=document.getElementById('date').value.trim(),
+            cnt=document.getElementById('content').value.trim(),
+            now=new Date().toLocaleString();
+      let out='',hist=`시각: ${now}\n`;
+      items.forEach(item=>{
+        const selling=isSell?item:(sellArr[0]||''),
+              term=isSell?(kwArr[0]||''):item,
+              camp=[b,m,t,selling,a,g,d].join('_');
+        let url=`${base}${sep}utm_source=${m}&utm_medium=${t}&utm_campaign=${camp}`;
+        if(term)url+=`&utm_term=${encodeURIComponent(term)}`;
+        if(cnt)url+=`&utm_content=${encodeURIComponent(cnt)}`;
+        out+=`${term}\n${url}\n\n`;
+        hist+=`${term}: ${url}\n`;
+        records.push({brand:b,source:m,medium:t,'selling point':selling,Age:a,gender:g,date:d,campaign_name:camp,utm_link:url,generated_at:now});
+      });
+      document.getElementById('utmOutput').textContent=out;
+      document.getElementById('utmHistory').innerHTML+=hist+'<hr>';
+    }
+    function copyToClipboard(){
+      navigator.clipboard.writeText(document.getElementById('utmOutput').textContent)
+        .then(()=>{
+          const btn=document.getElementById('copyBtn');
+          btn.textContent='copied';
+          btn.addEventListener('mouseleave',()=>btn.textContent='copy',{once:true});
+        });
+    }
+    function shortenURL(){
+      const txt=document.getElementById('utmOutput').textContent.match(/https?:\/\/[^\s]+/);
+      if(!txt) return alert('링크 없음');
+      fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(txt[0])}`)
+        .then(r=>r.text()).then(s=>document.getElementById('utmOutput').textContent+=`\nShortened: ${s}`)
+        .catch(()=>alert('단축 실패'));
+    }
+    function openAll(){
+      if(!records.length) return alert('이력이 없습니다.');
+      records.forEach(r=>window.open(r.utm_link,'_blank'));
+    }
+    function downloadExcel(){
+      if(!records.length) return alert('이력이 없습니다.');
+      const header=['brand','source','medium','selling point','Age','gender','date','campaign_name','utm_link','generated_at'],
+            ws=XLSX.utils.json_to_sheet(records,{header,skipHeader:false});
+      ws['!cols']=header.map(h=>({wch:Math.max(h.length,15)}));
+      const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'UTM History');
+      XLSX.writeFile(wb,'utm_history.xlsx');
+    }
+  </script>
+</body>
+</html>
