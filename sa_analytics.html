@@ -642,13 +642,13 @@ body, header, .case, .chip, .conds, .effect, .warn, .tip, .pill, .tab-btn, .logo
           <td>저비용 고검색</td>
           <td>월간 검색량↑ · 입찰가 낮음</td>
           <td>—</td><td>—</td>
-          <td>주목도 확보</td>
+          <td>⚠ 비용 누수 리스크 확인 후 신중 상향</td>
         </tr>
         <tr>
           <td>최적화 키워드</td>
           <td>CTR 최고 · CPC 최저 · 이탈률≈0%</td>
           <td>—</td><td>—</td>
-          <td>무조건 상향</td>
+          <td>현행 유지 우선 검토 (섣부른 상향 주의)</td>
         </tr>
         <tr>
           <td>골든 키워드</td>
@@ -676,7 +676,7 @@ body, header, .case, .chip, .conds, .effect, .warn, .tip, .pill, .tab-btn, .logo
           <td>CTR↑ · 클릭수 적음 · 모수 부족</td>
           <td style="color:var(--text-3)">판단불가</td>
           <td style="color:var(--text-3)">판단불가</td>
-          <td>데이터 축적 후 재판단</td>
+          <td>노출 순위 낮으면 상향 시도, 상위권이면 데이터 축적</td>
         </tr>
         <tr>
           <td>전략적 방어</td>
@@ -716,19 +716,19 @@ body, header, .case, .chip, .conds, .effect, .warn, .tip, .pill, .tab-btn, .logo
           <td>순위 과다 점유</td>
           <td>순위 1~2위 · 이탈률↑ · 비용 극심</td>
           <td>—</td><td>—</td>
-          <td>4위권 재배치</td>
+          <td>1페이지 하순위 재배치 (PC·MO 기준 별도 확인)</td>
         </tr>
         <tr>
           <td>개연성 부족</td>
           <td>이탈률 60~100% · 제품 연관성↓</td>
           <td>—</td><td>—</td>
-          <td>하향 또는 삭제</td>
+          <td>최저 입찰가(70원) 유지 — 삭제보다 비용 리스크↓</td>
         </tr>
         <tr>
           <td>예산 분산 필요</td>
           <td>특정 키워드 예산 독점</td>
           <td>—</td><td>—</td>
-          <td>순위 낮춰 예산 재배분</td>
+          <td>키워드 성격에 따라 Bid-Keep 또는 순위 낮춰 재배분</td>
         </tr>
         <tr>
           <td>함정 키워드</td>
@@ -770,7 +770,8 @@ body, header, .case, .chip, .conds, .effect, .warn, .tip, .pill, .tab-btn, .logo
       <ul>
         <li><b>판단</b> — Bid-Keep. 입찰가 조정보다 LP·객단가 개선 선행</li>
         <li><b>이유</b> — 전환은 되지만 마진·객단가 문제로 수익이 안 나는 구조</li>
-        <li><b>액션</b> — 유지 + 업셀·고가 패키지 소재로 객단가 개선</li>
+        <li><b>액션</b> — 유지 + 번들 상품·고가 패키지 구성으로 객단가 개선. 업셀·크로스셀 소재 강화</li>
+        <li><b>실무 팁</b> — 단품보다 번들 구성으로 객단가를 끌어올리면 CVR을 유지하면서 ROAS를 동시에 개선할 수 있는 가장 현실적인 접근</li>
       </ul>
     </div>
     <div class="sum-card">
@@ -805,6 +806,7 @@ body, header, .case, .chip, .conds, .effect, .warn, .tip, .pill, .tab-btn, .logo
       <div class="ap-card-head">🎯 CTR — 클릭률 및 소재 최적화</div>
       <ul>
         <li>키워드-소재-LP 3단계 정합성 점검 (검색 의도 일치)</li>
+        <li>키워드 검색 유저는 LP에서 검색어보다 '더'를 원하는 경향 → 검색 의도를 충족하되 한 단계 더 나아간 메시지 제공</li>
         <li>이미지형 서브링크·가격링크 등 확장 소재 활용</li>
         <li>니즈별 그룹 세분화 후 각 그룹 최적화 소재 노출</li>
       </ul>
@@ -917,7 +919,7 @@ body, header, .case, .chip, .conds, .effect, .warn, .tip, .pill, .tab-btn, .logo
       <div class="case-icon icon-up">🔎</div>
       <div class="case-meta">
         <div class="case-title">저비용 고검색</div>
-        <div class="case-desc">월간 검색량은 매우 높지만 입찰가가 낮아 주목도가 떨어지는 경우</div>
+        <div class="case-desc">월간 검색량은 매우 높지만 입찰가가 낮아 주목도가 떨어지는 경우 — 비용 누수 리스크 선 확인 필수</div>
         <div class="pills">
           <span class="pill pill-green">월간 검색량 높음</span>
           <span class="pill pill-red">입찰가 낮음</span>
@@ -931,12 +933,15 @@ body, header, .case, .chip, .conds, .effect, .warn, .tip, .pill, .tab-btn, .logo
       <div class="chip"><div class="chip-k">유입 확대</div><div class="chip-v cv-amber">잠재력 있음</div></div>
     </div>
     <ul class="conds">
-      <li><span class="bullet"></span>검색 수요는 충분하지만 경쟁에서 밀려 유입을 충분히 받지 못하는 상태. 입찰가를 적절히 올려 주목도를 높이면 효율적인 유입 확대 가능.</li>
+      <li><span class="bullet"></span><b>⚠ 상향 전 비용 누수 리스크 반드시 확인</b> — 검색량이 높다는 것은 곧 클릭 볼륨도 크다는 의미. 입찰가를 올리는 순간 하루 수백만 원이 빠져나갈 수 있음. (예: 월 검색량 수십만인 '에어컨' 키워드를 1,400원에 입찰 시 하루 예산이 순식간에 소진되는 구조)</li>
+      <li><span class="bullet"></span><b>단계적 상향 필수</b> — 소폭씩 올려가며 일일 예산 소진 속도·CPC 변화를 모니터링. 일예산 캡을 설정한 후 테스트.</li>
+      <li><span class="bullet"></span><b>CVR·ROAS 동시 확인</b> — 유입이 늘어도 전환이 없으면 비용 누수. 반드시 CVR·ROAS를 함께 보며 상향 지속 여부 결정.</li>
     </ul>
     <div class="effect ef-green">
       <div class="effect-icon">💡</div>
-      <div class="effect-text"><b>기대효과</b> — 낮은 추가 비용으로 노출 및 유입 총량 대폭 확대.</div>
+      <div class="effect-text"><b>기대효과</b> — 리스크를 통제한 상태에서 유입 총량 확대. 단, 검색량이 클수록 비용 변동성도 크므로 소폭 테스트 후 확장하는 것이 원칙.</div>
     </div>
+    <div class="warn">⚠️ 검색량이 크면 클수록 비용 누수 속도도 빠름. 무조건 올리는 것이 아닌, 일예산 상한선 설정 후 단계적 테스트가 필수.</div>
   </div>
 
   <div class="case">
@@ -944,11 +949,12 @@ body, header, .case, .chip, .conds, .effect, .warn, .tip, .pill, .tab-btn, .logo
       <div class="case-icon icon-up">⭐</div>
       <div class="case-meta">
         <div class="case-title">지표 우수 키워드 (최적화 키워드)</div>
-        <div class="case-desc">CTR 최고 + CPC 최저 + 이탈률 0% 수준 — 무조건 상향</div>
+        <div class="case-desc">CTR 최고 + CPC 최저 + 이탈률 0% 수준 — 이미 최적화된 상태, 섣부른 상향은 오히려 역효과</div>
         <div class="pills">
           <span class="pill pill-green">CTR 최고</span>
           <span class="pill pill-green">CPC 최저</span>
           <span class="pill pill-green">이탈률 ≈ 0%</span>
+          <span class="pill pill-amber">현행 유지 우선</span>
         </div>
       </div>
     </div>
@@ -956,14 +962,16 @@ body, header, .case, .chip, .conds, .effect, .warn, .tip, .pill, .tab-btn, .logo
       <div class="chip"><div class="chip-k">CTR</div><div class="chip-v cv-green">최고</div></div>
       <div class="chip"><div class="chip-k">CPC</div><div class="chip-v cv-green">최저</div></div>
       <div class="chip"><div class="chip-k">이탈률</div><div class="chip-v cv-green">≈ 0%</div></div>
-      <div class="chip"><div class="chip-k">판단</div><div class="chip-v cv-green">무조건 상향</div></div>
+      <div class="chip"><div class="chip-k">판단</div><div class="chip-v cv-amber">현행 유지 우선</div></div>
     </div>
     <ul class="conds">
-      <li><span class="bullet"></span>모든 지표가 최적화된 상태. 예산 낭비 리스크가 가장 낮고 성과 기여도가 가장 높은 유형. 조건 확인 불필요 — 즉시 상향.</li>
+      <li><span class="bullet"></span><b>현행 유지가 최우선</b> — 이미 CTR·CPC·이탈률 모든 지표가 최적화된 상태. 입찰가를 올리면 CPC가 상승해 지금의 효율 균형이 무너질 수 있음.</li>
+      <li><span class="bullet"></span><b>상향이 정당화되는 경우</b> — 현재 순위가 3위 이하이고, CVR·ROAS까지 우수한 경우에 한해 소폭 상향 검토. 단, 순위가 이미 1~2위라면 건드리지 않는 것이 원칙.</li>
+      <li><span class="bullet"></span><b>관리 포인트</b> — 최적화 상태가 유지되는지 주기적으로 확인. 경쟁사 입찰 변화로 순위가 밀리면 그때 상향 검토.</li>
     </ul>
     <div class="effect ef-green">
       <div class="effect-icon">💡</div>
-      <div class="effect-text"><b>기대효과</b> — 순위 상승 시 클릭·전환 동시 증가. 캠페인 전체 효율 견인 역할.</div>
+      <div class="effect-text"><b>핵심 판단 로직</b> — "잘 되고 있는 걸 굳이 건드릴 필요가 없다." 이미 최적화된 키워드를 억지로 상향하면 CPC만 오르고 효율은 떨어지는 역효과가 발생할 수 있음.</div>
     </div>
   </div>
 
@@ -1111,7 +1119,10 @@ body, header, .case, .chip, .conds, .effect, .warn, .tip, .pill, .tab-btn, .logo
       <div class="chip"><div class="chip-k">전환 건수</div><div class="chip-v cv-red">모수 부족</div></div>
     </div>
     <ul class="conds">
-      <li><span class="bullet"></span>CVR·ROAS 모두 클릭 모수가 부족해 통계적 신뢰도가 없는 상태. 전환 최소 10건 이상 확보될 때까지 성급한 조정 대신 데이터 축적 우선.</li>
+      <li><span class="bullet"></span><b>노출 순위가 관건</b> — 데이터 검증 단계에서 판단 기준은 현재 노출 순위로 갈린다. 클릭수가 적은 이유가 '순위가 낮아서'인지 '소재가 약해서'인지 먼저 파악.</li>
+      <li><span class="bullet"></span><b>순위가 낮은 경우 (3위↓)</b> — 노출 기회 자체가 부족한 상태. 소폭 상향해 순위를 올려보며 클릭 모수를 확보. 이후 CVR·이탈률을 보며 재판단.</li>
+      <li><span class="bullet"></span><b>순위가 이미 1~2위인 경우</b> — 순위 문제가 아닌 소재 또는 키워드 의도 문제. 성급한 조정 없이 데이터 축적 후 재판단. 최소 클릭 30회, 전환 10건 이상 확보 후 결정.</li>
+      <li><span class="bullet"></span>CVR·ROAS 모두 클릭 모수가 부족해 통계적 신뢰도가 없는 상태. 판단 보류 기간 중 소재·LP 정합성 점검 병행.</li>
     </ul>
     <div class="effect ef-blue">
       <div class="effect-icon">💡</div>
@@ -1192,7 +1203,8 @@ body, header, .case, .chip, .conds, .effect, .warn, .tip, .pill, .tab-btn, .logo
     </div>
     <ul class="conds">
       <li><span class="bullet"></span><b>입찰가 유지</b> — 전환이 발생 중이므로 무리하게 내리면 전환 데이터·모수를 잃음.</li>
-      <li><span class="bullet"></span><b>LP·상품 구조 개선 선행</b> — 업셀·크로스셀 소재로 객단가 상향, 고가 패키지 노출 강화. CPC 절감 방향도 병행 시도.</li>
+      <li><span class="bullet"></span><b>번들 상품 구성이 가장 현실적인 해법</b> — 단품 전환은 되지만 객단가가 낮은 구조라면, 번들·패키지 상품으로 묶어 객단가를 끌어올리는 것이 입찰 조정보다 효과적. CVR을 유지하면서 ROAS를 동시에 개선할 수 있는 가장 빠른 접근.</li>
+      <li><span class="bullet"></span><b>소재 업셀 강화</b> — 고가 패키지·세트 상품을 LP 상단에 노출하거나 확장 소재에 포함. CPC 절감보다 객단가 개선이 우선.</li>
     </ul>
     <div class="effect ef-amber">
       <div class="effect-icon">⚠️</div>
@@ -1299,11 +1311,11 @@ body, header, .case, .chip, .conds, .effect, .warn, .tip, .pill, .tab-btn, .logo
       <div class="case-icon icon-down">📉</div>
       <div class="case-meta">
         <div class="case-title">순위 과다 점유</div>
-        <div class="case-desc">1~2위 비용 과다 소모 + 이탈률 높음 → 4위권 재배치로 효율 확보</div>
+        <div class="case-desc">1~2위 비용 과다 소모 + 이탈률 높음 → 1페이지 하순위로 재배치 (PC·MO 기준 상이)</div>
         <div class="pills">
           <span class="pill pill-red">순위 1~2위</span>
           <span class="pill pill-red">이탈률 높음</span>
-          <span class="pill pill-amber">4위권 재배치 목표</span>
+          <span class="pill pill-amber">1페이지 하순위 목표</span>
         </div>
       </div>
     </div>
@@ -1311,14 +1323,16 @@ body, header, .case, .chip, .conds, .effect, .warn, .tip, .pill, .tab-btn, .logo
       <div class="chip"><div class="chip-k">노출 순위</div><div class="chip-v cv-red">1~2위</div></div>
       <div class="chip"><div class="chip-k">이탈률</div><div class="chip-v cv-red">높음</div></div>
       <div class="chip"><div class="chip-k">비용 소모</div><div class="chip-v cv-red">극심</div></div>
-      <div class="chip"><div class="chip-k">재배치 목표</div><div class="chip-v cv-amber">4위권</div></div>
+      <div class="chip"><div class="chip-k">재배치 목표</div><div class="chip-v cv-amber">1페이지 하순위</div></div>
     </div>
     <ul class="conds">
-      <li><span class="bullet"></span>순위가 높아도 방문 유저가 바로 이탈하면 비용 낭비. 4위권으로 재배치해 비용 효율을 확보하고 절감 예산을 다른 키워드에 배분.</li>
+      <li><span class="bullet"></span><b>1페이지 하순위 재배치</b> — 4위권이라는 고정된 기준보다 '1페이지 내 하순위'가 더 실무적인 기준. 노출은 유지하되 CPC를 낮추는 것이 목적.</li>
+      <li><span class="bullet"></span><b>PC·MO 기준 별도 확인 필수</b> — PC와 모바일의 1페이지 노출 기준이 다름. 디바이스별 입찰가 조정 기능을 활용해 각각 최적 순위 설정.</li>
+      <li><span class="bullet"></span>순위가 높아도 이탈률이 높으면 비용 낭비. 하순위 이동으로 CPC를 낮추고 절감 예산을 다른 키워드에 배분.</li>
     </ul>
     <div class="effect ef-red">
       <div class="effect-icon">💡</div>
-      <div class="effect-text"><b>기대효과</b> — 과도한 광고비 절감 + 장기적으로 원활한 노출 지속 가능.</div>
+      <div class="effect-text"><b>기대효과</b> — 과도한 광고비 절감 + 1페이지 내 노출 유지로 브랜드 존재감 확보. PC·MO 각각 최적 순위 설정 시 비용 대비 효율 극대화.</div>
     </div>
   </div>
 
@@ -1335,12 +1349,15 @@ body, header, .case, .chip, .conds, .effect, .warn, .tip, .pill, .tab-btn, .logo
       </div>
     </div>
     <ul class="conds">
-      <li><span class="bullet"></span>키워드와 제품 간 의도 정합성이 없어 클릭해도 바로 이탈. 하향 또는 삭제 처리하고 소재·LP 정합성을 재검토해야 함.</li>
+      <li><span class="bullet"></span><b>삭제보다 최저 입찰가(70원) 유지</b> — 키워드를 삭제하면 Quality Score 누적 데이터가 사라지고, 향후 재등록 시 품질지수를 다시 쌓아야 함. 이탈률이 높더라도 70원 최저가로 내려두면 비용 리스크 없이 키워드를 살려둘 수 있음.</li>
+      <li><span class="bullet"></span><b>예외적으로 삭제하는 경우</b> — 브랜드 이미지 훼손 우려가 있거나, 경쟁사 트래픽 유입이 확실한 경우. 이 두 가지가 아니라면 최저가 유지가 더 안전한 선택.</li>
+      <li><span class="bullet"></span>소재·LP 정합성 재검토는 병행 권장. 의도치 않은 유입이더라도 소재 개선으로 전환이 발생하면 다시 활용 가능.</li>
     </ul>
     <div class="effect ef-red">
       <div class="effect-icon">💡</div>
-      <div class="effect-text"><b>기대효과</b> — 무의미한 광고비 지출 차단. 예산을 연관성 높은 키워드로 재배분.</div>
+      <div class="effect-text"><b>기대효과</b> — 비용 리스크 최소화 + 키워드 품질지수 데이터 보존. 70원 최저가 유지로 사실상 비용 0에 가깝게 키워드를 관리할 수 있음.</div>
     </div>
+    <div class="tip">💡 키워드 삭제는 되돌리기 어렵고, 재등록 시 품질지수를 처음부터 다시 쌓아야 함. 확실한 이유가 없다면 최저가 유지가 원칙.</div>
   </div>
 
   <div class="case">
@@ -1356,11 +1373,13 @@ body, header, .case, .chip, .conds, .effect, .warn, .tip, .pill, .tab-btn, .logo
       </div>
     </div>
     <ul class="conds">
-      <li><span class="bullet"></span>한 키워드가 예산을 독식하는 구조. 순위를 한 단계 낮춰 다른 효율적인 키워드들에게 노출 기회를 고르게 배분.</li>
+      <li><span class="bullet"></span><b>키워드 성격에 따라 판단이 갈림</b> — 예산을 독점하는 키워드가 ROAS·CVR 모두 우수하다면 Bid-Keep이 맞음. 예산을 독점할 이유가 있는 키워드인지 먼저 확인.</li>
+      <li><span class="bullet"></span><b>하향이 맞는 경우</b> — 예산을 독점하는 키워드의 CVR·ROAS가 낮고, 다른 키워드들이 예산 부족으로 노출 기회를 박탈당하고 있을 때. 순위를 낮춰 예산을 고효율 키워드에 재배분.</li>
+      <li><span class="bullet"></span><b>유지가 맞는 경우</b> — 브랜드 방어·검색량 압도적·ROAS 우수 등 해당 키워드가 예산을 독점할 명확한 이유가 있을 때. 다른 키워드 예산을 별도로 늘리는 방향 검토.</li>
     </ul>
     <div class="effect ef-red">
       <div class="effect-icon">💡</div>
-      <div class="effect-text"><b>기대효과</b> — 예산 분산을 통해 전체 캠페인 ROI 개선. 롱테일 키워드 노출 기회 확보.</div>
+      <div class="effect-text"><b>기대효과</b> — 예산 분산을 통해 전체 캠페인 ROI 개선. 롱테일 키워드 노출 기회 확보. 단, 핵심 키워드라면 예산 증액이 더 나은 해결책일 수 있음.</div>
     </div>
   </div>
 
