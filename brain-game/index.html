@@ -782,7 +782,7 @@ async function maybeAwardCard(totalScore){
 function showCardRevealModal(card, img, reason){
   const subtitle = reason==='clear' ? '90점 클리어 보상 🎯' : '행운의 카드! (1% 확률) 🍀';
   const countText = `보유 ${currentMember.cards[card.id]}장`;
-  playCardRevealEffect(card, img, {subtitle, countText});
+  playCardRevealEffect(card, img, {subtitle, countText, showNav:true});
 }
 function playCardSound(){
   beep(523,0.12); setTimeout(()=>beep(659,0.12),90); setTimeout(()=>beep(784,0.2),180);
@@ -803,9 +803,19 @@ function spawnBurstParticles(container){
     setTimeout(()=>p.remove(),900);
   }
 }
-function playCardRevealEffect(card, img, {countText=null, subtitle='', headline='축하합니다 카드를 획득했어요!'}={}){
+function playCardRevealEffect(card, img, {countText=null, subtitle='', headline='축하합니다 카드를 획득했어요!', showNav=false}={}){
   confetti();
   playCardSound();
+  const navHtml = showNav ? `
+        <button class="btn btn-primary" id="continueGame" style="margin-top:18px;">🔁 다시 도전하기</button>
+        <div class="btn-row" style="margin-top:8px;">
+          <button class="btn btn-ghost" id="zoomCard" style="font-size:16px;padding:14px;">🔍 크게 보기</button>
+          <button class="btn btn-ghost" id="toLibraryBtn" style="font-size:16px;padding:14px;">📚 라이브러리</button>
+        </div>` : `
+        <div class="btn-row" style="margin-top:18px;">
+          <button class="btn btn-ghost" id="zoomCard" style="font-size:16px;padding:14px;">🔍 크게 보기</button>
+          <button class="btn btn-primary" id="closeCard" style="font-size:16px;padding:14px;">확인</button>
+        </div>`;
   const ov=el(`
     <div class="overlay">
       <div class="modal fade" style="text-align:center;">
@@ -818,12 +828,19 @@ function playCardRevealEffect(card, img, {countText=null, subtitle='', headline=
         </div>
         <div style="font-family:'Jua';font-size:20px;margin-top:12px;">${card.name||'이름 없음'}</div>
         ${countText?`<div style="font-size:14px;color:var(--ink-soft);margin-top:2px;">${countText}</div>`:''}
-        <button class="btn btn-primary" id="closeCard" style="margin-top:18px;">확인</button>
+        ${navHtml}
       </div>
     </div>`);
   document.body.appendChild(ov);
   spawnBurstParticles(ov.querySelector('#fxWrap'));
-  ov.querySelector('#closeCard').addEventListener('click',()=>ov.remove());
+  const zoomBtn=ov.querySelector('#zoomCard');
+  if(zoomBtn) zoomBtn.addEventListener('click',()=>{ ov.remove(); showCardZoomModal(card, img, countText); });
+  const closeBtn=ov.querySelector('#closeCard');
+  if(closeBtn) closeBtn.addEventListener('click',()=>ov.remove());
+  const libBtn=ov.querySelector('#toLibraryBtn');
+  if(libBtn) libBtn.addEventListener('click',()=>{ ov.remove(); renderMyCards(); });
+  const contBtn=ov.querySelector('#continueGame');
+  if(contBtn) contBtn.addEventListener('click',()=>{ ov.remove(); startSession(); });
 }
 function showLockedCardMsg(){
   const ov=el(`
@@ -1033,7 +1050,7 @@ async function renderMyCards(){
       if(!cnt) return showLockedCardMsg();
       let img=imgMap[c.id];
       if(img===undefined) img=await getCardImage(c.id);
-      showCardZoomModal(c, img, `보유 ${cnt}장`);
+      playCardRevealEffect(c, img, {countText:`보유 ${cnt}장`});
     });
   });
 }
@@ -1187,7 +1204,7 @@ async function renderAdminLibrary(){
       <div class="topbar"><div class="brand">📚 카드 라이브러리</div><button class="iconbtn" id="back">‹</button></div>
       <div class="panel" style="margin-bottom:14px;">
         <div style="font-family:'Jua';font-size:20px;">등록된 카드 ${cardIndex.length}종</div>
-        <div style="font-size:14px;color:var(--ink-soft);margin-top:4px;">카드를 누르면 크게 볼 수 있어요</div>
+        <div style="font-size:14px;color:var(--ink-soft);margin-top:4px;">카드를 누르면 획득 연출을 미리 볼 수 있어요</div>
       </div>
       <div class="mycard-grid" id="grid">${cardIndex.length?'':'<div style="grid-column:1/-1;color:var(--ink-soft);padding:20px 0;">등록된 카드가 없어요</div>'}</div>
     </div>`);
@@ -1207,7 +1224,7 @@ async function renderAdminLibrary(){
     item.addEventListener('click', async ()=>{
       let img=imgMap[c.id];
       if(img===undefined) img=await getCardImage(c.id);
-      showCardZoomModal(c, img);
+      playCardRevealEffect(c, img, {});
     });
   });
 }
