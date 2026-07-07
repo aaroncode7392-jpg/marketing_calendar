@@ -139,10 +139,10 @@
   .npboxes{display:flex;justify-content:center;gap:9px;margin:22px 0 28px;flex-wrap:wrap;}
   .npbox{width:36px;height:46px;border:3px solid var(--line);border-radius:12px;display:flex;align-items:center;justify-content:center;font-family:'Jua';font-size:24px;background:#fff;}
   .npbox.filled{border-color:var(--speed);background:#FFF3DF;}
-  .numpad{display:grid;grid-template-columns:repeat(3,80px);gap:13px;justify-content:center;margin:0 auto;}
-  .npkey{font-family:'Jua';font-size:26px;height:60px;border-radius:18px;border:2px solid var(--line);background:#fff;box-shadow:0 5px 0 rgba(0,0,0,.06);cursor:pointer;color:var(--ink);}
+  .numpad{display:grid;grid-template-columns:repeat(3,74px);gap:16px;justify-content:center;margin:0 auto;}
+  .npkey{font-family:'Jua';font-size:26px;width:74px;height:74px;border-radius:50%;border:2px solid var(--line);background:#fff;box-shadow:0 5px 0 rgba(0,0,0,.06);cursor:pointer;color:var(--ink);display:flex;align-items:center;justify-content:center;}
   .npkey:active{transform:translateY(3px);box-shadow:none;}
-  .npkey-clear,.npkey-back{font-size:15px;color:var(--ink-soft);}
+  .npkey-clear,.npkey-back{font-size:13px;color:var(--ink-soft);}
   .np-footer{text-align:center;margin-top:26px;}
   .footer-link{background:none;border:none;color:var(--ink-soft);font-size:13px;cursor:pointer;padding:8px;text-decoration:underline;}
   /* card grids */
@@ -310,6 +310,31 @@ function readFileAsDataURL(file){
     r.readAsDataURL(file);
   });
 }
+// 큰 이미지를 자동으로 축소·압축해서 localStorage 용량 초과를 방지 (gif는 애니메이션 보존을 위해 원본 그대로 사용)
+function toStorableImage(file, maxDim=480){
+  return new Promise((resolve)=>{
+    if(file.type==='image/gif'){ readFileAsDataURL(file).then(resolve).catch(()=>resolve(null)); return; }
+    readFileAsDataURL(file).then(raw=>{
+      const img=new Image();
+      img.onload=()=>{
+        let {width,height}=img;
+        if(width>maxDim||height>maxDim){
+          if(width>=height){ height=Math.round(height*maxDim/width); width=maxDim; }
+          else{ width=Math.round(width*maxDim/height); height=maxDim; }
+        }
+        try{
+          const canvas=document.createElement('canvas');
+          canvas.width=width; canvas.height=height;
+          const ctx=canvas.getContext('2d');
+          ctx.drawImage(img,0,0,width,height);
+          resolve(canvas.toDataURL('image/png'));
+        }catch(e){ resolve(raw); }
+      };
+      img.onerror=()=>resolve(raw);
+      img.src=raw;
+    }).catch(()=>resolve(null));
+  });
+}
 
 // ---------- DIFFICULTY ----------
 function curLevel(){return Math.min(10,Math.max(1,(currentMember&&currentMember.level)||8));}
@@ -342,39 +367,38 @@ function renderNumpadScreen({title, subtitle, length, mask=false, errorMsg='', o
     return html;
   }
 
-  function draw(){
-    clear();
-    const v=el(`
-      <div class="fade" style="display:flex;flex-direction:column;justify-content:center;min-height:78vh;">
-        <div style="text-align:center;">
-          <div style="font-size:44px;">🧠</div>
-          <div style="font-family:'Jua';font-size:24px;margin-top:8px;">${title}</div>
-          <div style="font-size:15px;color:var(--ink-soft);margin-top:4px;">${subtitle}</div>
-          ${errorMsg?`<div style="color:var(--warn);font-family:'Jua';font-size:15px;margin-top:10px;">${errorMsg}</div>`:''}
-        </div>
-        <div class="npboxes">${boxesHtml()}</div>
-        <div class="numpad">
-          ${[1,2,3,4,5,6,7,8,9].map(n=>`<button class="npkey" data-k="${n}">${n}</button>`).join('')}
-          <button class="npkey npkey-clear" data-k="clear">지우기</button>
-          <button class="npkey" data-k="0">0</button>
-          <button class="npkey npkey-back" data-k="back">⌫</button>
-        </div>
-        <div class="np-footer">${footerHtml}</div>
-      </div>`);
-    app.appendChild(v);
-    v.querySelectorAll('.npkey').forEach(b=>{
-      b.addEventListener('click',()=>{
-        const k=b.dataset.k;
-        if(k==='clear'){ digits=''; }
-        else if(k==='back'){ digits=digits.slice(0,-1); }
-        else if(digits.length<length){ digits+=k; beep(440,0.05); }
-        if(digits.length===length){ setTimeout(()=>onSubmit(digits),200); }
-        else { draw(); }
-      });
+  const v=el(`
+    <div class="fade" style="display:flex;flex-direction:column;justify-content:center;min-height:78vh;">
+      <div style="text-align:center;">
+        <div style="font-size:44px;">🧠</div>
+        <div style="font-family:'Jua';font-size:24px;margin-top:8px;">${title}</div>
+        <div style="font-size:15px;color:var(--ink-soft);margin-top:4px;">${subtitle}</div>
+        ${errorMsg?`<div style="color:var(--warn);font-family:'Jua';font-size:15px;margin-top:10px;">${errorMsg}</div>`:''}
+      </div>
+      <div class="npboxes" id="npboxes">${boxesHtml()}</div>
+      <div class="numpad">
+        ${[1,2,3,4,5,6,7,8,9].map(n=>`<button class="npkey" data-k="${n}">${n}</button>`).join('')}
+        <button class="npkey npkey-clear" data-k="clear">지우기</button>
+        <button class="npkey" data-k="0">0</button>
+        <button class="npkey npkey-back" data-k="back">⌫</button>
+      </div>
+      <div class="np-footer">${footerHtml}</div>
+    </div>`);
+  app.appendChild(v);
+  const boxesEl=v.querySelector('#npboxes');
+  let locked=false;
+  v.querySelectorAll('.npkey').forEach(b=>{
+    b.addEventListener('click',()=>{
+      if(locked) return;
+      const k=b.dataset.k;
+      if(k==='clear'){ digits=''; }
+      else if(k==='back'){ digits=digits.slice(0,-1); }
+      else if(digits.length<length){ digits+=k; beep(440,0.05); }
+      boxesEl.innerHTML=boxesHtml();
+      if(digits.length===length){ locked=true; setTimeout(()=>onSubmit(digits),200); }
     });
-    if(afterRender) afterRender(v);
-  }
-  draw();
+  });
+  if(afterRender) afterRender(v);
 }
 
 // ---------- LOGIN ----------
@@ -1016,7 +1040,7 @@ async function renderAdminDashboard(){
         <div class="section-title">📥 카드 등록</div>
         <div class="dropzone" id="dropzone">
           이미지를 여기로 끌어다 놓으세요<br>
-          <span style="font-size:13px;">(여러 장 한번에 가능 · gif 지원 · 탭해서 선택도 가능 · 장당 1.5MB 이하 권장)</span>
+          <span style="font-size:13px;">(여러 장 한번에 가능 · gif 지원 · 탭해서 선택도 가능 · 이미지는 자동으로 압축돼요)</span>
         </div>
         <input type="file" id="fileInput" accept="image/*" multiple style="display:none;">
         <div id="uploadStatus" style="font-size:14px;color:var(--ink-soft);margin-top:8px;"></div>
@@ -1079,9 +1103,10 @@ async function renderAdminDashboard(){
     let done=0, skipped=0;
     statusEl.textContent=`0/${files.length}장 등록 중...`;
     for(const f of files){
-      if(f.size>1.5*1024*1024){ skipped++; done++; statusEl.textContent=`${done}/${files.length}장 처리 중... (용량 초과 ${skipped}건 건너뜀, 1.5MB 이하 권장)`; continue; }
+      if(f.size>10*1024*1024){ skipped++; done++; statusEl.textContent=`${done}/${files.length}장 처리 중... (파일이 너무 커요, 10MB 이하로 건너뜀)`; continue; }
       try{
-        const dataUrl=await readFileAsDataURL(f);
+        const dataUrl=await toStorableImage(f);
+        if(!dataUrl){ skipped++; done++; statusEl.textContent=`${done}/${files.length}장 처리 중...`; continue; }
         const id='c'+Date.now()+'_'+rnd(100000);
         const saved=await saveCardImage(id, dataUrl);
         if(saved) cardIndex.push({id, name:f.name.replace(/\.[^/.]+$/,''), mime:f.type, addedAt:Date.now()});
@@ -1091,8 +1116,8 @@ async function renderAdminDashboard(){
       statusEl.textContent=`${done}/${files.length}장 등록 중...`;
     }
     await saveCardIndex(cardIndex);
-    statusEl.textContent=`완료! ${files.length-skipped}장 등록됨${skipped?` (건너뜀 ${skipped}건)`:''}`;
-    setTimeout(renderAdminDashboard, 700);
+    statusEl.textContent=`완료! ${files.length-skipped}장 등록됨${skipped?` (저장 실패 ${skipped}건 — 브라우저 저장 공간을 확인해주세요)`:''}`;
+    setTimeout(renderAdminDashboard, skipped?2200:900);
   }
 
   // ---- members list ----
