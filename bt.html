@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>오늘의 두뇌 운동</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum:wght@400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#FBF4E6; --paper:#FFFFFF; --ink:#3A2E28; --ink-soft:#7A6A5E; --line:#EAD9BE;
+    --speed:#EE7B5B; --memory:#2FA28E; --seq:#E0A33B; --math:#9A6FB0;
+    --ok:#3FA796; --warn:#E8635B;
+    --shadow:0 8px 0 rgba(0,0,0,0.06),0 14px 30px rgba(120,90,60,0.16);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;background:var(--cream);color:var(--ink);font-family:'Gowun Dodum',sans-serif;min-height:100%;}
+  body{background-image:radial-gradient(circle at 20% 0%,#FFFBF2 0%,var(--cream) 60%);}
+  #app{max-width:560px;margin:0 auto;padding:20px 18px 60px;min-height:100vh;}
+  h1,h2,h3,.display{font-family:'Jua',sans-serif;font-weight:400;letter-spacing:.5px;}
+  .fade{animation:fade .35s ease both;}
+  @keyframes fade{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+  @keyframes pop{0%{transform:scale(.85);}60%{transform:scale(1.06);}100%{transform:scale(1);}}
+  @keyframes flashIn{from{opacity:0;transform:scale(.6);}to{opacity:1;transform:scale(1);}}
+  @keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-7px);}75%{transform:translateX(7px);}}
+  @keyframes cardPop{0%{opacity:0;transform:scale(.4) rotate(-8deg);}60%{transform:scale(1.08) rotate(2deg);}100%{opacity:1;transform:scale(1) rotate(0);}}
+  @keyframes jellyPop{
+    0%{transform:scale(.3);opacity:0;}
+    15%{opacity:1;}
+    40%{transform:scale(1.22,.8);}
+    55%{transform:scale(.86,1.16);}
+    70%{transform:scale(1.1,.92);}
+    83%{transform:scale(.95,1.05);}
+    92%{transform:scale(1.03,.98);}
+    100%{transform:scale(1,1);opacity:1;}
+  }
+  @keyframes burstRing{
+    0%{transform:scale(0);opacity:.95;}
+    60%{opacity:.4;}
+    100%{transform:scale(2.8);opacity:0;}
+  }
+  @keyframes burstOut{
+    0%{transform:translate(-50%,-50%) scale(.3) rotate(0deg);opacity:1;}
+    100%{transform:translate(calc(-50% + var(--bx)),calc(-50% + var(--by))) scale(1.15) rotate(180deg);opacity:0;}
+  }
+  .card-fx-wrap{position:relative;display:inline-block;margin:6px 0;}
+  .card-burst-ring{position:absolute;left:50%;top:50%;width:200px;height:200px;margin:-100px 0 0 -100px;
+    border-radius:50%;background:radial-gradient(circle,rgba(255,214,120,.9) 0%,rgba(255,168,90,.5) 40%,rgba(255,168,90,0) 70%);
+    animation:burstRing .65s ease-out forwards;pointer-events:none;z-index:0;}
+  .card-jelly{position:relative;z-index:1;animation:jellyPop .75s cubic-bezier(.34,1.56,.64,1) both;}
+  .burst-particle{position:absolute;left:50%;top:50%;pointer-events:none;z-index:2;animation:burstOut .7s ease-out forwards;}
+  /* topbar */
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+  .topbar .brand{font-family:'Jua';font-size:26px;color:var(--ink);}
+  .iconbtn{background:var(--paper);border:2px solid var(--line);border-radius:16px;width:48px;height:48px;font-size:22px;cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,.05);}
+  .iconbtn:active{transform:translateY(2px);box-shadow:none;}
+  /* hero */
+  .hero{background:var(--paper);border:2px solid var(--line);border-radius:28px;padding:22px;box-shadow:var(--shadow);margin-bottom:16px;}
+  .hero .hello{font-family:'Jua';font-size:28px;line-height:1.3;margin:0 0 6px;}
+  .hero .sub{font-size:17px;color:var(--ink-soft);margin:0;line-height:1.5;}
+  .streak{display:inline-flex;align-items:center;gap:8px;margin-top:10px;background:#FFF3DF;border:2px solid #F2D9A6;color:#B5772A;border-radius:999px;padding:8px 16px;font-family:'Jua';font-size:16px;}
+  .streak.card-badge{background:#EAF3FF;border-color:#BFDBFF;color:#2E6BB5;}
+  /* panel */
+  .panel{background:var(--paper);border:2px solid var(--line);border-radius:28px;padding:26px 22px;box-shadow:var(--shadow);text-align:center;}
+  /* buttons */
+  .btn{font-family:'Jua';font-size:22px;border:none;border-radius:20px;padding:18px 22px;cursor:pointer;width:100%;color:#fff;box-shadow:0 6px 0 rgba(0,0,0,.12);transition:transform .1s;margin-top:10px;}
+  .btn:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,.12);}
+  .btn-primary{background:#3FA796;}
+  .btn-speed{background:#E8633F;}.btn-memory{background:#1E8E7B;}
+  .btn-seq{background:#D9952A;}.btn-math{background:#8A5BA2;}
+  .btn-ghost{background:var(--paper);color:var(--ink);border:2px solid var(--line);box-shadow:0 5px 0 rgba(0,0,0,.06);}
+  .btn-row{display:flex;gap:12px;}
+  .btn-row .btn{font-size:20px;padding:16px;}
+  .btn-small{font-size:16px;padding:12px;margin-top:8px;}
+  /* scoreline */
+  .scoreline{display:flex;justify-content:space-between;align-items:center;font-family:'Jua';font-size:20px;margin-bottom:14px;padding:0 2px;}
+  .pill{background:var(--paper);border:2px solid var(--line);border-radius:999px;padding:8px 18px;}
+  /* stage top bar */
+  .stage-bar{border-radius:18px;padding:11px 18px;display:flex;justify-content:space-between;align-items:center;font-family:'Jua';font-size:18px;color:#fff;margin-bottom:14px;}
+  .stage-bar.speed-bar{background:linear-gradient(135deg,#F2926F,#E8633F);}
+  .stage-bar.memory-bar{background:linear-gradient(135deg,#46B7A2,#1E8E7B);}
+  .stage-bar.seq-bar{background:linear-gradient(135deg,#ECB857,#D9952A);}
+  .stage-bar.math-bar{background:linear-gradient(135deg,#AD85C2,#8A5BA2);}
+  /* speed game */
+  .flashgrid{display:grid;gap:12px;margin:8px auto 4px;}
+  .cell{background:#FFF;border:3px solid var(--line);border-radius:22px;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 5px 0 rgba(0,0,0,.05);transition:transform .08s;}
+  .cell:active{transform:translateY(3px);}
+  .cell.lit{background:#FFF3DF;border-color:var(--speed);animation:flashIn .15s ease;}
+  .cell.correct{background:#E5F6F0;border-color:var(--ok);}
+  .cell.wrong{background:#FCE7E5;border-color:var(--warn);animation:shake .3s;}
+  .cell.selected{background:#FFF3DF;border-color:var(--speed);border-width:4px;}
+  .countdown{font-family:'Jua';font-size:80px;color:var(--speed);animation:pop .4s;}
+  /* memory */
+  .memgrid{display:grid;gap:10px;margin-top:6px;justify-content:center;}
+  .mcard{aspect-ratio:3/4;border-radius:16px;cursor:pointer;position:relative;perspective:600px;}
+  .mcard .inner{position:absolute;inset:0;transition:transform .35s;transform-style:preserve-3d;}
+  .mcard.flipped .inner,.mcard.matched .inner{transform:rotateY(180deg);}
+  .mface{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:16px;backface-visibility:hidden;}
+  .mfront{background:linear-gradient(150deg,#46B7A2,#1E8E7B);color:#fff;font-family:'Jua';font-size:28px;box-shadow:0 5px 0 rgba(0,0,0,.08);}
+  .mback{background:#FFF;border:3px solid var(--line);transform:rotateY(180deg);font-size:36px;}
+  .mcard.matched .mback{border-color:var(--ok);background:#E5F6F0;}
+  /* seq pads */
+  .padwrap{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:360px;margin:8px auto;}
+  .pad{aspect-ratio:1/1;border-radius:24px;cursor:pointer;border:4px solid rgba(0,0,0,.08);opacity:.5;transition:opacity .12s,transform .08s;box-shadow:0 6px 0 rgba(0,0,0,.12);}
+  .pad:active{transform:translateY(3px);}
+  .pad.on{opacity:1;transform:scale(1.03);}
+  .pad.p0{background:#E8635B;}.pad.p1{background:#5BB98C;}
+  .pad.p2{background:#5B8DEF;}.pad.p3{background:#EAC23D;}
+  /* math */
+  .qbox{font-family:'Jua';font-size:60px;margin:6px 0;}
+  .timerbar{height:14px;background:#EFE2CC;border-radius:999px;overflow:hidden;margin:4px 0 16px;}
+  .timerfill{height:100%;background:var(--math);width:100%;transition:width .1s linear;}
+  .choices{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .choice{font-family:'Jua';font-size:32px;background:#FFF;border:3px solid var(--line);border-radius:20px;padding:20px 0;cursor:pointer;box-shadow:0 5px 0 rgba(0,0,0,.06);}
+  .choice:active{transform:translateY(3px);box-shadow:none;}
+  .choice.right{background:#E5F6F0;border-color:var(--ok);}
+  .choice.wrongpick{background:#FCE7E5;border-color:var(--warn);}
+  /* result */
+  .stars{font-size:50px;letter-spacing:6px;margin:6px 0;}
+  .domain-row{margin-bottom:14px;}
+  .domain-row .dlabel{display:flex;justify-content:space-between;font-family:'Jua';font-size:19px;margin-bottom:6px;}
+  .dtrack{background:#F0E8D8;border-radius:999px;height:16px;overflow:hidden;}
+  .dfill{height:100%;border-radius:999px;transition:width .9s ease;}
+  /* modal */
+  .overlay{position:fixed;inset:0;background:rgba(58,46,40,.5);display:flex;align-items:center;justify-content:center;padding:20px;z-index:60;}
+  .modal{background:var(--paper);border-radius:26px;max-width:480px;width:100%;padding:26px 24px;box-shadow:var(--shadow);max-height:84vh;overflow:auto;}
+  /* transition */
+  .trans-next{background:var(--paper);border:2px solid var(--line);border-radius:20px;padding:16px 20px;margin-top:14px;text-align:left;}
+  /* confetti */
+  .confetti-item{position:fixed;top:-10px;font-size:22px;pointer-events:none;z-index:70;animation:fall linear forwards;}
+  @keyframes fall{to{transform:translateY(105vh) rotate(360deg);opacity:.9;}}
+  /* progress dots */
+  .prog{display:flex;gap:8px;justify-content:center;margin:16px 0;align-items:center;}
+  .prog-dot{width:12px;height:12px;border-radius:50%;background:var(--line);transition:all .3s;}
+  .prog-dot.done{background:var(--ok);width:14px;height:14px;}
+  .prog-dot.current{background:var(--speed);width:18px;height:18px;}
+  /* numpad */
+  .npboxes{display:flex;justify-content:center;gap:9px;margin:22px 0 28px;flex-wrap:wrap;}
+  .npbox{width:36px;height:46px;border:3px solid var(--line);border-radius:12px;display:flex;align-items:center;justify-content:center;font-family:'Jua';font-size:24px;background:#fff;}
+  .npbox.filled{border-color:var(--speed);background:#FFF3DF;}
+  .numpad{display:grid;grid-template-columns:repeat(3,80px);gap:13px;justify-content:center;margin:0 auto;}
+  .npkey{font-family:'Jua';font-size:26px;height:60px;border-radius:18px;border:2px solid var(--line);background:#fff;box-shadow:0 5px 0 rgba(0,0,0,.06);cursor:pointer;color:var(--ink);}
+  .npkey:active{transform:translateY(3px);box-shadow:none;}
+  .npkey-clear,.npkey-back{font-size:15px;color:var(--ink-soft);}
+  .np-footer{text-align:center;margin-top:26px;}
+  .footer-link{background:none;border:none;color:var(--ink-soft);font-size:13px;cursor:pointer;padding:8px;text-decoration:underline;}
+  /* card grids */
+  .mycard-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px;}
+  .mycard-item{background:#fff;border:2px solid var(--line);border-radius:16px;padding:8px;text-align:center;}
+  .mycard-item.empty{opacity:.32;}
+  .mycard-item img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:10px;background:#F5EDDC;}
+  .mycard-item .ph{width:100%;aspect-ratio:1/1;border-radius:10px;background:#F5EDDC;display:flex;align-items:center;justify-content:center;font-size:26px;}
+  .mycard-item .nm{font-size:12px;margin-top:5px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .mycard-item .cnt{font-family:'Jua';color:var(--speed);font-size:13px;}
+  /* admin */
+  .dropzone{border:3px dashed var(--line);border-radius:20px;padding:32px 16px;text-align:center;cursor:pointer;color:var(--ink-soft);font-size:15px;background:#FFFBF2;transition:all .15s;}
+  .dropzone.dragover{border-color:var(--speed);background:#FFF3DF;color:var(--ink);}
+  .card-admin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(68px,1fr));gap:10px;margin-top:14px;}
+  .card-admin-item{position:relative;aspect-ratio:1/1;border-radius:12px;overflow:hidden;border:2px solid var(--line);background:#fff;}
+  .card-admin-item img{width:100%;height:100%;object-fit:cover;}
+  .card-admin-item .del{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;cursor:pointer;line-height:1;}
+  .member-row{display:flex;justify-content:space-between;align-items:center;padding:11px 2px;border-bottom:1px solid var(--line);font-size:14px;text-align:left;}
+  .member-row:last-child{border-bottom:none;}
+  .section-title{font-family:'Jua';font-size:19px;margin:0 0 12px;text-align:left;}
+  .admin-panel{background:var(--paper);border:2px solid var(--line);border-radius:24px;padding:20px;box-shadow:var(--shadow);margin-bottom:16px;text-align:left;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+/* ==========================================================
+   오늘의 두뇌 운동 — 8 스테이지 + 회원(생년월일) + 카드 수집 + 관리자
+   ========================================================== */
+
+// ---------- GLOBAL STATE ----------
+let currentMember = null;   // {birthdate, joinedAt, lastLogin, streak, lastDay, bestTotal, level, cards:{id:count}}
+let cardIndex = [];          // [{id,name,mime,addedAt}]
+const ADMIN_PIN = '1128';
+
+// ---------- STORAGE LAYER (Claude 아티팩트 window.storage 우선, 안되면 localStorage로 자동 전환) ----------
+const hasCloudStorage = (typeof window!=='undefined') && window.storage && typeof window.storage.get==='function';
+async function stGet(key){
+  if(hasCloudStorage){
+    try{ const r=await window.storage.get(key, true); if(r&&r.value!==undefined) return r.value; }catch(e){}
+  }
+  try{ const v=localStorage.getItem(key); return v===null?undefined:v; }catch(e){ return undefined; }
+}
+async function stSet(key, value){
+  let ok=false;
+  if(hasCloudStorage){
+    try{ await window.storage.set(key, value, true); ok=true; }catch(e){}
+  }
+  try{ localStorage.setItem(key, value); ok=true; }catch(e){}
+  return ok;
+}
+async function stDelete(key){
+  if(hasCloudStorage){ try{ await window.storage.delete(key, true); }catch(e){} }
+  try{ localStorage.removeItem(key); }catch(e){}
+}
+async function stListKeys(prefix){
+  if(hasCloudStorage){
+    try{ const r=await window.storage.list(prefix, true); if(r&&r.keys) return r.keys; }catch(e){}
+  }
+  const keys=[];
+  try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&k.indexOf(prefix)===0) keys.push(k); } }catch(e){}
+  return keys;
+}
+
+// ---------- 에셋 폴더 기본 카드 (배포 시 assets/cards/ 에 파일을 넣고 여기 등록하세요) ----------
+// 예시: { id:'default_pikachu', name:'피카츄', file:'assets/cards/pikachu.png' },
+const DEFAULT_CARDS = [
+];
+
+// ---------- STORAGE HELPERS (카드/회원 데이터) ----------
+async function loadCardIndex(){
+  const v=await stGet('bg:cards:index');
+  const stored=v?JSON.parse(v):[];
+  return [...DEFAULT_CARDS, ...stored];
+}
+async function saveCardIndex(idx){
+  // 기본(에셋 폴더) 카드는 저장하지 않음 — 코드의 DEFAULT_CARDS에서 항상 다시 채워짐
+  const extra=idx.filter(c=>!String(c.id).startsWith('default_'));
+  await stSet('bg:cards:index', JSON.stringify(extra));
+}
+async function getCardImage(id){
+  const dc=DEFAULT_CARDS.find(c=>c.id===id);
+  if(dc) return dc.file;
+  const v=await stGet('bg:cards:img:'+id);
+  return v||null;
+}
+async function saveCardImage(id, dataUrl){
+  return await stSet('bg:cards:img:'+id, dataUrl);
+}
+async function deleteCardImage(id){
+  if(String(id).startsWith('default_')) return; // 에셋 폴더 카드는 코드에서만 관리
+  await stDelete('bg:cards:img:'+id);
+}
+async function loadOrCreateMember(bd){
+  const v=await stGet('bg:member:'+bd);
+  if(v){
+    const m=JSON.parse(v);
+    m.lastLogin=new Date().toISOString();
+    await saveMemberRaw(m);
+    return {member:m, isNew:false};
+  }
+  const m = { birthdate:bd, joinedAt:new Date().toISOString(), lastLogin:new Date().toISOString(),
+    streak:0, lastDay:null, bestTotal:0, level:8, cards:{} };
+  await saveMemberRaw(m);
+  return {member:m, isNew:true};
+}
+async function saveMemberRaw(m){
+  await stSet('bg:member:'+m.birthdate, JSON.stringify(m));
+}
+function saveMember(){ if(currentMember) saveMemberRaw(currentMember); }
+async function listAllMembers(){
+  const keys=await stListKeys('bg:member:');
+  const members=[];
+  for(const k of keys){
+    try{ const v=await stGet(k); if(v) members.push(JSON.parse(v)); }catch(e){}
+  }
+  return members.sort((a,b)=> (b.lastLogin||'').localeCompare(a.lastLogin||''));
+}
+
+function markPlayedToday(){
+  const today=new Date().toISOString().slice(0,10);
+  if(currentMember.lastDay===today) return;
+  const y=new Date(Date.now()-86400000).toISOString().slice(0,10);
+  currentMember.streak=(currentMember.lastDay===y)?(currentMember.streak||0)+1:1;
+  currentMember.lastDay=today; saveMember();
+}
+
+// ---------- HELPERS ----------
+const EMOJIS=['🐱','🐶','🌸','🍎','🌞','🐰','🦋','🐢','🍊','⭐','🌷','🐤','🍉','🐠','🌻','🐻'];
+const PRAISE=['잘하셨어요!','좋아요!','훌륭해요!','정확해요!','멋져요!'];
+const SOFT=['괜찮아요, 다시 해봐요','천천히 하셔도 돼요','거의 다 왔어요'];
+const rnd=n=>Math.floor(Math.random()*n);
+const pick=arr=>arr[rnd(arr.length)];
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;}
+function clear(){app.innerHTML='';}
+function el(html){const d=document.createElement('div');d.innerHTML=html.trim();return d.firstElementChild;}
+let audioCtx=null;
+function beep(freq,dur=0.18){
+  try{
+    audioCtx=audioCtx||new(window.AudioContext||window.webkitAudioContext)();
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.frequency.value=freq;o.type='sine';o.connect(g);g.connect(audioCtx.destination);
+    g.gain.setValueAtTime(0.0001,audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.18,audioCtx.currentTime+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+dur);
+    o.start();o.stop(audioCtx.currentTime+dur);
+  }catch(e){}
+}
+function confetti(){
+  ['🎉','⭐','✨','🌟','💛'].forEach(ch=>{
+    for(let i=0;i<4;i++){
+      const c=document.createElement('div');c.className='confetti-item';
+      c.textContent=ch;c.style.left=(Math.random()*100)+'%';
+      c.style.animationDuration=(1.6+Math.random()*1.2)+'s';
+      c.style.animationDelay=(Math.random()*0.4)+'s';
+      document.body.appendChild(c);setTimeout(()=>c.remove(),3200);
+    }
+  });
+}
+function readFileAsDataURL(file){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>res(r.result);
+    r.onerror=()=>rej(new Error('read failed'));
+    r.readAsDataURL(file);
+  });
+}
+
+// ---------- DIFFICULTY ----------
+function curLevel(){return Math.min(10,Math.max(1,(currentMember&&currentMember.level)||8));}
+function setLevel(n){currentMember.level=Math.min(10,Math.max(1,n));saveMember();}
+function speedStart(L){
+  const findCount=L<=6?3:4;
+  const size=findCount===3?3:4;
+  const flash=Math.max(350,1700-L*120);
+  return{size,flash,findCount};
+}
+function memPairs(L){return Math.min(8,Math.max(3,2+Math.ceil(L/2)));}
+function seqStart(L){return Math.min(4, 2+Math.floor((L-1)/3));}
+function seqFlashMs(L){return Math.max(480, 780-L*30);}
+function scoreColor(s){return s>=80?'var(--ok)':s>=60?'#E0A33B':'var(--warn)';}
+
+// ==========================================================
+// NUMPAD COMPONENT
+// ==========================================================
+function renderNumpadScreen({title, subtitle, length, mask=false, errorMsg='', onSubmit, footerHtml='', afterRender}){
+  clear();
+  let digits='';
+
+  function boxesHtml(){
+    let html='';
+    for(let i=0;i<length;i++){
+      const filled=i<digits.length;
+      const extra=((length===8&&(i===4||i===6))||(length===6&&(i===2||i===4)))?'style="margin-left:10px"':'';
+      html+=`<div class="npbox ${filled?'filled':''}" ${extra}>${filled?(mask?'●':digits[i]):''}</div>`;
+    }
+    return html;
+  }
+
+  function draw(){
+    clear();
+    const v=el(`
+      <div class="fade" style="display:flex;flex-direction:column;justify-content:center;min-height:78vh;">
+        <div style="text-align:center;">
+          <div style="font-size:44px;">🧠</div>
+          <div style="font-family:'Jua';font-size:24px;margin-top:8px;">${title}</div>
+          <div style="font-size:15px;color:var(--ink-soft);margin-top:4px;">${subtitle}</div>
+          ${errorMsg?`<div style="color:var(--warn);font-family:'Jua';font-size:15px;margin-top:10px;">${errorMsg}</div>`:''}
+        </div>
+        <div class="npboxes">${boxesHtml()}</div>
+        <div class="numpad">
+          ${[1,2,3,4,5,6,7,8,9].map(n=>`<button class="npkey" data-k="${n}">${n}</button>`).join('')}
+          <button class="npkey npkey-clear" data-k="clear">지우기</button>
+          <button class="npkey" data-k="0">0</button>
+          <button class="npkey npkey-back" data-k="back">⌫</button>
+        </div>
+        <div class="np-footer">${footerHtml}</div>
+      </div>`);
+    app.appendChild(v);
+    v.querySelectorAll('.npkey').forEach(b=>{
+      b.addEventListener('click',()=>{
+        const k=b.dataset.k;
+        if(k==='clear'){ digits=''; }
+        else if(k==='back'){ digits=digits.slice(0,-1); }
+        else if(digits.length<length){ digits+=k; beep(440,0.05); }
+        if(digits.length===length){ setTimeout(()=>onSubmit(digits),200); }
+        else { draw(); }
+      });
+    });
+    if(afterRender) afterRender(v);
+  }
+  draw();
+}
+
+// ---------- LOGIN ----------
+function renderLoginScreen(errorMsg){
+  renderNumpadScreen({
+    title:'생년월일을 입력하세요',
+    subtitle:'예) 1994년 11월 28일 → 941128 (6자리)',
+    length:6, mask:false, errorMsg,
+    onSubmit:attemptLogin,
+    footerHtml:`<button class="footer-link" id="toAdmin">관리자 페이지</button>`,
+    afterRender:(v)=>{ v.querySelector('#toAdmin').addEventListener('click',()=>renderAdminPinScreen()); }
+  });
+}
+async function attemptLogin(bd){
+  const mo=+bd.slice(2,4), d=+bd.slice(4,6);
+  const valid = mo>=1 && mo<=12 && d>=1 && d<=31;
+  if(!valid){ return renderLoginScreen('생년월일을 다시 확인해주세요'); }
+  const {member, isNew} = await loadOrCreateMember(bd);
+  currentMember = member;
+  cardIndex = await loadCardIndex();
+  renderHome(isNew);
+}
+
+// ---------- ADMIN PIN ----------
+function renderAdminPinScreen(errorMsg){
+  renderNumpadScreen({
+    title:'관리자 비밀번호',
+    subtitle:'4자리 숫자를 입력하세요',
+    length:4, mask:true, errorMsg,
+    onSubmit:(pin)=>{
+      if(pin===ADMIN_PIN) renderAdminDashboard();
+      else renderAdminPinScreen('비밀번호가 올바르지 않아요');
+    },
+    footerHtml:`<button class="footer-link" id="backBtn">${currentMember?'홈으로':'뒤로가기'}</button>`,
+    afterRender:(v)=>{ v.querySelector('#backBtn').addEventListener('click',()=> currentMember?renderHome():renderLoginScreen()); }
+  });
+}
+
+// ==========================================================
+// SESSION STATE (game flow)
+// ==========================================================
+let session=null;
+
+function buildStages(L){
+  const L2=Math.min(10,L+1);
+  return [
+    {type:'speed', label:'⚡ 순간 포착', domain:'speed', lv:L},
+    {type:'seq',   label:'🎵 순서 기억', domain:'seq',   lv:L},
+    {type:'math',  label:'🔢 빠른 셈',   domain:'math',  lv:L},
+    {type:'memory',label:'🃏 짝 맞추기', domain:'memory',lv:L},
+    {type:'speed', label:'⚡ 순간 포착', domain:'speed', lv:L2},
+    {type:'math',  label:'🔢 빠른 셈',   domain:'math',  lv:L2},
+    {type:'seq',   label:'🎵 순서 기억', domain:'seq',   lv:L2},
+    {type:'memory',label:'🃏 짝 맞추기', domain:'memory',lv:L2},
+  ];
+}
+function startSession(){
+  markPlayedToday();
+  const L=curLevel();
+  session={ stages:buildStages(L), idx:0, stageScores:[], domainScores:{speed:[],memory:[],seq:[],math:[]} };
+  showTransition(null,null,true);
+}
+function onGameDone(score100){
+  const stage=session.stages[session.idx];
+  session.stageScores.push(score100);
+  session.domainScores[stage.domain].push(score100);
+  session.idx++;
+  if(session.idx>=session.stages.length) showFinalResult();
+  else showTransition(stage, score100, false);
+}
+function showTransition(prevStage, prevScore, isFirst){
+  clear();
+  const {idx, stages}=session;
+  const next=stages[idx];
+  const total=stages.length;
+  const dots=stages.map((_,i)=>{const cls=i<idx?'done':i===idx?'current':'';return `<div class="prog-dot ${cls}"></div>`;}).join('');
+  const prevHtml=isFirst?`
+    <div style="font-family:'Jua';font-size:28px;margin-bottom:6px;">준비됐나요? 😊</div>
+    <div style="font-size:17px;color:var(--ink-soft);line-height:1.6;">4가지 두뇌 운동을 8스테이지로 연속해서 해봐요.<br>천천히, 즐겁게!</div>`:
+    `<div style="font-size:16px;color:var(--ink-soft);margin-bottom:4px;">스테이지 ${idx} 완료!</div>
+     <div style="font-family:'Jua';font-size:21px;color:var(--ink-soft);margin-bottom:6px;">${prevStage.label}</div>
+     <div style="font-family:'Jua';font-size:56px;color:${scoreColor(prevScore)};line-height:1.1;">${prevScore}점</div>`;
+  const colorMap={speed:'#E8633F',memory:'#1E8E7B',seq:'#D9952A',math:'#8A5BA2'};
+  const v=el(`
+    <div class="fade">
+      <div class="panel" style="text-align:center;padding:26px 20px;">
+        ${prevHtml}
+        <div class="prog">${dots}</div>
+        ${idx<total?`
+        <div class="trans-next">
+          <div style="font-size:13px;color:var(--ink-soft);margin-bottom:5px;">다음 스테이지 ${idx+1}/${total}</div>
+          <div style="font-family:'Jua';font-size:22px;">${next.label}</div>
+        </div>`:''}
+        <button class="btn" id="goNext" style="background:${colorMap[next.type]};margin-top:16px;font-size:23px;padding:19px;">
+          ${isFirst?'시작하기':'다음 스테이지 →'}
+        </button>
+        <button class="btn btn-ghost" id="quitBtn" style="font-size:17px;padding:13px;margin-top:8px;">홈으로</button>
+      </div>
+    </div>`);
+  app.appendChild(v);
+  v.querySelector('#goNext').addEventListener('click',()=>runGame(next, onGameDone));
+  v.querySelector('#quitBtn').addEventListener('click',()=>renderHome());
+}
+function runGame(stage, onDone){
+  if(stage.type==='speed') playSpeed({lv:stage.lv, rounds:5, onDone});
+  else if(stage.type==='memory') playMemory({lv:stage.lv, onDone});
+  else if(stage.type==='seq') playSeq({lv:stage.lv, onDone});
+  else if(stage.type==='math') playMath({lv:stage.lv, qs:6, onDone});
+}
+function stageBar(){
+  if(!session) return '';
+  const {idx,stages}=session; const s=stages[idx];
+  return `<div class="stage-bar ${s.type}-bar"><span>${s.label}</span><span>스테이지 ${idx+1} / ${stages.length}</span></div>`;
+}
+
+// ==========================================================
+// GAME 1: 순간 포착
+// ==========================================================
+function playSpeed({lv, rounds=5, onDone=null}={}){
+  const s0=speedStart(lv||curLevel());
+  const findCount=s0.findCount, size=s0.size;
+  let round=0, totalScore=0, flash=s0.flash;
+  const totalRounds=rounds;
+  const maxScore=totalRounds*findCount;
+  const emojiFs=size===3?'38px':'30px';
+
+  function frame(inner){
+    clear();
+    const v=el(`
+      <div class="fade">
+        ${stageBar()}
+        <div class="scoreline"><span class="pill">⚡ ${round}/${totalRounds}</span><span class="pill" id="sc">맞춘 칸 ${totalScore}</span></div>
+        <div class="panel" id="stage">${inner}</div>
+      </div>`);
+    app.appendChild(v);
+    return v.querySelector('#stage');
+  }
+  function next(){
+    if(round>=totalRounds){ const score=Math.round(totalScore/maxScore*100); return onDone?onDone(score):null; }
+    round++;
+    const stage=frame(`<div class="countdown" id="cd" style="font-size:70px;">준비</div>`);
+    const cd=stage.querySelector('#cd');
+    setTimeout(()=>{cd.textContent='잘 보세요!';cd.style.color='var(--speed)';},300);
+    setTimeout(showFlash,900);
+  }
+  function showFlash(){
+    const n=size*size;
+    const positions=shuffle([...Array(n).keys()]).slice(0,findCount);
+    const emojis=shuffle(EMOJIS.slice()).slice(0,findCount);
+    let cells='';
+    for(let i=0;i<n;i++){
+      const pi=positions.indexOf(i);
+      cells+=`<div class="cell" data-i="${i}" style="font-size:${emojiFs}">${pi>=0?`<span>${emojis[pi]}</span>`:''}</div>`;
+    }
+    const stage=frame(`
+      <div id="label" style="font-family:'Jua';font-size:22px;margin-bottom:10px;">잘 보세요! <span style="color:var(--speed)">${findCount}개</span></div>
+      <div class="flashgrid" style="grid-template-columns:repeat(${size},1fr);max-width:${size===3?'360px':'340px'};">${cells}</div>`);
+    const grid=stage.querySelector('.flashgrid');
+    positions.forEach(p=>grid.querySelector(`[data-i="${p}"]`).classList.add('lit'));
+    setTimeout(()=>{
+      grid.querySelectorAll('.cell').forEach(c=>{c.classList.remove('lit');c.innerHTML='';});
+      askWhere(grid,positions);
+    },flash);
+  }
+  function askWhere(grid,targets){
+    const label=document.querySelector('#label');
+    const targetSet=new Set(targets); const selected=new Set(); let done=false;
+    label.innerHTML=`어디에 있었나요? <span id="cnt" style="color:var(--speed)">0/${findCount}</span>`;
+    const cnt=label.querySelector('#cnt');
+    grid.querySelectorAll('.cell').forEach(c=>{
+      c.style.cursor='pointer';
+      c.addEventListener('click',()=>{
+        if(done) return;
+        const i=+c.dataset.i;
+        if(selected.has(i)){selected.delete(i);c.classList.remove('selected');c.innerHTML='';cnt.textContent=`${selected.size}/${findCount}`;return;}
+        selected.add(i);c.classList.add('selected');c.innerHTML='<span style="opacity:.5">✓</span>';
+        cnt.textContent=`${selected.size}/${findCount}`;
+        if(selected.size>=findCount) submitAnswer();
+      });
+    });
+    function submitAnswer(){
+      done=true; let roundScore=0;
+      grid.querySelectorAll('.cell').forEach(c=>{
+        const i=+c.dataset.i,isTgt=targetSet.has(i),isPick=selected.has(i);
+        c.classList.remove('selected'); c.innerHTML='';
+        if(isTgt&&isPick){c.classList.add('correct');c.innerHTML='✅';roundScore++;}
+        else if(!isTgt&&isPick){c.classList.add('wrong');c.innerHTML='❌';}
+        else if(isTgt&&!isPick){c.classList.add('correct');c.style.opacity='.5';c.innerHTML='⭐';}
+      });
+      totalScore+=roundScore;
+      const sc=document.querySelector('#sc'); if(sc) sc.textContent='맞춘 칸 '+totalScore;
+      const allRight=roundScore===findCount;
+      if(allRight) flash=Math.max(350,flash-90); else flash=Math.min(1700,flash+130);
+      feedback(allRight?`${pick(PRAISE)} (${findCount}/${findCount})`:`${roundScore}개 맞았어요!`, allRight);
+    }
+  }
+  function feedback(text,good){
+    const stage=document.querySelector('#stage');
+    const fb=el(`<div style="margin-top:14px;font-family:'Jua';font-size:21px;color:${good?'var(--ok)':'var(--warn)'}">${text}</div>`);
+    stage.appendChild(fb); setTimeout(next,1100);
+  }
+  next();
+}
+
+// ==========================================================
+// GAME 2: 짝 맞추기
+// ==========================================================
+function playMemory({lv, onDone=null}={}){
+  const pairs=memPairs(lv||curLevel());
+  const faces=shuffle(EMOJIS).slice(0,pairs);
+  const deck=shuffle([...faces,...faces]);
+  let first=null,lock=false,moves=0,matched=0;
+  const cols=4;
+  const cw=pairs<=4?'80px':pairs<=6?'68px':'60px';
+  clear();
+  let cards='';
+  deck.forEach((f,i)=>{ cards+=`<div class="mcard" data-i="${i}" data-f="${f}"><div class="inner"><div class="mface mfront">?</div><div class="mface mback">${f}</div></div></div>`; });
+  const v=el(`
+    <div class="fade">
+      ${stageBar()}
+      <div class="scoreline"><span class="pill">짝 ${pairs}쌍</span><span class="pill" id="mv">뒤집기 ${moves}</span></div>
+      <div class="memgrid" style="grid-template-columns:repeat(${cols},${cw});">${cards}</div>
+    </div>`);
+  app.appendChild(v);
+  const mv=v.querySelector('#mv');
+  v.querySelectorAll('.mcard').forEach(card=>{
+    card.addEventListener('click',()=>{
+      if(lock||card.classList.contains('flipped')||card.classList.contains('matched')) return;
+      card.classList.add('flipped');
+      if(!first){first=card;return;}
+      moves++; mv.textContent='뒤집기 '+moves;
+      if(first.dataset.f===card.dataset.f){
+        first.classList.add('matched');card.classList.add('matched');
+        beep(660);matched++;first=null;
+        if(matched===pairs) finish();
+      } else {
+        lock=true; beep(220,0.12);
+        const a=first,b=card;
+        setTimeout(()=>{a.classList.remove('flipped');b.classList.remove('flipped');first=null;lock=false;},850);
+      }
+    });
+  });
+  function finish(){
+    const eff=Math.max(0,pairs/moves);
+    const score=Math.round(Math.min(100,eff*100));
+    beep(660);
+    setTimeout(()=>{ if(onDone) onDone(score); },600);
+  }
+}
+
+// ==========================================================
+// GAME 3: 순서 기억
+// ==========================================================
+function playSeq({lv, onDone=null}={}){
+  const L=lv||curLevel();
+  const startLen=seqStart(L);
+  const flashMs=seqFlashMs(L);
+  const maxLen=startLen+7;
+  const freqs=[330,392,494,587];
+  let seq=[],level=startLen-1,lock=true,maxReached=startLen-1;
+  for(let i=0;i<startLen-1;i++) seq.push(rnd(4));
+  clear();
+  const v=el(`
+    <div class="fade">
+      ${stageBar()}
+      <div class="scoreline"><span class="pill" id="lv">${startLen}단계</span><span class="pill" id="st">잘 보세요</span></div>
+      <div class="padwrap">
+        <div class="pad p0" data-p="0"></div><div class="pad p1" data-p="1"></div>
+        <div class="pad p2" data-p="2"></div><div class="pad p3" data-p="3"></div>
+      </div>
+    </div>`);
+  app.appendChild(v);
+  const pads=[...v.querySelectorAll('.pad')];
+  const lvEl=v.querySelector('#lv'),stEl=v.querySelector('#st');
+  let input=[];
+  pads.forEach(p=>p.addEventListener('click',()=>{
+    if(lock) return;
+    const i=+p.dataset.p; flashPad(i); input.push(i);
+    const idx=input.length-1;
+    if(input[idx]!==seq[idx]) return gameover();
+    if(input.length===seq.length){
+      lock=true; maxReached=level; stEl.textContent='좋아요! 😊';
+      if(level>=maxLen) return gameover(true);
+      setTimeout(nextLevel,850);
+    }
+  }));
+  function flashPad(i,dur=320){ pads[i].classList.add('on'); beep(freqs[i]); setTimeout(()=>pads[i].classList.remove('on'),dur); }
+  function nextLevel(){
+    level++; lvEl.textContent=level+'단계'; stEl.textContent='잘 보세요';
+    seq.push(rnd(4)); input=[]; lock=true;
+    let k=0;
+    const t=setInterval(()=>{
+      if(k<seq.length){flashPad(seq[k]);k++;}
+      else{clearInterval(t);lock=false;stEl.textContent='따라 누르세요';}
+    },flashMs);
+  }
+  function gameover(success=false){
+    pads.forEach(p=>p.classList.remove('on'));
+    if(!success) beep(160,0.3);
+    const reached=Math.max(0,maxReached-(startLen-1));
+    const score=Math.round(Math.min(100,reached/7*100));
+    setTimeout(()=>{ if(onDone) onDone(score); },500);
+  }
+  setTimeout(nextLevel,600);
+}
+
+// ==========================================================
+// GAME 4: 빠른 셈
+// ==========================================================
+function playMath({lv, qs=10, onDone=null}={}){
+  let q=0,score=0,level=lv||curLevel(); const total=qs;
+  let timer=null;
+  function makeProblem(){
+    const big=level<=2?9:Math.min(99,level*9);
+    const pool=['+']; if(level>=2) pool.push('−'); if(level>=7) pool.push('×');
+    const op=pick(pool);
+    let a,b,ans;
+    if(op==='×'){a=rnd(8)+2;b=rnd(8)+2;ans=a*b;}
+    else if(op==='−'){a=rnd(big)+2;b=rnd(a-1)+1;ans=a-b;}
+    else{a=rnd(big)+1;b=rnd(big)+1;ans=a+b;}
+    const opts=new Set([ans]); let guard=0;
+    while(opts.size<4&&guard++<60){const d=ans+(rnd(11)-5);if(d>=0&&d!==ans)opts.add(d);}
+    while(opts.size<4){opts.add(ans+opts.size+1);}
+    return{text:`${a} ${op} ${b}`,ans,opts:shuffle([...opts])};
+  }
+  function next(){
+    if(q>=total){ const finalScore=Math.round(score/total*100); return onDone?onDone(finalScore):null; }
+    q++;
+    const p=makeProblem();
+    clear();
+    const v=el(`
+      <div class="fade">
+        ${stageBar()}
+        <div class="scoreline"><span class="pill">🔢 ${q}/${total}</span><span class="pill">맞춘 개수 ${score}</span></div>
+        <div class="panel">
+          <div class="qbox">${p.text} = ?</div>
+          <div class="timerbar"><div class="timerfill" id="tf"></div></div>
+          <div class="choices">${p.opts.map(o=>`<button class="choice" data-v="${o}">${o}</button>`).join('')}</div>
+        </div>
+      </div>`);
+    app.appendChild(v);
+    const tf=v.querySelector('#tf');
+    let answered=false,t=100;
+    timer=setInterval(()=>{t-=1.1;tf.style.width=Math.max(0,t)+'%';if(t<=0){clearInterval(timer);if(!answered)timeUp(p,v);}},100);
+    v.querySelectorAll('.choice').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        if(answered) return; answered=true; clearInterval(timer);
+        const val=+btn.dataset.v;
+        if(val===p.ans){btn.classList.add('right');beep(660);score++;if(level<10)level++;msg(v,pick(PRAISE),true);}
+        else{btn.classList.add('wrongpick');beep(220,0.12);const r=v.querySelector(`.choice[data-v="${p.ans}"]`);if(r)r.classList.add('right');if(level>1)level--;msg(v,'정답은 '+p.ans+'이에요',false);}
+      });
+    });
+  }
+  function timeUp(p,v){const r=v.querySelector(`.choice[data-v="${p.ans}"]`);if(r)r.classList.add('right');if(level>1)level--;msg(v,'정답은 '+p.ans+'이에요',false);}
+  function msg(v,text,good){
+    const m=el(`<div style="margin-top:14px;font-family:'Jua';font-size:22px;color:${good?'var(--ok)':'var(--warn)'}">${text}</div>`);
+    v.querySelector('.panel').appendChild(m); setTimeout(next,good?750:1100);
+  }
+  next();
+}
+
+// ==========================================================
+// CARD AWARD LOGIC
+// ==========================================================
+async function maybeAwardCard(totalScore){
+  cardIndex = await loadCardIndex();
+  if(!cardIndex.length) return;
+  let awarded=false, reason=null;
+  if(totalScore>=90){ awarded=true; reason='clear'; }
+  else if(Math.random()<0.01){ awarded=true; reason='lucky'; }
+  if(!awarded) return;
+  const card=pick(cardIndex);
+  currentMember.cards=currentMember.cards||{};
+  currentMember.cards[card.id]=(currentMember.cards[card.id]||0)+1;
+  saveMember();
+  const img=await getCardImage(card.id);
+  showCardRevealModal(card, img, reason);
+}
+function showCardRevealModal(card, img, reason){
+  const subtitle = reason==='clear' ? '90점 클리어 보상 🎯' : '행운의 카드! (1% 확률) 🍀';
+  const countText = `보유 ${currentMember.cards[card.id]}장`;
+  playCardRevealEffect(card, img, {subtitle, countText});
+}
+function playCardSound(){
+  beep(523,0.12); setTimeout(()=>beep(659,0.12),90); setTimeout(()=>beep(784,0.2),180);
+}
+function spawnBurstParticles(container){
+  const parts=['✨','⭐','🎊','💥','🌟'];
+  for(let i=0;i<14;i++){
+    const p=document.createElement('div');
+    p.className='burst-particle';
+    p.textContent=pick(parts);
+    const angle=Math.random()*Math.PI*2;
+    const dist=55+Math.random()*95;
+    p.style.setProperty('--bx',(Math.cos(angle)*dist)+'px');
+    p.style.setProperty('--by',(Math.sin(angle)*dist)+'px');
+    p.style.fontSize=(16+Math.random()*14)+'px';
+    p.style.animationDelay=(Math.random()*0.08)+'s';
+    container.appendChild(p);
+    setTimeout(()=>p.remove(),900);
+  }
+}
+function playCardRevealEffect(card, img, {countText=null, subtitle='', headline='축하합니다 카드를 획득했어요!'}={}){
+  confetti();
+  playCardSound();
+  const ov=el(`
+    <div class="overlay">
+      <div class="modal fade" style="text-align:center;">
+        <div style="font-family:'Jua';font-size:24px;color:var(--speed);margin-bottom:4px;">${headline}</div>
+        ${subtitle?`<div style="font-size:14px;color:var(--ink-soft);margin-bottom:14px;">${subtitle}</div>`:''}
+        <div class="card-fx-wrap" id="fxWrap">
+          <div class="card-burst-ring"></div>
+          ${img?`<img class="card-jelly" src="${img}" style="width:190px;max-width:70%;border-radius:18px;box-shadow:0 10px 26px rgba(0,0,0,.2);background:#fff;">`
+               :`<div class="card-jelly" style="font-size:70px;">🎴</div>`}
+        </div>
+        <div style="font-family:'Jua';font-size:20px;margin-top:12px;">${card.name||'이름 없음'}</div>
+        ${countText?`<div style="font-size:14px;color:var(--ink-soft);margin-top:2px;">${countText}</div>`:''}
+        <button class="btn btn-primary" id="closeCard" style="margin-top:18px;">확인</button>
+      </div>
+    </div>`);
+  document.body.appendChild(ov);
+  spawnBurstParticles(ov.querySelector('#fxWrap'));
+  ov.querySelector('#closeCard').addEventListener('click',()=>ov.remove());
+}
+function showLockedCardMsg(){
+  const ov=el(`
+    <div class="overlay">
+      <div class="modal fade" style="text-align:center;">
+        <div style="font-size:48px;">🔒</div>
+        <div style="font-family:'Jua';font-size:20px;margin:10px 0 6px;">아직 만나지 못한 카드예요</div>
+        <div style="font-size:15px;color:var(--ink-soft);line-height:1.6;">게임을 90점 이상으로 클리어하면<br>새로운 카드를 만날 수 있어요!</div>
+        <button class="btn btn-ghost" id="closeLock" style="margin-top:16px;">확인</button>
+      </div>
+    </div>`);
+  document.body.appendChild(ov);
+  ov.querySelector('#closeLock').addEventListener('click',()=>ov.remove());
+}
+
+// ==========================================================
+// FINAL RESULT
+// ==========================================================
+function showFinalResult(){
+  const{stageScores,domainScores}=session;
+  const totalScore=Math.round(stageScores.reduce((a,b)=>a+b,0)/stageScores.length);
+  const avg=d=>domainScores[d].length?Math.round(domainScores[d].reduce((a,b)=>a+b,0)/domainScores[d].length):0;
+  const domains={
+    speed:{label:'⚡ 처리속도',score:avg('speed')},
+    seq:{label:'🎵 작업기억',score:avg('seq')},
+    math:{label:'🔢 계산력',score:avg('math')},
+    memory:{label:'🃏 기억력',score:avg('memory')},
+  };
+  if(totalScore>(currentMember.bestTotal||0)){currentMember.bestTotal=totalScore;saveMember();}
+  const stars=totalScore>=80?3:totalScore>=60?2:1;
+  const starStr='⭐'.repeat(stars)+'☆'.repeat(3-stars);
+  if(stars>=2) confetti();
+  const barHtml=Object.values(domains).map(d=>`
+    <div class="domain-row">
+      <div class="dlabel"><span>${d.label}</span><span style="color:${scoreColor(d.score)}">${d.score}점</span></div>
+      <div class="dtrack"><div class="dfill" style="width:${d.score}%;background:${scoreColor(d.score)};"></div></div>
+    </div>`).join('');
+  const diag=getDiagnosis(totalScore,domains);
+  clear();
+  const v=el(`
+    <div class="fade">
+      <div class="panel" style="margin-bottom:14px;">
+        <div style="font-family:'Jua';font-size:24px;margin-bottom:4px;">오늘의 두뇌 운동 완료! 🏁</div>
+        <div class="stars">${starStr}</div>
+        <div style="font-family:'Jua';font-size:58px;color:${scoreColor(totalScore)};line-height:1.1;">${totalScore}점</div>
+        <div style="font-size:15px;color:var(--ink-soft);margin-top:6px;">최고 기록: ${currentMember.bestTotal}점</div>
+      </div>
+      <div class="panel" style="text-align:left;margin-bottom:14px;">
+        <div style="font-family:'Jua';font-size:20px;margin-bottom:14px;">📊 영역별 점수</div>
+        ${barHtml}
+      </div>
+      <div class="panel" style="text-align:left;margin-bottom:14px;">
+        <div style="font-family:'Jua';font-size:20px;margin-bottom:10px;">💬 오늘의 진단</div>
+        <div style="font-size:17px;line-height:1.8;color:var(--ink);">${diag}</div>
+      </div>
+      <button class="btn btn-primary" id="retry" style="font-size:23px;padding:19px;">다시 도전하기</button>
+      <div class="btn-row" style="margin-top:10px;"><button class="btn btn-ghost" id="home">홈으로</button></div>
+    </div>`);
+  app.appendChild(v);
+  v.querySelector('#retry').addEventListener('click',startSession);
+  v.querySelector('#home').addEventListener('click',()=>renderHome());
+  maybeAwardCard(totalScore);
+}
+function getDiagnosis(total,domains){
+  const entries=Object.entries(domains).sort((a,b)=>a[1].score-b[1].score);
+  const weakest=entries[0], strongest=entries[entries.length-1];
+  const names={speed:'처리속도',seq:'작업기억',math:'계산력',memory:'기억력'};
+  const advice={
+    speed:'순간 판단력과 처리속도를 높이는 훈련을 꾸준히 해보세요.',
+    seq:'순서를 기억하는 작업기억 훈련에 좀 더 집중해 보시면 도움이 될 거예요.',
+    math:'매일 간단한 계산 연습을 하시면 계산력이 빠르게 향상됩니다.',
+    memory:'그림이나 단어를 외우는 기억력 훈련을 더 해보시면 좋겠어요.',
+  };
+  let lines=[];
+  if(total>=85) lines.push('모든 인지 영역이 매우 우수한 수준이에요!');
+  else if(total>=70) lines.push('전반적으로 양호한 수준이에요.');
+  else if(total>=55) lines.push('기본적인 인지 기능은 잘 유지되고 있어요.');
+  else lines.push('오늘은 조금 어려우셨나요? 천천히 꾸준히 하면 반드시 좋아져요.');
+  if(strongest[1].score>=80) lines.push(`특히 ${names[strongest[0]]} 능력이 뛰어나세요!`);
+  if(weakest[1].score<65) lines.push(advice[weakest[0]]);
+  lines.push('매일 조금씩 꾸준히 하는 것이 두뇌 건강의 가장 좋은 방법이에요 😊');
+  return lines.join('<br>');
+}
+
+// ==========================================================
+// HOME SCREEN
+// ==========================================================
+async function renderHome(isNew=false){
+  session=null; clear();
+  cardIndex = await loadCardIndex();
+  const owned=Object.keys(currentMember.cards||{}).length;
+  const hour=new Date().getHours();
+  const greet = isNew ? '환영합니다! 첫 방문이시네요' : (hour<11?'좋은 아침이에요':hour<17?'좋은 오후예요':'편안한 저녁이에요');
+  const streakHtml=currentMember.streak>0?`<div class="streak">🔥 ${currentMember.streak}일째 운동 중!</div>`:'';
+  const bestHtml=currentMember.bestTotal?`<div class="streak" style="background:#E5F6F0;border-color:#A5DDD0;color:#1E8E7B;">🏆 최고 ${currentMember.bestTotal}점</div>`:'';
+  const cardHtml=`<div class="streak card-badge">🎴 카드 ${owned}/${cardIndex.length}종</div>`;
+
+  const v=el(`
+    <div class="fade">
+      <div class="topbar">
+        <div class="brand">🧠 오늘의 두뇌 운동</div>
+        <button class="iconbtn" id="infoBtn">ℹ️</button>
+      </div>
+      <div class="hero">
+        <p class="hello">${greet} 😊</p>
+        <p class="sub">4가지 두뇌 운동을 8스테이지로<br>연속해서 해봐요.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">${streakHtml}${bestHtml}${cardHtml}</div>
+      </div>
+      <div class="hero" style="padding:16px 20px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+          <div>
+            <div style="font-family:'Jua';font-size:20px;">난이도 ${'⭐'.repeat(Math.min(5,Math.ceil(curLevel()/2)))}</div>
+            <div style="font-size:14px;color:var(--ink-soft);margin-top:2px;">숫자가 클수록 어려워요</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <button class="iconbtn" id="lvDown" style="font-family:'Jua';font-size:28px;">−</button>
+            <div style="font-family:'Jua';font-size:36px;min-width:54px;text-align:center;">${curLevel()}<span style="font-size:18px;color:var(--ink-soft)">단계</span></div>
+            <button class="iconbtn" id="lvUp" style="font-family:'Jua';font-size:26px;">＋</button>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="startBtn" style="font-size:27px;padding:23px;margin-top:0;">시작하기</button>
+      <button class="btn btn-ghost" id="myCardsBtn" style="font-size:18px;">📚 라이브러리</button>
+      <div style="text-align:center;margin-top:18px;display:flex;justify-content:center;gap:16px;">
+        <button class="footer-link" id="switchUser">다른 생년월일로 로그인</button>
+        <button class="footer-link" id="toAdmin">관리자 페이지</button>
+      </div>
+    </div>`);
+  app.appendChild(v);
+  v.querySelector('#infoBtn').addEventListener('click',showInfo);
+  v.querySelector('#lvDown').addEventListener('click',()=>{setLevel(curLevel()-1);renderHome();});
+  v.querySelector('#lvUp').addEventListener('click',()=>{setLevel(curLevel()+1);renderHome();});
+  v.querySelector('#startBtn').addEventListener('click',startSession);
+  v.querySelector('#myCardsBtn').addEventListener('click',renderMyCards);
+  v.querySelector('#switchUser').addEventListener('click',()=>{ currentMember=null; renderLoginScreen(); });
+  v.querySelector('#toAdmin').addEventListener('click',()=>renderAdminPinScreen());
+}
+function showInfo(){
+  const ov=el(`
+    <div class="overlay"><div class="modal fade">
+      <h2 style="font-family:'Jua'">왜 이 게임들인가요?</h2>
+      <p>4가지 인지 영역을 한 번에 훈련합니다.<br>
+        <b>⚡ 처리속도</b> — 순간 판단력<br>
+        <b>🎵 작업기억</b> — 순서 기억<br>
+        <b>🔢 계산력</b> — 빠른 연산<br>
+        <b>🃏 기억력</b> — 위치·패턴 기억</p>
+      <p>여러 연구에서 한 가지보다 여러 영역을 함께 훈련할 때 더 큰 효과가 있다고 보고하고 있어요. 모든 게임은 잘하시면 더 어려워지고, 어려워하시면 다시 쉬워지는 적응형이에요.</p>
+      <p style="color:var(--ink-soft);font-size:14px;">※ 이 게임은 즐거운 두뇌 활동을 돕기 위한 것이며, 의학적 진단이나 치료를 대신하지 않습니다.</p>
+      <button class="btn btn-primary" id="closeInfo">닫기</button>
+    </div></div>`);
+  document.body.appendChild(ov);
+  ov.querySelector('#closeInfo').addEventListener('click',()=>ov.remove());
+  ov.addEventListener('click',e=>{if(e.target===ov)ov.remove();});
+}
+
+// ==========================================================
+// MY CARDS
+// ==========================================================
+async function renderMyCards(){
+  clear();
+  cardIndex = await loadCardIndex();
+  const owned=currentMember.cards||{};
+  const imgMap={};
+  clear();
+  const v=el(`
+    <div class="fade">
+      <div class="topbar"><div class="brand">📚 라이브러리</div><button class="iconbtn" id="back">‹</button></div>
+      <div class="panel" style="margin-bottom:14px;">
+        <div style="font-family:'Jua';font-size:22px;">${Object.keys(owned).length} / ${cardIndex.length}종 수집</div>
+        <div style="font-size:14px;color:var(--ink-soft);margin-top:4px;">카드를 눌러보세요</div>
+      </div>
+      <div class="mycard-grid" id="grid">${cardIndex.length?'':'<div style="grid-column:1/-1;color:var(--ink-soft);padding:20px 0;">아직 등록된 카드가 없어요</div>'}</div>
+    </div>`);
+  app.appendChild(v);
+  v.querySelector('#back').addEventListener('click',()=>renderHome());
+  const grid=v.querySelector('#grid');
+  cardIndex.forEach(c=>{
+    const cnt=owned[c.id]||0;
+    const item=el(`<div class="mycard-item ${cnt?'':'empty'}" style="cursor:pointer;">
+      <div class="ph">${cnt?'❓':'🔒'}</div>
+      <div class="nm">${cnt?c.name:'???'}</div>
+      ${cnt?`<div class="cnt">×${cnt}</div>`:''}
+    </div>`);
+    grid.appendChild(item);
+    if(cnt){
+      getCardImage(c.id).then(img=>{
+        imgMap[c.id]=img;
+        if(img){ const ph=item.querySelector('.ph'); if(ph) ph.outerHTML = `<img src="${img}">`; }
+      });
+    }
+    item.addEventListener('click', async ()=>{
+      if(!cnt) return showLockedCardMsg();
+      let img=imgMap[c.id];
+      if(img===undefined) img=await getCardImage(c.id);
+      playCardRevealEffect(c, img, {countText:`보유 ${cnt}장`});
+    });
+  });
+}
+
+// ==========================================================
+// ADMIN DASHBOARD
+// ==========================================================
+async function renderAdminDashboard(){
+  clear();
+  cardIndex = await loadCardIndex();
+  const members = await listAllMembers();
+
+  const v=el(`
+    <div class="fade">
+      <div class="topbar">
+        <div class="brand">🛠️ 관리자 페이지</div>
+        <button class="iconbtn" id="exitAdmin">✕</button>
+      </div>
+
+      <div class="admin-panel">
+        <div class="section-title">📥 카드 등록</div>
+        <div class="dropzone" id="dropzone">
+          이미지를 여기로 끌어다 놓으세요<br>
+          <span style="font-size:13px;">(여러 장 한번에 가능 · gif 지원 · 탭해서 선택도 가능 · 장당 1.5MB 이하 권장)</span>
+        </div>
+        <input type="file" id="fileInput" accept="image/*" multiple style="display:none;">
+        <div id="uploadStatus" style="font-size:14px;color:var(--ink-soft);margin-top:8px;"></div>
+        <button class="btn btn-ghost btn-small" id="toLibrary">📚 라이브러리에서 확인하기</button>
+        <div class="card-admin-grid" id="cardGrid"></div>
+      </div>
+
+      <div class="admin-panel">
+        <div class="section-title">👥 회원 수집 현황 (${members.length}명 · 카드 ${cardIndex.length}종)</div>
+        <div id="memberList"></div>
+      </div>
+
+      <button class="btn btn-ghost" id="exitAdmin2">닫기</button>
+    </div>`);
+  app.appendChild(v);
+
+  const exit=()=> currentMember?renderHome():renderLoginScreen();
+  v.querySelector('#exitAdmin').addEventListener('click',exit);
+  v.querySelector('#exitAdmin2').addEventListener('click',exit);
+  v.querySelector('#toLibrary').addEventListener('click',renderAdminLibrary);
+
+  // ---- card grid render ----
+  const cardGrid=v.querySelector('#cardGrid');
+  function renderCardGrid(){
+    cardGrid.innerHTML = cardIndex.length? '' : '<div style="grid-column:1/-1;color:var(--ink-soft);padding:10px 0;font-size:14px;">등록된 카드가 없어요</div>';
+    cardIndex.forEach(c=>{
+      const isDefault=String(c.id).startsWith('default_');
+      const item=el(`<div class="card-admin-item" data-id="${c.id}">
+        ${isDefault?'<span style="position:absolute;bottom:2px;left:2px;background:rgba(0,0,0,.55);color:#fff;font-size:10px;border-radius:6px;padding:1px 5px;">기본</span>'
+                   :`<button class="del" data-id="${c.id}">×</button>`}
+      </div>`);
+      cardGrid.appendChild(item);
+      getCardImage(c.id).then(img=>{ if(img){ const im=document.createElement('img'); im.src=img; item.insertBefore(im, item.firstChild); } });
+    });
+    cardGrid.querySelectorAll('.del').forEach(b=>{
+      b.addEventListener('click', async ()=>{
+        const id=b.dataset.id;
+        cardIndex = cardIndex.filter(c=>c.id!==id);
+        await saveCardIndex(cardIndex);
+        await deleteCardImage(id);
+        renderAdminDashboard();
+      });
+    });
+  }
+  renderCardGrid();
+
+  // ---- drop zone ----
+  const dz=v.querySelector('#dropzone');
+  const fileInput=v.querySelector('#fileInput');
+  const statusEl=v.querySelector('#uploadStatus');
+  dz.addEventListener('click',()=>fileInput.click());
+  dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('dragover');});
+  dz.addEventListener('dragleave',()=>dz.classList.remove('dragover'));
+  dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('dragover');handleFiles(e.dataTransfer.files);});
+  fileInput.addEventListener('change',e=>handleFiles(e.target.files));
+
+  async function handleFiles(fileList){
+    const files=Array.from(fileList).filter(f=>f.type.startsWith('image/'));
+    if(!files.length) return;
+    let done=0, skipped=0;
+    statusEl.textContent=`0/${files.length}장 등록 중...`;
+    for(const f of files){
+      if(f.size>1.5*1024*1024){ skipped++; done++; statusEl.textContent=`${done}/${files.length}장 처리 중... (용량 초과 ${skipped}건 건너뜀, 1.5MB 이하 권장)`; continue; }
+      try{
+        const dataUrl=await readFileAsDataURL(f);
+        const id='c'+Date.now()+'_'+rnd(100000);
+        const saved=await saveCardImage(id, dataUrl);
+        if(saved) cardIndex.push({id, name:f.name.replace(/\.[^/.]+$/,''), mime:f.type, addedAt:Date.now()});
+        else skipped++;
+      }catch(e){ skipped++; }
+      done++;
+      statusEl.textContent=`${done}/${files.length}장 등록 중...`;
+    }
+    await saveCardIndex(cardIndex);
+    statusEl.textContent=`완료! ${files.length-skipped}장 등록됨${skipped?` (건너뜀 ${skipped}건)`:''}`;
+    setTimeout(renderAdminDashboard, 700);
+  }
+
+  // ---- members list ----
+  const memberList=v.querySelector('#memberList');
+  if(!members.length){
+    memberList.innerHTML='<div style="color:var(--ink-soft);font-size:14px;padding:8px 0;">아직 가입한 회원이 없어요</div>';
+  } else {
+    members.forEach(m=>{
+      const bd=m.birthdate||'';
+      const fmt = bd.length===6? `${bd.slice(0,2)}.${bd.slice(2,4)}.${bd.slice(4,6)}` : bd;
+      const cardCount=Object.keys(m.cards||{}).length;
+      const totalCards=Object.values(m.cards||{}).reduce((a,b)=>a+b,0);
+      const last=m.lastLogin? new Date(m.lastLogin).toLocaleDateString('ko-KR') : '-';
+      const row=el(`<div class="member-row">
+        <div>
+          <div style="font-family:'Jua';font-size:15px;">${fmt}</div>
+          <div style="font-size:12px;color:var(--ink-soft);">최근 접속 ${last} · 연속 ${m.streak||0}일 · 최고 ${m.bestTotal||0}점</div>
+        </div>
+        <div style="text-align:right;font-family:'Jua';color:var(--speed);">${cardCount}종<div style="font-size:11px;color:var(--ink-soft);font-family:'Gowun Dodum';">(총 ${totalCards}장)</div></div>
+      </div>`);
+      memberList.appendChild(row);
+    });
+  }
+}
+
+// ==========================================================
+// ADMIN CARD LIBRARY (preview / reveal effect check)
+// ==========================================================
+async function renderAdminLibrary(){
+  clear();
+  cardIndex = await loadCardIndex();
+  const imgMap={};
+  const v=el(`
+    <div class="fade">
+      <div class="topbar"><div class="brand">📚 카드 라이브러리</div><button class="iconbtn" id="back">‹</button></div>
+      <div class="panel" style="margin-bottom:14px;">
+        <div style="font-family:'Jua';font-size:20px;">등록된 카드 ${cardIndex.length}종</div>
+        <div style="font-size:14px;color:var(--ink-soft);margin-top:4px;">카드를 누르면 획득 연출을 미리 볼 수 있어요</div>
+      </div>
+      <div class="mycard-grid" id="grid">${cardIndex.length?'':'<div style="grid-column:1/-1;color:var(--ink-soft);padding:20px 0;">등록된 카드가 없어요</div>'}</div>
+    </div>`);
+  app.appendChild(v);
+  v.querySelector('#back').addEventListener('click',renderAdminDashboard);
+  const grid=v.querySelector('#grid');
+  cardIndex.forEach(c=>{
+    const item=el(`<div class="mycard-item" style="cursor:pointer;">
+      <div class="ph">🎴</div>
+      <div class="nm">${c.name}</div>
+    </div>`);
+    grid.appendChild(item);
+    getCardImage(c.id).then(img=>{
+      imgMap[c.id]=img;
+      if(img){ const ph=item.querySelector('.ph'); if(ph) ph.outerHTML=`<img src="${img}">`; }
+    });
+    item.addEventListener('click', async ()=>{
+      let img=imgMap[c.id];
+      if(img===undefined) img=await getCardImage(c.id);
+      playCardRevealEffect(c, img, {});
+    });
+  });
+}
+
+// ---------- INIT ----------
+(function init(){ renderLoginScreen(); })();
+</script>
+</body>
+</html>
