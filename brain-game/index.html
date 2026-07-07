@@ -25,6 +25,8 @@
   @keyframes flashIn{from{opacity:0;transform:scale(.6);}to{opacity:1;transform:scale(1);}}
   @keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-7px);}75%{transform:translateX(7px);}}
   @keyframes cardPop{0%{opacity:0;transform:scale(.4) rotate(-8deg);}60%{transform:scale(1.08) rotate(2deg);}100%{opacity:1;transform:scale(1) rotate(0);}}
+  @keyframes zoomFadeIn{0%{opacity:0;transform:scale(.94);}100%{opacity:1;transform:scale(1);}}
+  .card-zoom-modal{animation:zoomFadeIn .3s ease both;}
   @keyframes jellyPop{
     0%{transform:scale(.3);opacity:0;}
     15%{opacity:1;}
@@ -836,6 +838,21 @@ function showLockedCardMsg(){
   document.body.appendChild(ov);
   ov.querySelector('#closeLock').addEventListener('click',()=>ov.remove());
 }
+function showCardZoomModal(card, img, countText=null){
+  const ov=el(`
+    <div class="overlay">
+      <div class="modal card-zoom-modal" style="text-align:center;">
+        ${img?`<img src="${img}" style="width:240px;max-width:80%;border-radius:20px;box-shadow:0 10px 30px rgba(0,0,0,.22);background:#fff;">`
+             :`<div style="font-size:80px;">🎴</div>`}
+        <div style="font-family:'Jua';font-size:22px;margin-top:14px;">${card.name||'이름 없음'}</div>
+        ${countText?`<div style="font-size:14px;color:var(--ink-soft);margin-top:2px;">${countText}</div>`:''}
+        <button class="btn btn-ghost" id="closeZoom" style="margin-top:16px;">닫기</button>
+      </div>
+    </div>`);
+  document.body.appendChild(ov);
+  ov.querySelector('#closeZoom').addEventListener('click',()=>ov.remove());
+  ov.addEventListener('click', e=>{ if(e.target===ov) ov.remove(); });
+}
 
 // ==========================================================
 // FINAL RESULT
@@ -1016,7 +1033,7 @@ async function renderMyCards(){
       if(!cnt) return showLockedCardMsg();
       let img=imgMap[c.id];
       if(img===undefined) img=await getCardImage(c.id);
-      playCardRevealEffect(c, img, {countText:`보유 ${cnt}장`});
+      showCardZoomModal(c, img, `보유 ${cnt}장`);
     });
   });
 }
@@ -1040,7 +1057,7 @@ async function renderAdminDashboard(){
         <div class="section-title">📥 카드 등록</div>
         <div class="dropzone" id="dropzone">
           이미지를 여기로 끌어다 놓으세요<br>
-          <span style="font-size:13px;">(여러 장 한번에 가능 · gif 지원 · 탭해서 선택도 가능 · 이미지는 자동으로 압축돼요)</span>
+          <span style="font-size:13px;">(여러 장 한번에 가능 · 이미지는 자동 압축 · gif는 애니메이션 보존을 위해 압축 없이 2MB 이하만 가능)</span>
         </div>
         <input type="file" id="fileInput" accept="image/*" multiple style="display:none;">
         <div id="uploadStatus" style="font-size:14px;color:var(--ink-soft);margin-top:8px;"></div>
@@ -1101,23 +1118,38 @@ async function renderAdminDashboard(){
     const files=Array.from(fileList).filter(f=>f.type.startsWith('image/'));
     if(!files.length) return;
     let done=0, skipped=0;
+    const reasons=new Set();
     statusEl.textContent=`0/${files.length}장 등록 중...`;
     for(const f of files){
-      if(f.size>10*1024*1024){ skipped++; done++; statusEl.textContent=`${done}/${files.length}장 처리 중... (파일이 너무 커요, 10MB 이하로 건너뜀)`; continue; }
+      const isGif=f.type==='image/gif';
+      const limit=isGif?2*1024*1024:10*1024*1024;
+      if(f.size>limit){
+        skipped++; done++; reasons.add(isGif?'gif':'big');
+        statusEl.textContent=`${done}/${files.length}장 처리 중...`;
+        continue;
+      }
       try{
         const dataUrl=await toStorableImage(f);
-        if(!dataUrl){ skipped++; done++; statusEl.textContent=`${done}/${files.length}장 처리 중...`; continue; }
+        if(!dataUrl){ skipped++; done++; reasons.add('quota'); statusEl.textContent=`${done}/${files.length}장 처리 중...`; continue; }
         const id='c'+Date.now()+'_'+rnd(100000);
         const saved=await saveCardImage(id, dataUrl);
         if(saved) cardIndex.push({id, name:f.name.replace(/\.[^/.]+$/,''), mime:f.type, addedAt:Date.now()});
-        else skipped++;
-      }catch(e){ skipped++; }
+        else { skipped++; reasons.add('quota'); }
+      }catch(e){ skipped++; reasons.add('quota'); }
       done++;
       statusEl.textContent=`${done}/${files.length}장 등록 중...`;
     }
     await saveCardIndex(cardIndex);
-    statusEl.textContent=`완료! ${files.length-skipped}장 등록됨${skipped?` (저장 실패 ${skipped}건 — 브라우저 저장 공간을 확인해주세요)`:''}`;
-    setTimeout(renderAdminDashboard, skipped?2200:900);
+    let msg=`완료! ${files.length-skipped}장 등록됨`;
+    if(skipped){
+      const parts=[];
+      if(reasons.has('gif')) parts.push('gif는 2MB 이하만 가능 (압축을 안 해서 원본 그대로 저장돼요)');
+      if(reasons.has('big')) parts.push('10MB 초과 파일 제외');
+      if(reasons.has('quota')) parts.push('저장 공간 부족 — 카드를 좀 지우고 다시 시도해주세요');
+      msg += ` · 건너뜀 ${skipped}건 (${parts.join(', ')})`;
+    }
+    statusEl.textContent=msg;
+    setTimeout(renderAdminDashboard, skipped?3200:900);
   }
 
   // ---- members list ----
@@ -1155,7 +1187,7 @@ async function renderAdminLibrary(){
       <div class="topbar"><div class="brand">📚 카드 라이브러리</div><button class="iconbtn" id="back">‹</button></div>
       <div class="panel" style="margin-bottom:14px;">
         <div style="font-family:'Jua';font-size:20px;">등록된 카드 ${cardIndex.length}종</div>
-        <div style="font-size:14px;color:var(--ink-soft);margin-top:4px;">카드를 누르면 획득 연출을 미리 볼 수 있어요</div>
+        <div style="font-size:14px;color:var(--ink-soft);margin-top:4px;">카드를 누르면 크게 볼 수 있어요</div>
       </div>
       <div class="mycard-grid" id="grid">${cardIndex.length?'':'<div style="grid-column:1/-1;color:var(--ink-soft);padding:20px 0;">등록된 카드가 없어요</div>'}</div>
     </div>`);
@@ -1175,7 +1207,7 @@ async function renderAdminLibrary(){
     item.addEventListener('click', async ()=>{
       let img=imgMap[c.id];
       if(img===undefined) img=await getCardImage(c.id);
-      playCardRevealEffect(c, img, {});
+      showCardZoomModal(c, img);
     });
   });
 }
