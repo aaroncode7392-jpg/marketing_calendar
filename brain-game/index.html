@@ -209,10 +209,36 @@ async function stListKeys(prefix){
   return keys;
 }
 
-// ---------- 에셋 폴더 기본 카드 (배포 시 assets/cards/ 에 파일을 넣고 여기 등록하세요) ----------
+// ---------- 에셋 폴더 기본 카드 (코드에 직접 한 줄씩 등록하는 방식 — 필수 아님) ----------
 // 예시: { id:'default_pikachu', name:'피카츄', file:'assets/cards/pikachu.png' },
 const DEFAULT_CARDS = [
 ];
+
+// ---------- assets/cards 폴더 자동 인식 (가장 쉬운 방법) ----------
+// 이 세 값만 저장소 정보에 맞게 채워두면, assets/cards 폴더에 이미지 파일만 넣어도
+// 코드 수정 없이 자동으로 기본 카드가 됩니다. (GitHub 공개 저장소 전용, 비공개 저장소면 작동 안 함)
+const REPO_OWNER='aaroncode7392-jpg';
+const REPO_NAME='marketing_calendar';
+const REPO_CARDS_PATH='brain-game/assets/cards';
+let assetCardsCache=null, assetCardsLoaded=false;
+async function loadAssetCards(){
+  if(assetCardsLoaded) return assetCardsCache;
+  assetCardsLoaded=true;
+  if(!REPO_OWNER||!REPO_NAME){ assetCardsCache=[]; return assetCardsCache; }
+  try{
+    const res=await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${REPO_CARDS_PATH}`, {cache:'no-store'});
+    if(!res.ok){ assetCardsCache=[]; return assetCardsCache; }
+    const files=await res.json();
+    assetCardsCache = Array.isArray(files) ? files
+      .filter(f=>f.type==='file' && /\.(png|jpe?g|gif|webp)$/i.test(f.name))
+      .map(f=>({
+        id:'asset_'+f.name.replace(/\.[^.]+$/,'').replace(/[^a-zA-Z0-9가-힣_-]/g,'_'),
+        name:f.name.replace(/\.[^.]+$/,''),
+        file:`assets/cards/${f.name}`
+      })) : [];
+  }catch(e){ assetCardsCache=[]; }
+  return assetCardsCache;
+}
 
 // ---------- 공유 카드 파일 (assets/cards-data.json) — 관리자 페이지 '내보내기'로 만든 파일을
 // 이 경로에 올려두면, 코드 수정 없이 모든 기기에 자동으로 같은 카드가 보상으로 뜹니다 ----------
@@ -230,27 +256,30 @@ async function loadSharedCards(){
 
 // ---------- STORAGE HELPERS (카드/회원 데이터) ----------
 async function loadCardIndex(){
-  const shared=await loadSharedCards();
+  const [assetCards, shared]=await Promise.all([loadAssetCards(), loadSharedCards()]);
   const v=await stGet('bg:cards:index');
   const stored=v?JSON.parse(v):[];
   const sharedMeta=shared.map(c=>({id:c.id, name:c.name, mime:c.mime, addedAt:c.addedAt}));
   const seen=new Set(); const merged=[];
-  for(const c of [...DEFAULT_CARDS, ...sharedMeta, ...stored]){
+  for(const c of [...DEFAULT_CARDS, ...assetCards, ...sharedMeta, ...stored]){
     if(seen.has(c.id)) continue;
     seen.add(c.id); merged.push(c);
   }
   return merged;
 }
 async function saveCardIndex(idx){
-  // 기본(에셋 폴더)·공유 파일 카드는 이 기기 저장소에 저장하지 않음 — 항상 원본에서 다시 채워짐
-  const shared=await loadSharedCards();
-  const sharedIds=new Set(shared.map(c=>c.id));
-  const extra=idx.filter(c=>!String(c.id).startsWith('default_') && !sharedIds.has(c.id));
+  // 기본·에셋 폴더·공유 파일 카드는 이 기기 저장소에 저장하지 않음 — 항상 원본에서 다시 채워짐
+  const [assetCards, shared]=await Promise.all([loadAssetCards(), loadSharedCards()]);
+  const lockedIds=new Set([...assetCards.map(c=>c.id), ...shared.map(c=>c.id)]);
+  const extra=idx.filter(c=>!String(c.id).startsWith('default_') && !lockedIds.has(c.id));
   await stSet('bg:cards:index', JSON.stringify(extra));
 }
 async function getCardImage(id){
   const dc=DEFAULT_CARDS.find(c=>c.id===id);
   if(dc) return dc.file;
+  const assetCards=await loadAssetCards();
+  const ac=assetCards.find(c=>c.id===id);
+  if(ac) return ac.file;
   const shared=await loadSharedCards();
   const sc=shared.find(c=>c.id===id);
   if(sc) return sc.img;
@@ -261,8 +290,10 @@ async function saveCardImage(id, dataUrl){
   return await stSet('bg:cards:img:'+id, dataUrl);
 }
 async function deleteCardImage(id){
-  if(String(id).startsWith('default_')) return; // 에셋 폴더 카드는 코드에서만 관리
+  if(String(id).startsWith('default_')) return; // 에셋 폴더(코드 등록) 카드는 코드에서만 관리
+  const assetCards=assetCardsCache||[];
   const shared=sharedCardsCache||[];
+  if(assetCards.some(c=>c.id===id)) return; // assets/cards 폴더 카드는 그 폴더에서 파일을 지워야 함
   if(shared.some(c=>c.id===id)) return; // 공유 파일 카드는 assets/cards-data.json 자체를 교체해야 함
   await stDelete('bg:cards:img:'+id);
 }
@@ -1110,7 +1141,7 @@ async function renderAdminDashboard(){
           <button class="btn btn-ghost btn-small" id="importCards" style="margin-top:0;font-size:15px;">⬆️ 가져오기</button>
         </div>
         <input type="file" id="importFileInput" accept="application/json,.json" style="display:none;">
-        <div style="font-size:12px;color:var(--ink-soft);margin-top:6px;line-height:1.5;">✅ 모든 기기(가족 폰 포함)에 똑같이 보이게 하려면: "내보내기"로 받은 파일 이름을 <b>cards-data.json</b>으로 바꿔서 저장소의 <b>assets</b> 폴더에 올려주세요. 그 뒤로는 아무것도 안 해도 자동으로 반영됩니다.<br>"가져오기"는 이 기기에서만 빠르게 미리 보고 싶을 때 쓰는 기능입니다.</div>
+        <div style="font-size:12px;color:var(--ink-soft);margin-top:6px;line-height:1.5;">✅ 가장 쉬운 방법: 저장소의 <b>assets/cards</b> 폴더에 이미지 파일만 올려두면, 코드 수정 없이 자동으로 모든 기기에 카드가 반영됩니다.<br>아래 내보내기/가져오기는 이 관리자 페이지 안에서만 카드를 등록·전달하고 싶을 때 쓰는 보조 기능입니다.</div>
         <div class="card-admin-grid" id="cardGrid"></div>
       </div>
 
@@ -1142,13 +1173,15 @@ async function renderAdminDashboard(){
   // ---- card grid render ----
   const cardGrid=v.querySelector('#cardGrid');
   async function renderCardGrid(){
-    const shared=await loadSharedCards();
+    const [assetCards, shared]=await Promise.all([loadAssetCards(), loadSharedCards()]);
+    const assetIds=new Set(assetCards.map(c=>c.id));
     const sharedIds=new Set(shared.map(c=>c.id));
     cardGrid.innerHTML = cardIndex.length? '' : '<div style="grid-column:1/-1;color:var(--ink-soft);padding:10px 0;font-size:14px;">등록된 카드가 없어요</div>';
     cardIndex.forEach(c=>{
       const isDefault=String(c.id).startsWith('default_');
+      const isAsset=assetIds.has(c.id);
       const isShared=sharedIds.has(c.id);
-      const badge = isDefault?'기본' : isShared?'공유' : null;
+      const badge = isDefault?'기본' : isAsset?'폴더' : isShared?'공유' : null;
       const item=el(`<div class="card-admin-item" data-id="${c.id}">
         ${badge?`<span style="position:absolute;bottom:2px;left:2px;background:rgba(0,0,0,.55);color:#fff;font-size:10px;border-radius:6px;padding:1px 5px;">${badge}</span>`
                    :`<button class="del" data-id="${c.id}">×</button>`}
