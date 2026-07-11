@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum:wght@400&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore-compat.js"></script>
 <style>
   :root{
     --cream:#FBF4E6; --paper:#FFFFFF; --ink:#3A2E28; --ink-soft:#7A6A5E; --line:#EAD9BE;
@@ -297,7 +299,47 @@ async function deleteCardImage(id){
   if(shared.some(c=>c.id===id)) return; // 공유 파일 카드는 assets/cards-data.json 자체를 교체해야 함
   await stDelete('bg:cards:img:'+id);
 }
+// ---------- Firebase (회원 정보를 모든 기기에서 공유하기 위한 실제 서버) ----------
+// Firebase 콘솔(console.firebase.google.com)에서 프로젝트를 만들고 아래 값을 채워주세요.
+// 비워두면 자동으로 기존 방식(이 기기에만 저장)으로 동작합니다.
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAC1if-NGCLN_lGTGhNSJMiOJE0HRkxE10",
+  authDomain: "brain-game-6ebb9.firebaseapp.com",
+  projectId: "brain-game-6ebb9",
+  storageBucket: "brain-game-6ebb9.firebasestorage.app",
+  messagingSenderId: "89059239180",
+  appId: "1:89059239180:web:39f46ce0519bd0116a1529"
+};
+let fbDb=null, fbTried=false;
+function initFirebase(){
+  if(fbTried) return fbDb;
+  fbTried=true;
+  if(!FIREBASE_CONFIG.apiKey || !FIREBASE_CONFIG.projectId) return null;
+  if(typeof firebase==='undefined') return null;
+  try{
+    if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    fbDb=firebase.firestore();
+  }catch(e){ fbDb=null; }
+  return fbDb;
+}
 async function loadOrCreateMember(bd){
+  const db=initFirebase();
+  if(db){
+    try{
+      const ref=db.collection('members').doc(bd);
+      const snap=await ref.get();
+      if(snap.exists){
+        const m=snap.data();
+        m.lastLogin=new Date().toISOString();
+        await ref.set(m, {merge:true});
+        return {member:m, isNew:false};
+      }
+      const m={ birthdate:bd, joinedAt:new Date().toISOString(), lastLogin:new Date().toISOString(),
+        streak:0, lastDay:null, bestTotal:0, level:8, cards:{} };
+      await ref.set(m);
+      return {member:m, isNew:true};
+    }catch(e){ /* Firebase 실패 시 아래 로컬 저장 방식으로 폴백 */ }
+  }
   const v=await stGet('bg:member:'+bd);
   if(v){
     const m=JSON.parse(v);
@@ -311,10 +353,23 @@ async function loadOrCreateMember(bd){
   return {member:m, isNew:true};
 }
 async function saveMemberRaw(m){
+  const db=initFirebase();
+  if(db){
+    try{ await db.collection('members').doc(m.birthdate).set(m, {merge:true}); return; }catch(e){}
+  }
   await stSet('bg:member:'+m.birthdate, JSON.stringify(m));
 }
 function saveMember(){ if(currentMember) saveMemberRaw(currentMember); }
 async function listAllMembers(){
+  const db=initFirebase();
+  if(db){
+    try{
+      const snap=await db.collection('members').get();
+      const members=[];
+      snap.forEach(doc=>members.push(doc.data()));
+      return members.sort((a,b)=> (b.lastLogin||'').localeCompare(a.lastLogin||''));
+    }catch(e){ /* 실패 시 아래 로컬 목록으로 폴백 */ }
+  }
   const keys=await stListKeys('bg:member:');
   const members=[];
   for(const k of keys){
@@ -340,6 +395,46 @@ const pick=arr=>arr[rnd(arr.length)];
 function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;}
 function clear(){app.innerHTML='';}
 function el(html){const d=document.createElement('div');d.innerHTML=html.trim();return d.firstElementChild;}
+function showToast(text){
+  const t=el(`<div style="position:fixed;left:50%;bottom:34px;transform:translateX(-50%);background:rgba(40,30,25,.9);color:#fff;font-family:'Jua';font-size:15px;padding:12px 22px;border-radius:999px;z-index:90;box-shadow:0 6px 20px rgba(0,0,0,.25);max-width:86vw;text-align:center;">${text}</div>`);
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 2000);
+}
+function buildGiftLink(cardId){
+  const base=location.origin+location.pathname;
+  return `${base}?gift=${encodeURIComponent(cardId)}`;
+}
+async function copyGiftLink(cardId){
+  const url=buildGiftLink(cardId);
+  try{ await navigator.clipboard.writeText(url); return true; }
+  catch(e){
+    try{
+      const ta=document.createElement('textarea');
+      ta.value=url; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+      return true;
+    }catch(e2){ return false; }
+  }
+}
+async function checkPendingGift(){
+  const params=new URLSearchParams(location.search);
+  const giftId=params.get('gift');
+  if(!giftId) return;
+  history.replaceState({}, '', location.pathname); // 링크 중복 사용 방지
+  cardIndex=await loadCardIndex();
+  const card=cardIndex.find(c=>c.id===giftId);
+  if(!card){ showToast('선물 링크가 만료됐거나 잘못됐어요'); return; }
+  const img=await getCardImage(card.id);
+  currentMember.cards=currentMember.cards||{};
+  currentMember.cards[card.id]=(currentMember.cards[card.id]||0)+1;
+  saveMember();
+  playCardRevealEffect(card, img, {
+    countText:`보유 ${currentMember.cards[card.id]}장`,
+    subtitle:'선물 받은 카드예요 🎁',
+    headline:'카드를 선물 받았어요!'
+  });
+}
 let audioCtx=null;
 function beep(freq,dur=0.18){
   try{
@@ -462,6 +557,25 @@ function renderNumpadScreen({title, subtitle, length, mask=false, errorMsg='', o
   if(afterRender) afterRender(v);
 }
 
+// ---------- 메인(스플래시) 화면 ----------
+function renderSplashScreen(){
+  clear();
+  const v=el(`
+    <div class="fade" style="position:relative;min-height:88vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;text-align:center;padding-bottom:16px;">
+      <div style="position:fixed;inset:0;z-index:-1;overflow:hidden;">
+        <img src="assets/main-bg.gif" alt="" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'">
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg, rgba(30,20,15,.12) 0%, rgba(30,20,15,.5) 65%, rgba(20,14,10,.74) 100%);"></div>
+      </div>
+      <div style="font-family:'Jua';font-size:32px;color:#fff;text-shadow:0 3px 12px rgba(0,0,0,.55);margin-bottom:8px;">🧠 오늘의 두뇌 운동</div>
+      <div style="font-size:16px;color:rgba(255,255,255,.92);text-shadow:0 2px 8px rgba(0,0,0,.5);margin-bottom:26px;">두뇌 운동으로 치매 요괴를 물리쳐요!</div>
+      <button class="btn" id="goStart" style="background:#E8633F;font-size:24px;padding:22px;max-width:340px;box-shadow:0 8px 0 rgba(0,0,0,.25);">👹 치매 요괴 퇴치하기</button>
+      <button class="footer-link" id="splashAdmin" style="margin-top:18px;color:rgba(255,255,255,.82);">관리자 페이지</button>
+    </div>`);
+  app.appendChild(v);
+  v.querySelector('#goStart').addEventListener('click', ()=>renderLoginScreen());
+  v.querySelector('#splashAdmin').addEventListener('click', ()=>renderAdminPinScreen());
+}
+
 // ---------- LOGIN ----------
 function renderLoginScreen(errorMsg){
   renderNumpadScreen({
@@ -473,14 +587,23 @@ function renderLoginScreen(errorMsg){
     afterRender:(v)=>{ v.querySelector('#toAdmin').addEventListener('click',()=>renderAdminPinScreen()); }
   });
 }
+function pushCapped(arr, item, cap=50){
+  const a=Array.isArray(arr)?arr.slice():[];
+  a.push(item);
+  if(a.length>cap) a.splice(0, a.length-cap);
+  return a;
+}
 async function attemptLogin(bd){
   const mo=+bd.slice(2,4), d=+bd.slice(4,6);
   const valid = mo>=1 && mo<=12 && d>=1 && d<=31;
   if(!valid){ return renderLoginScreen('생년월일을 다시 확인해주세요'); }
   const {member, isNew} = await loadOrCreateMember(bd);
   currentMember = member;
+  currentMember.loginLog = pushCapped(currentMember.loginLog, new Date().toISOString());
+  saveMember();
   cardIndex = await loadCardIndex();
   renderHome(isNew);
+  await checkPendingGift();
 }
 
 // ---------- ADMIN PIN ----------
@@ -941,7 +1064,12 @@ function showFinalResult(){
     math:{label:'🔢 계산력',score:avg('math')},
     memory:{label:'🃏 기억력',score:avg('memory')},
   };
-  if(totalScore>(currentMember.bestTotal||0)){currentMember.bestTotal=totalScore;saveMember();}
+  if(totalScore>(currentMember.bestTotal||0)){ currentMember.bestTotal=totalScore; }
+  currentMember.scoreLog = pushCapped(currentMember.scoreLog, {
+    ts:new Date().toISOString(), total:totalScore,
+    speed:domains.speed.score, seq:domains.seq.score, math:domains.math.score, memory:domains.memory.score
+  });
+  saveMember();
   const stars=totalScore>=80?3:totalScore>=60?2:1;
   const starStr='⭐'.repeat(stars)+'☆'.repeat(3-stars);
   if(stars>=2) confetti();
@@ -1119,6 +1247,7 @@ async function renderAdminDashboard(){
   clear();
   cardIndex = await loadCardIndex();
   const members = await listAllMembers();
+  const fbActive = !!initFirebase();
 
   const v=el(`
     <div class="fade">
@@ -1126,6 +1255,18 @@ async function renderAdminDashboard(){
         <div class="brand">🛠️ 관리자 페이지</div>
         <button class="iconbtn" id="exitAdmin">✕</button>
       </div>
+
+      ${currentMember ? `
+      <div class="admin-panel" style="background:linear-gradient(135deg,#FFF3DF,#FFE8C8);border-color:#F2D9A6;">
+        <div class="section-title">🎮 지금 이 기기에 로그인 중</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+          <div>
+            <div style="font-family:'Jua';font-size:19px;">${fmtBirthdate(currentMember.birthdate)}</div>
+            <div style="font-size:12px;color:var(--ink-soft);margin-top:2px;">카드 ${Object.keys(currentMember.cards||{}).length}종 보유 · 최고 ${currentMember.bestTotal||0}점</div>
+          </div>
+          <button class="btn btn-primary btn-small" id="giftCurrentBtn" style="width:auto;margin:0;padding:13px 20px;font-size:16px;">🎁 카드 주기</button>
+        </div>
+      </div>` : ''}
 
       <div class="admin-panel">
         <div class="section-title">📥 카드 등록</div>
@@ -1147,6 +1288,9 @@ async function renderAdminDashboard(){
 
       <div class="admin-panel">
         <div class="section-title">👥 회원 수집 현황 (${members.length}명 · 카드 ${cardIndex.length}종)</div>
+        <div style="font-size:12px;color:var(--ink-soft);margin-bottom:10px;line-height:1.5;">${fbActive
+          ? '✅ Firebase에 연결되어 있어요. 이 목록은 기기와 상관없이 가입한 모든 회원이 보여요. 🎁로 아무에게나 카드를 줄 수 있어요.'
+          : '이 목록은 지금 보고 계신 이 기기에 로그인한 적 있는 회원만 보여요. 🎁는 그런 회원에게만 쓸 수 있어요.<br>다른 폰에 있는 사람에게 선물하려면 📚 라이브러리에서 🔗 선물 링크를 복사해서 보내주세요. (Firebase를 연결하면 이 제한이 사라져요)'}</div>
         <div id="memberList"></div>
       </div>
 
@@ -1156,6 +1300,10 @@ async function renderAdminDashboard(){
 
   const exit=()=> currentMember?renderHome():renderLoginScreen();
   v.querySelector('#exitAdmin').addEventListener('click',exit);
+  if(currentMember){
+    const giftBtn=v.querySelector('#giftCurrentBtn');
+    if(giftBtn) giftBtn.addEventListener('click',()=>showGrantCardModal(currentMember));
+  }
   v.querySelector('#exitAdmin2').addEventListener('click',exit);
   v.querySelector('#toLibrary').addEventListener('click',renderAdminLibrary);
   v.querySelector('#exportCards').addEventListener('click', exportCardsToFile);
@@ -1260,16 +1408,17 @@ async function renderAdminDashboard(){
       const totalCards=Object.values(m.cards||{}).reduce((a,b)=>a+b,0);
       const last=m.lastLogin? new Date(m.lastLogin).toLocaleDateString('ko-KR') : '-';
       const row=el(`<div class="member-row">
-        <div>
-          <div style="font-family:'Jua';font-size:15px;">${fmt}</div>
+        <button class="member-info-btn" style="background:none;border:none;text-align:left;cursor:pointer;padding:0;flex:1;">
+          <div style="font-family:'Jua';font-size:15px;">${fmt} <span style="font-size:11px;color:var(--speed);">보기 ›</span></div>
           <div style="font-size:12px;color:var(--ink-soft);">최근 접속 ${last} · 연속 ${m.streak||0}일 · 최고 ${m.bestTotal||0}점</div>
-        </div>
+        </button>
         <div style="display:flex;align-items:center;gap:10px;">
           <div style="text-align:right;font-family:'Jua';color:var(--speed);">${cardCount}종<div style="font-size:11px;color:var(--ink-soft);font-family:'Gowun Dodum';">(총 ${totalCards}장)</div></div>
           <button class="iconbtn gift-btn" style="width:38px;height:38px;font-size:17px;" title="카드 선물하기">🎁</button>
         </div>
       </div>`);
       row.querySelector('.gift-btn').addEventListener('click',()=>showGrantCardModal(m));
+      row.querySelector('.member-info-btn').addEventListener('click',()=>renderMemberDetail(m));
       memberList.appendChild(row);
     });
   }
@@ -1321,6 +1470,19 @@ function fmtBirthdate(bd){
   return bd.length===6? `${bd.slice(0,2)}.${bd.slice(2,4)}.${bd.slice(4,6)}` : bd;
 }
 async function grantCardToMember(birthdate, cardId){
+  const db=initFirebase();
+  if(db){
+    try{
+      const ref=db.collection('members').doc(birthdate);
+      const snap=await ref.get();
+      if(!snap.exists) return false;
+      const m=snap.data();
+      m.cards=m.cards||{};
+      m.cards[cardId]=(m.cards[cardId]||0)+1;
+      await ref.set(m, {merge:true});
+      return true;
+    }catch(e){ return false; }
+  }
   const raw=await stGet('bg:member:'+birthdate);
   if(!raw) return false;
   const m=JSON.parse(raw);
@@ -1357,12 +1519,80 @@ async function showGrantCardModal(member){
     btn.addEventListener('click', async ()=>{
       const cardId=btn.dataset.id;
       await grantCardToMember(member.birthdate, cardId);
+      if(currentMember && currentMember.birthdate===member.birthdate){
+        currentMember.cards=currentMember.cards||{};
+        currentMember.cards[cardId]=(currentMember.cards[cardId]||0)+1;
+      }
       ov.remove();
+      const card=idx.find(c=>c.id===cardId);
+      const img=await getCardImage(cardId);
       renderAdminDashboard();
+      if(card) playCardRevealEffect(card, img, {countText:`${fmtBirthdate(member.birthdate)} 회원에게 선물 완료`, headline:'카드를 선물했어요!'});
     });
   });
 }
 
+// ==========================================================
+// 회원 상세 기록 (로그인 기록 / 점수 활동 내역)
+// ==========================================================
+function fmtDateTime(iso){
+  if(!iso) return '-';
+  const d=new Date(iso);
+  const days=['일','월','화','수','목','금','토'];
+  const hh=d.getHours(), mm=String(d.getMinutes()).padStart(2,'0');
+  const ampm=hh<12?'오전':'오후';
+  const h12=hh%12===0?12:hh%12;
+  return `${d.getMonth()+1}월 ${d.getDate()}일(${days[d.getDay()]}) ${ampm} ${h12}:${mm}`;
+}
+async function renderMemberDetail(member){
+  clear();
+  const fmt=fmtBirthdate(member.birthdate);
+  const cardCount=Object.keys(member.cards||{}).length;
+  const loginLog=(member.loginLog||[]).slice().reverse();
+  const scoreLog=(member.scoreLog||[]).slice().reverse();
+
+  const loginHtml=loginLog.length? loginLog.slice(0,30).map(ts=>`
+      <div style="padding:9px 0;border-bottom:1px solid var(--line);font-size:14px;">${fmtDateTime(ts)}</div>
+    `).join('') : '<div style="color:var(--ink-soft);font-size:14px;padding:8px 0;">로그인 기록이 없어요</div>';
+
+  const scoreHtml=scoreLog.length? scoreLog.slice(0,30).map(s=>`
+      <div style="padding:10px 0;border-bottom:1px solid var(--line);">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:13px;color:var(--ink-soft);">${fmtDateTime(s.ts)}</span>
+          <span style="font-family:'Jua';font-size:18px;color:${scoreColor(s.total)};">${s.total}점</span>
+        </div>
+        <div style="font-size:12px;color:var(--ink-soft);margin-top:3px;">⚡${s.speed} 🎵${s.seq} 🔢${s.math} 🃏${s.memory}</div>
+      </div>
+    `).join('') : '<div style="color:var(--ink-soft);font-size:14px;padding:8px 0;">플레이 기록이 없어요</div>';
+
+  const v=el(`
+    <div class="fade">
+      <div class="topbar">
+        <div class="brand" style="font-size:22px;">${fmt} 님</div>
+        <button class="iconbtn" id="back">‹</button>
+      </div>
+      <div class="panel" style="margin-bottom:14px;text-align:left;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:14px;">
+          <div>가입일<br><b style="font-family:'Jua';font-size:16px;">${fmtDateTime(member.joinedAt)}</b></div>
+          <div>연속 일수<br><b style="font-family:'Jua';font-size:16px;">${member.streak||0}일</b></div>
+          <div>최고 점수<br><b style="font-family:'Jua';font-size:16px;color:${scoreColor(member.bestTotal||0)};">${member.bestTotal||0}점</b></div>
+          <div>보유 카드<br><b style="font-family:'Jua';font-size:16px;">${cardCount}종</b></div>
+        </div>
+      </div>
+      <div class="admin-panel">
+        <div class="section-title">📅 로그인 기록 (최근 ${Math.min(30,loginLog.length)}건)</div>
+        <div>${loginHtml}</div>
+      </div>
+      <div class="admin-panel">
+        <div class="section-title">📊 점수 활동 내역 (최근 ${Math.min(30,scoreLog.length)}건)</div>
+        <div>${scoreHtml}</div>
+      </div>
+      <button class="btn btn-ghost" id="back2">닫기</button>
+    </div>`);
+  app.appendChild(v);
+  v.querySelector('#back').addEventListener('click',renderAdminDashboard);
+  v.querySelector('#back2').addEventListener('click',renderAdminDashboard);
+}
 
 async function renderAdminLibrary(){
   clear();
@@ -1373,7 +1603,7 @@ async function renderAdminLibrary(){
       <div class="topbar"><div class="brand">📚 카드 라이브러리</div><button class="iconbtn" id="back">‹</button></div>
       <div class="panel" style="margin-bottom:14px;">
         <div style="font-family:'Jua';font-size:20px;">등록된 카드 ${cardIndex.length}종</div>
-        <div style="font-size:14px;color:var(--ink-soft);margin-top:4px;">카드를 누르면 획득 연출을 미리 볼 수 있어요</div>
+        <div style="font-size:14px;color:var(--ink-soft);margin-top:4px;">카드를 누르면 획득 연출을 미리 볼 수 있어요<br>🔗 아이콘을 누르면 그 카드를 선물하는 링크가 복사돼요</div>
       </div>
       <div class="mycard-grid" id="grid">${cardIndex.length?'':'<div style="grid-column:1/-1;color:var(--ink-soft);padding:20px 0;">등록된 카드가 없어요</div>'}</div>
     </div>`);
@@ -1381,7 +1611,8 @@ async function renderAdminLibrary(){
   v.querySelector('#back').addEventListener('click',renderAdminDashboard);
   const grid=v.querySelector('#grid');
   cardIndex.forEach(c=>{
-    const item=el(`<div class="mycard-item" style="cursor:pointer;">
+    const item=el(`<div class="mycard-item" style="cursor:pointer;position:relative;">
+      <button class="gift-link-btn" data-id="${c.id}" style="position:absolute;top:2px;right:2px;z-index:2;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:8px;width:26px;height:26px;font-size:13px;cursor:pointer;">🔗</button>
       <div class="ph">🎴</div>
       <div class="nm">${c.name}</div>
     </div>`);
@@ -1389,6 +1620,11 @@ async function renderAdminLibrary(){
     getCardImage(c.id).then(img=>{
       imgMap[c.id]=img;
       if(img){ const ph=item.querySelector('.ph'); if(ph) ph.outerHTML=`<img src="${img}">`; }
+    });
+    item.querySelector('.gift-link-btn').addEventListener('click', async (e)=>{
+      e.stopPropagation();
+      const ok=await copyGiftLink(c.id);
+      showToast(ok?'🔗 선물 링크가 복사됐어요! 카카오톡 등으로 보내주세요':'복사에 실패했어요');
     });
     item.addEventListener('click', async ()=>{
       let img=imgMap[c.id];
@@ -1399,7 +1635,7 @@ async function renderAdminLibrary(){
 }
 
 // ---------- INIT ----------
-(function init(){ renderLoginScreen(); })();
+(function init(){ renderSplashScreen(); })();
 </script>
 </body>
 </html>
