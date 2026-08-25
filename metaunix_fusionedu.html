@@ -49,7 +49,8 @@
   }
   .section-title{font-size:clamp(26px,4vw,40px);font-weight:700;letter-spacing:-.025em;margin:0 0 16px;}
   .section-lede{font-size:16px;color:var(--text-lo);line-height:1.6;max-width:56ch;margin:0 auto 56px;}
-  section.panel{padding:clamp(64px,11vw,140px) 0;}
+  @media (max-width:767px){ section.panel{padding:clamp(64px,11vw,140px) 0;} }
+  @media (min-width:768px){ section.panel{padding:clamp(42px,5.5vw,70px) 0;} }
 
   .btn{
     display:inline-flex;align-items:center;justify-content:center;gap:8px;
@@ -106,8 +107,20 @@
   .hero h1 .hi{color:var(--accent);}
   .hero-sub{font-size:18px;color:var(--text-lo);line-height:1.6;max-width:46ch;margin:0 auto 36px;}
   .hero-ctas{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px;margin-bottom:36px;}
-  .trust-row{font-size:13.5px;color:var(--text-mute);margin-bottom:52px;}
-  .trust-row b{color:var(--text-lo);font-weight:500;}
+  .hero-badges{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-bottom:32px;}
+  .hero-badge{
+    display:inline-flex;align-items:center;gap:7px;font-size:14px;font-weight:700;
+    color:var(--accent);background:var(--accent-soft);border:1px solid var(--accent-line);
+    border-radius:999px;padding:9px 18px;letter-spacing:-.005em;
+  }
+  .hero-badge svg{flex:0 0 auto;}
+  .callout-strong{
+    display:inline-flex;align-items:center;gap:8px;margin-top:22px;padding:11px 20px;
+    border-radius:999px;background:var(--accent-soft);border:1px solid var(--accent-line);
+    color:var(--text-hi);font-size:13.5px;line-height:1.5;
+  }
+  .callout-strong svg{flex:0 0 auto;color:var(--accent);}
+  .callout-strong b{color:var(--accent);}
   .fact-strip{display:flex;flex-wrap:wrap;gap:0;max-width:760px;margin:0 auto;}
   .fact{flex:1 1 200px;padding:0 26px;border-right:1px solid var(--hairline-soft);text-align:center;}
   .fact:last-child{border-right:none;}
@@ -231,15 +244,16 @@
   </div>
   <div class="hero-overlay"></div>
   <div class="wrap hero-inner">
-    <div class="trust-row">
-      <span class="trust-chip"><svg width="12" height="12" viewBox="0 0 16 16"><path d="M8 1l2.1 4.6 5 .5-3.8 3.4 1.1 5-4.4-2.6-4.4 2.6 1.1-5-3.8-3.4 5-.5z" fill="currentColor"/></svg>Autodesk 공인 Gold Partner</span>
-      <span class="trust-chip"><svg width="12" height="12" viewBox="0 0 16 16"><path d="M2 8.5l4 4 8-9" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>국비지원 최대 90% 환급</span>
+    <div class="hero-badges">
+      <span class="hero-badge"><svg width="14" height="14" viewBox="0 0 16 16"><path d="M8 1l2.1 4.6 5 .5-3.8 3.4 1.1 5-4.4-2.6-4.4 2.6 1.1-5-3.8-3.4 5-.5z" fill="currentColor"/></svg>Autodesk 공인 Gold Partner</span>
+      <span class="hero-badge"><svg width="14" height="14" viewBox="0 0 16 16"><path d="M2 8.5l4 4 8-9" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>국비지원 최대 90% 환급</span>
+      <span class="hero-badge"><svg width="14" height="14" viewBox="0 0 16 16"><path d="M2 8.5l4 4 8-9" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>20인 이상 단체 출강 가능</span>
     </div>
     <h1 id="heroTitle">아이디어를 하루 만에,<br><span class="hi">실물로 만드는 법</span></h1>
     <p class="hero-sub" id="heroSub">비전공자도 괜찮습니다. Autodesk Fusion으로 설계부터 CNC 가공까지, 하루 안에 전 과정을 직접 경험하세요.</p>
     <div class="hero-ctas">
       <a class="btn btn-primary" href="#apply">교육 신청하기</a>
-      <a class="btn btn-ghost" href="#schedule">교육 일정 보기</a>
+      <a class="link-arrow" href="#schedule">교육 일정 보기 <span aria-hidden="true">›</span></a>
     </div>
     <div class="fact-strip">
       <div class="fact"><div class="fact-label">교육 레벨</div><div class="fact-value">초급 · 비전공자 가능</div></div>
@@ -249,24 +263,18 @@
   </div>
 </section>
 
-<section class="panel" id="schedule">
+<section class="panel" id="cost">
   <div class="wrap">
-    <span class="eyebrow">교육 일정</span>
-    <h2 class="section-title">전국 5개 지역에서 진행됩니다</h2>
-    <p class="section-lede">가까운 지역과 일정을 확인하고 신청하세요. 정부 예산 소진 시 접수가 조기 마감될 수 있습니다.</p>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>지역</th><th>교육 장소</th><th>일자</th></tr></thead>
-        <tbody>
-          <tr><td class="city">서울</td><td>오토데스크 코리아 @삼성동 아셈타워</td><td class="date">9/16 (수)</td></tr>
-          <tr><td class="city">부산</td><td class="tbd">장소 추후 안내</td><td class="date">9/23 (수)</td></tr>
-          <tr><td class="city">대구</td><td class="tbd">장소 추후 안내</td><td class="date">10/13 (수)</td></tr>
-          <tr><td class="city">서울</td><td>스팩스페이스 @마곡동</td><td class="date">10/20 (화)</td></tr>
-          <tr><td class="city">천안</td><td class="tbd">장소 추후 안내</td><td class="date">11/4 (화)</td></tr>
-        </tbody>
-      </table>
+    <span class="eyebrow">교육 비용</span>
+    <h2 class="section-title">국비지원으로 부담 없이</h2>
+    <div class="cost-box">
+      <span class="cost-old">1,000,000원</span>
+      <span class="cost-arrow">→</span>
+      <span class="cost-new">100,000원</span>
+      <span class="cost-badge">국비지원 최대 90% 환급</span>
     </div>
-    <p class="schedule-note">20명 이상 단체 신청 시 원하는 지역으로 출강도 가능합니다.</p>
+    <p class="cost-note">해당 교육은 <b>'중소기업 인재키움 프리미엄 훈련 사업'</b> 국비 지원 교육입니다. 우선지원대상기업 재직자를 대상으로, 직무 연계 프리미엄 교육 수강료의 최대 90%를 지원하는 제도입니다. 기업 또는 재직자가 훈련비를 선납한 후, 근로자가 훈련을 수료하면 납부한 훈련비의 최대 90%가 환급됩니다.</p>
+    <p class="cost-fine">※ 요건 충족 시 적용되며, 정부 예산 소진 시 접수가 조기 마감될 수 있습니다.</p>
   </div>
 </section>
 
@@ -394,18 +402,24 @@
   </div>
 </section>
 
-<section class="panel" id="cost">
+<section class="panel" id="schedule">
   <div class="wrap">
-    <span class="eyebrow">교육 비용</span>
-    <h2 class="section-title">국비지원으로 부담 없이</h2>
-    <div class="cost-box">
-      <span class="cost-old">1,000,000원</span>
-      <span class="cost-arrow">→</span>
-      <span class="cost-new">100,000원</span>
-      <span class="cost-badge">국비지원 최대 90% 환급</span>
+    <span class="eyebrow">교육 일정</span>
+    <h2 class="section-title">전국 5개 지역에서 진행됩니다</h2>
+    <p class="section-lede">가까운 지역과 일정을 확인하고 신청하세요. 정부 예산 소진 시 접수가 조기 마감될 수 있습니다.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>지역</th><th>교육 장소</th><th>일자</th></tr></thead>
+        <tbody>
+          <tr><td class="city">서울</td><td>오토데스크 코리아 @삼성동 아셈타워</td><td class="date">9/16 (수)</td></tr>
+          <tr><td class="city">부산</td><td class="tbd">장소 추후 안내</td><td class="date">9/23 (수)</td></tr>
+          <tr><td class="city">대구</td><td class="tbd">장소 추후 안내</td><td class="date">10/13 (수)</td></tr>
+          <tr><td class="city">서울</td><td>스팩스페이스 @마곡동</td><td class="date">10/20 (화)</td></tr>
+          <tr><td class="city">천안</td><td class="tbd">장소 추후 안내</td><td class="date">11/4 (화)</td></tr>
+        </tbody>
+      </table>
     </div>
-    <p class="cost-note">해당 교육은 <b>'중소기업 인재키움 프리미엄 훈련 사업'</b> 국비 지원 교육입니다. 우선지원대상기업 재직자를 대상으로, 직무 연계 프리미엄 교육 수강료의 최대 90%를 지원하는 제도입니다. 기업 또는 재직자가 훈련비를 선납한 후, 근로자가 훈련을 수료하면 납부한 훈련비의 최대 90%가 환급됩니다.</p>
-    <p class="cost-fine">※ 요건 충족 시 적용되며, 정부 예산 소진 시 접수가 조기 마감될 수 있습니다.</p>
+    <div class="callout-strong"><svg width="15" height="15" viewBox="0 0 16 16"><path d="M2 8.5l4 4 8-9" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>20명 이상 단체 신청</b> 시 원하는 지역으로 출강도 가능합니다</span></div>
   </div>
 </section>
 
@@ -510,19 +524,19 @@
   if(!reduceMotion){
     var bg = document.querySelector('.hero-bg');
     var ticking = false;
+    function applyParallax(){
+      var y = window.scrollY || window.pageYOffset;
+      bg.style.transform = 'translateY(' + (y * 0.25).toFixed(1) + 'px)';
+      ticking = false;
+    }
     function onScroll(){
       if(!ticking){
-        window.requestAnimationFrame(function(){
-          var y = window.scrollY || window.pageYOffset;
-          if(y < window.innerHeight * 1.2){
-            bg.style.transform = 'translateY(' + (y * 0.25).toFixed(1) + 'px)';
-          }
-          ticking = false;
-        });
+        window.requestAnimationFrame(applyParallax);
         ticking = true;
       }
     }
     window.addEventListener('scroll', onScroll, { passive: true });
+    applyParallax();
   }
 })();
 </script>
