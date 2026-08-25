@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fusion 시제품 제작 원데이 클래스 | (주)메타유닉스</title>
+<meta name="description" content="비전공자도 하루 만에 아이디어를 실물로 제작합니다. Autodesk Fusion으로 설계부터 CNC 가공까지, 국비지원 90% 환급.">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/pretendard.css" />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#000000;
+    --surface:rgba(255,255,255,.035);
+    --surface-hover:rgba(255,255,255,.06);
+    --hairline:rgba(255,255,255,.12);
+    --hairline-soft:rgba(255,255,255,.08);
+    --text-hi:#f5f5f7;
+    --text-lo:#86868b;
+    --text-mute:#6e6e73;
+    --accent:#ff5a1f;
+    --accent-dim:#d94a17;
+    --accent-soft:rgba(255,90,31,.14);
+    --accent-line:rgba(255,90,31,.45);
+    --radius:18px;
+    --mono:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+    --sans:'Pretendard', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  @media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto;} }
+  body{
+    margin:0;background:var(--bg);color:var(--text-hi);font-family:var(--sans);
+    -webkit-font-smoothing:antialiased;line-height:1.5;
+  }
+  a{color:inherit;}
+  img{max-width:100%;display:block;}
+  ::selection{background:var(--accent);color:#000;}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px;}
+
+  .wrap{max-width:980px;margin:0 auto;padding:0 24px;}
+  section.panel .wrap{text-align:center;}
+  section.panel .table-wrap, section.panel .role-grid, section.panel .feature-list,
+  section.panel .curriculum, section.panel .objection{text-align:left;}
+
+  .eyebrow{
+    display:inline-block;font-family:var(--sans);font-size:13px;font-weight:600;
+    letter-spacing:-.005em;color:var(--accent);margin-bottom:14px;
+  }
+  .section-title{font-size:clamp(26px,4vw,40px);font-weight:700;letter-spacing:-.025em;margin:0 0 16px;}
+  .section-lede{font-size:16px;color:var(--text-lo);line-height:1.6;max-width:56ch;margin:0 auto 56px;}
+  section.panel{padding:clamp(64px,11vw,140px) 0;}
+
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    font-family:var(--sans);font-weight:600;font-size:15px;padding:14px 28px;
+    border-radius:999px;cursor:pointer;border:none;text-decoration:none;
+    transition:transform .15s ease, box-shadow .15s ease, background .15s ease, border-color .15s ease;
+  }
+  .btn-primary{background:var(--accent);color:#0b0b0c;}
+  .btn-primary:hover{background:#ff6c39;transform:translateY(-1px);box-shadow:0 8px 22px rgba(255,90,31,.28);}
+  .btn-ghost{background:transparent;color:var(--text-hi);border:1px solid rgba(255,255,255,.38);}
+  .btn-ghost:hover{border-color:var(--text-hi);}
+  @media (prefers-reduced-motion:reduce){ .btn-primary:hover{transform:none;} }
+
+  .link-arrow{
+    display:inline-flex;align-items:center;gap:4px;color:var(--text-hi);font-weight:500;font-size:16px;
+    padding:14px 6px;text-decoration:none;
+  }
+  .link-arrow span{color:var(--accent);transition:transform .15s ease;}
+  .link-arrow:hover{color:var(--accent);}
+  .link-arrow:hover span{transform:translateX(2px);}
+
+  /* ---------------- HEADER ---------------- */
+  .site-header{
+    position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;
+    padding:14px 24px;background:rgba(0,0,0,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--hairline-soft);
+  }
+  .logo{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px;letter-spacing:-.01em;}
+  .logo .mark{width:8px;height:8px;border-radius:2px;background:var(--accent);}
+  .badge{
+    font-family:var(--sans);font-size:12px;color:var(--text-mute);margin-left:8px;display:none;
+  }
+  .badge::before{content:'·';margin-right:8px;color:var(--text-mute);}
+  @media (min-width:560px){ .badge{display:inline-block;} }
+  .site-header .btn{padding:9px 19px;font-size:13.5px;}
+
+  /* ---------------- HERO ---------------- */
+  .hero{position:relative;overflow:hidden;padding:120px 0 80px;background-color:var(--bg);}
+  .hero-bg{position:absolute;inset:0;z-index:0;overflow:hidden;background:#000;}
+  .hero-bg iframe{
+    position:absolute;top:50%;left:50%;width:177.78vh;height:56.25vw;min-width:100%;min-height:100%;
+    transform:translate(-50%,-50%);border:0;pointer-events:none;
+  }
+  .hero-bg-fallback{position:absolute;inset:0;background-size:cover;background-position:center;opacity:.4;}
+  .hero-overlay{
+    position:absolute;inset:0;z-index:1;
+    background:linear-gradient(180deg, rgba(0,0,0,.68) 0%, rgba(0,0,0,.88) 55%, var(--bg) 100%);
+  }
+  .hero-inner{position:relative;z-index:2;text-align:center;}
+  .hero h1{
+    font-size:clamp(32px,6.2vw,64px);font-weight:700;letter-spacing:-.03em;line-height:1.12;
+    margin:0 auto 20px;max-width:17ch;
+  }
+  .hero h1 .hi{color:var(--accent);}
+  .hero-sub{font-size:18px;color:var(--text-lo);line-height:1.6;max-width:46ch;margin:0 auto 36px;}
+  .hero-ctas{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px;margin-bottom:36px;}
+  .trust-row{font-size:13.5px;color:var(--text-mute);margin-bottom:52px;}
+  .trust-row b{color:var(--text-lo);font-weight:500;}
+  .fact-strip{display:flex;flex-wrap:wrap;gap:0;max-width:760px;margin:0 auto;}
+  .fact{flex:1 1 200px;padding:0 26px;border-right:1px solid var(--hairline-soft);text-align:center;}
+  .fact:last-child{border-right:none;}
+  .fact-label{font-family:var(--sans);font-size:12px;color:var(--text-mute);margin-bottom:8px;}
+  .fact-value{font-size:15.5px;font-weight:600;color:var(--text-hi);}
+  @media (max-width:640px){
+    .fact-strip{flex-direction:column;gap:18px;}
+    .fact{flex:1 1 100%;border-right:none;padding:0;}
+  }
+
+  /* ---------------- SCHEDULE TABLE ---------------- */
+  .table-wrap{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:14px;min-width:520px;}
+  th{
+    text-align:left;font-family:var(--sans);font-size:12px;letter-spacing:0;text-transform:none;
+    color:var(--text-mute);font-weight:500;padding:12px 16px;border-bottom:1px solid var(--hairline);
+  }
+  td{padding:16px 16px;border-bottom:1px solid var(--hairline-soft);color:var(--text-lo);}
+  tr:last-child td{border-bottom:none;}
+  td.city{color:var(--text-hi);font-weight:600;}
+  td.date{color:var(--accent);font-weight:600;font-family:var(--mono);white-space:nowrap;}
+  .tbd{color:var(--text-mute);font-style:normal;}
+  .schedule-note{font-size:12.5px;color:var(--text-mute);margin-top:16px;}
+
+  /* ---------------- AUDIENCE ---------------- */
+  .role-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:2px;}
+  .role-card{background:var(--surface);border-radius:var(--radius);padding:22px;transition:background .15s ease;}
+  .role-card:hover{background:var(--surface-hover);}
+  .role-title{font-size:15px;font-weight:600;color:var(--text-hi);margin-bottom:7px;}
+  .role-title .tag{font-family:var(--sans);font-size:11px;font-weight:600;color:var(--accent);background:var(--accent-soft);border-radius:5px;padding:3px 7px;margin-right:8px;}
+  .role-desc{font-size:13px;color:var(--text-lo);line-height:1.6;}
+
+  /* ---------------- FEATURES ---------------- */
+  .feature-list{display:flex;flex-direction:column;gap:0;}
+  .feature-row{display:grid;grid-template-columns:56px 1fr;gap:24px;padding:30px 0;border-top:1px solid var(--hairline-soft);}
+  .feature-row:first-child{border-top:none;}
+  .feature-num{font-family:var(--mono);font-size:20px;font-weight:600;color:var(--text-mute);}
+  .feature-title{font-size:17px;font-weight:600;margin-bottom:9px;letter-spacing:-.01em;}
+  .feature-desc{font-size:14.5px;color:var(--text-lo);line-height:1.65;max-width:62ch;}
+  .feature-note{margin-top:12px;font-size:12px;color:var(--text-mute);}
+
+  /* ---------------- VIDEO CARD (click to play) ---------------- */
+  .video-card{margin-top:20px;background:#000;border-radius:14px;overflow:hidden;max-width:520px;}
+  .video-inner{position:relative;aspect-ratio:16/9;background:#000;}
+  .video-inner img{width:100%;height:100%;object-fit:cover;opacity:.7;}
+  .video-inner iframe{width:100%;height:100%;border:0;}
+  .play-btn{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.2);width:100%;}
+  .play-btn .circle{width:50px;height:50px;border-radius:50%;background:rgba(0,0,0,.6);border:1.5px solid var(--accent);color:var(--accent);display:flex;align-items:center;justify-content:center;}
+  .play-btn:hover .circle{background:var(--accent);color:#000;}
+  .video-caption{padding:9px 4px 0;font-family:var(--sans);font-size:12px;color:var(--text-mute);}
+
+  /* ---------------- CURRICULUM ---------------- */
+  .curriculum{position:relative;padding-left:30px;}
+  .curriculum::before{content:'';position:absolute;left:2px;top:6px;bottom:6px;width:1px;background:var(--hairline);}
+  .curric-item{position:relative;padding-bottom:32px;}
+  .curric-item:last-child{padding-bottom:0;}
+  .curric-item::before{
+    content:attr(data-n);position:absolute;left:-30px;top:0;width:16px;
+    color:var(--accent);font-family:var(--mono);font-size:13px;font-weight:700;
+  }
+  .curric-title{font-size:16px;font-weight:600;margin-bottom:7px;display:flex;flex-wrap:wrap;align-items:center;gap:9px;}
+  .curric-shift{font-family:var(--sans);font-size:12px;color:var(--accent);background:var(--accent-soft);border-radius:5px;padding:3px 9px;font-weight:500;}
+  .curric-desc{font-size:13.5px;color:var(--text-lo);line-height:1.65;}
+
+  /* ---------------- OBJECTIONS ---------------- */
+  .objection{border-bottom:1px solid var(--hairline-soft);padding:22px 0;}
+  .objection:last-child{border-bottom:none;}
+  .objection-q{display:flex;gap:9px;align-items:flex-start;font-size:14.5px;font-weight:600;color:var(--text-hi);margin-bottom:9px;}
+  .objection-q svg{color:var(--text-mute);flex:0 0 auto;margin-top:2px;}
+  .objection-a{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;color:var(--text-lo);line-height:1.6;}
+  .objection-a svg{color:var(--accent);flex:0 0 auto;margin-top:3px;}
+
+  /* ---------------- COST ---------------- */
+  .cost-box{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:center;gap:18px;}
+  .cost-old{font-size:22px;color:var(--text-mute);text-decoration:line-through;}
+  .cost-arrow{color:var(--text-mute);}
+  .cost-new{font-size:clamp(40px,7vw,64px);font-weight:700;color:var(--accent);letter-spacing:-.03em;}
+  .cost-badge{font-family:var(--sans);font-size:12px;font-weight:500;color:var(--accent);background:var(--accent-soft);border-radius:20px;padding:6px 14px;}
+  .cost-note{font-size:14px;color:var(--text-lo);line-height:1.7;margin:26px auto 0;max-width:60ch;}
+  .cost-note b{color:var(--text-hi);}
+  .cost-fine{font-size:12px;color:var(--text-mute);margin-top:12px;}
+
+  /* ---------------- APPLY ---------------- */
+  .apply-panel{text-align:center;padding:0;}
+  .apply-q{font-size:clamp(22px,3.2vw,30px);font-weight:700;letter-spacing:-.02em;margin-bottom:32px;}
+  .apply-ctas{display:flex;flex-wrap:wrap;justify-content:center;gap:14px;}
+  .apply-cta{flex:0 1 260px;}
+  .apply-cta .btn{width:100%;padding:17px 20px;font-size:15.5px;}
+  .apply-cta-label{font-family:var(--sans);font-size:12px;color:var(--text-mute);margin-bottom:10px;}
+
+  /* ---------------- MOBILE STICKY CTA ---------------- */
+  .sticky-cta{
+    position:fixed;left:0;right:0;bottom:0;z-index:60;display:none;
+    padding:12px 16px;background:rgba(0,0,0,.85);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    border-top:1px solid var(--hairline-soft);transform:translateY(100%);transition:transform .25s ease;
+  }
+  .sticky-cta.show{transform:translateY(0);}
+  .sticky-cta .btn{width:100%;}
+  @media (max-width:720px){ .sticky-cta{display:block;} }
+  @media (prefers-reduced-motion:reduce){ .sticky-cta{transition:none;} }
+
+  /* ---------------- FOOTER ---------------- */
+  footer{border-top:1px solid var(--hairline-soft);padding:44px 0 60px;}
+  .footer-links{display:flex;gap:18px;margin-bottom:18px;font-size:12.5px;}
+  .footer-links a:hover{color:var(--accent);}
+  .footer-legal{font-size:11.5px;color:var(--text-mute);line-height:1.9;}
+  .footer-legal a{color:var(--text-mute);}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="logo"><span class="mark"></span>메타유닉스<span class="badge">Autodesk Gold Partner</span></div>
+  <a class="btn btn-primary" href="#apply">교육 신청하기</a>
+</header>
+
+<section class="hero">
+  <div class="hero-bg">
+    <div class="hero-bg-fallback" id="heroFallback" style="background-image:url('https://img.youtube.com/vi/7DWpnEVCo1A/hqdefault.jpg');"></div>
+    <iframe id="heroVideo" src="https://www.youtube-nocookie.com/embed/7DWpnEVCo1A?autoplay=1&mute=1&loop=1&playlist=7DWpnEVCo1A&controls=0&modestbranding=1&playsinline=1&rel=0" title="배경 영상" allow="autoplay; encrypted-media" tabindex="-1" aria-hidden="true"></iframe>
+  </div>
+  <div class="hero-overlay"></div>
+  <div class="wrap hero-inner">
+    <div class="trust-row">
+      <span class="trust-chip"><svg width="12" height="12" viewBox="0 0 16 16"><path d="M8 1l2.1 4.6 5 .5-3.8 3.4 1.1 5-4.4-2.6-4.4 2.6 1.1-5-3.8-3.4 5-.5z" fill="currentColor"/></svg>Autodesk 공인 Gold Partner</span>
+      <span class="trust-chip"><svg width="12" height="12" viewBox="0 0 16 16"><path d="M2 8.5l4 4 8-9" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>국비지원 최대 90% 환급</span>
+    </div>
+    <h1 id="heroTitle">아이디어를 하루 만에,<br><span class="hi">실물로 만드는 법</span></h1>
+    <p class="hero-sub" id="heroSub">비전공자도 괜찮습니다. Autodesk Fusion으로 설계부터 CNC 가공까지, 하루 안에 전 과정을 직접 경험하세요.</p>
+    <div class="hero-ctas">
+      <a class="btn btn-primary" href="#apply">교육 신청하기</a>
+      <a class="btn btn-ghost" href="#schedule">교육 일정 보기</a>
+    </div>
+    <div class="fact-strip">
+      <div class="fact"><div class="fact-label">교육 레벨</div><div class="fact-value">초급 · 비전공자 가능</div></div>
+      <div class="fact"><div class="fact-label">교육 시간</div><div class="fact-value">오전 10시 ~ 오후 5시 (점심 1시간 포함)</div></div>
+      <div class="fact"><div class="fact-label">교육비</div><div class="fact-value">실부담 10만원 (국비 90% 환급)</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="panel" id="schedule">
+  <div class="wrap">
+    <span class="eyebrow">교육 일정</span>
+    <h2 class="section-title">전국 5개 지역에서 진행됩니다</h2>
+    <p class="section-lede">가까운 지역과 일정을 확인하고 신청하세요. 정부 예산 소진 시 접수가 조기 마감될 수 있습니다.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>지역</th><th>교육 장소</th><th>일자</th></tr></thead>
+        <tbody>
+          <tr><td class="city">서울</td><td>오토데스크 코리아 @삼성동 아셈타워</td><td class="date">9/16 (수)</td></tr>
+          <tr><td class="city">부산</td><td class="tbd">장소 추후 안내</td><td class="date">9/23 (수)</td></tr>
+          <tr><td class="city">대구</td><td class="tbd">장소 추후 안내</td><td class="date">10/13 (수)</td></tr>
+          <tr><td class="city">서울</td><td>스팩스페이스 @마곡동</td><td class="date">10/20 (화)</td></tr>
+          <tr><td class="city">천안</td><td class="tbd">장소 추후 안내</td><td class="date">11/4 (화)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="schedule-note">20명 이상 단체 신청 시 원하는 지역으로 출강도 가능합니다.</p>
+  </div>
+</section>
+
+<section class="panel" id="audience">
+  <div class="wrap">
+    <span class="eyebrow">교육 대상</span>
+    <h2 class="section-title">이런 역할을 하고 있다면 추천합니다</h2>
+    <p class="section-lede">Autodesk Fusion 및 CNC 장비 사용 경험이 없어도 참여할 수 있습니다.</p>
+    <div class="role-grid">
+      <div class="role-card"><div class="role-title"><span class="tag">설계</span>CAD 설계자를 꿈꾼다면</div><div class="role-desc">제품 아이디어를 직접 3D로 설계해보고 싶은 재직자</div></div>
+      <div class="role-card"><div class="role-title"><span class="tag">입문</span>Fusion이 처음이라면</div><div class="role-desc">Autodesk Fusion을 처음 배우는 비전공자 및 입문자</div></div>
+      <div class="role-card"><div class="role-title"><span class="tag">가공</span>CAM 프로그래머가 궁금하다면</div><div class="role-desc">3D CAD와 CAM의 전체 작업 흐름을 경험하고 싶은 재직자</div></div>
+      <div class="role-card"><div class="role-title"><span class="tag">현업</span>제조·생산기술 엔지니어라면</div><div class="role-desc">제품개발, 연구개발, 생산기술, 설비관리 및 품질관리 분야 재직자</div></div>
+      <div class="role-card"><div class="role-title"><span class="tag">확장</span>2D에서 3D로 넘어가고 싶다면</div><div class="role-desc">기존 2D 설계 업무를 3D 설계로 확장하고 싶은 실무자</div></div>
+      <div class="role-card"><div class="role-title"><span class="tag">제작</span>시제품 제작 엔지니어라면</div><div class="role-desc">간단한 부품, 지그, 고정구 및 시제품 제작에 관심 있는 재직자</div></div>
+      <div class="role-card"><div class="role-title"><span class="tag">운용</span>CNC 오퍼레이터가 궁금하다면</div><div class="role-desc">CNC 가공과 디지털 제조 프로세스를 이해하고 싶은 재직자</div></div>
+      <div class="role-card"><div class="role-title"><span class="tag">실현</span>아이디어를 제품으로 연결하고 싶다면</div><div class="role-desc">자신의 아이디어를 실제 제품 제작 과정으로 연결하고 싶은 재직자</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="panel" id="features">
+  <div class="wrap">
+    <span class="eyebrow">교육 특징</span>
+    <h2 class="section-title">지금껏 볼 수 없었던 구성</h2>
+    <p class="section-lede">단순한 소프트웨어 기능 교육이 아니라, 설계부터 실제 가공까지 이어지는 하루짜리 실습입니다.</p>
+    <div class="feature-list">
+      <div class="feature-row">
+        <div class="feature-num">01</div>
+        <div>
+          <div class="feature-title">아이디어부터 실제 가공까지, 하루 안에</div>
+          <div class="feature-desc">단순한 소프트웨어 기능 교육을 넘어 아이디어 구상, 3D 모델링, CAM 가공경로 생성, CNC 가공까지 시제품 제작의 전체 과정을 하루 동안 경험합니다.</div>
+        </div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-num">02</div>
+        <div>
+          <div class="feature-title">Fusion 하나로 CAD와 CAM을 동시에</div>
+          <div class="feature-desc">하나의 프로그램 안에서 3D 형상 설계와 CNC 가공경로 생성을 함께 학습합니다. 설계한 모델이 가공 데이터로 변환되는 디지털 제조 프로세스를 체계적으로 이해할 수 있습니다.</div>
+        </div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-num">03</div>
+        <div>
+          <div class="feature-title">비전공자도 따라올 수 있는 입문형 실습</div>
+          <div class="feature-desc">복잡한 기계설계 이론이나 고급 가공기술보다는 핵심 기능을 중심으로 진행합니다. 강사의 단계별 시연과 따라 하기 실습으로 구성되어 있습니다.</div>
+        </div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-num">04</div>
+        <div>
+          <div class="feature-title">실제 소형 CNC 조각기 가동을 직접 확인</div>
+          <div class="feature-desc">수업 시간 내에 실제 소형 CNC 조각기를 구동하여 Fusion에서 설계한 모델이 실물로 가공되는 과정을 보여줍니다. 소재 고정, 공구 장착, 원점 설정, 가공 실행까지 장비 운용의 전체 과정을 단계별로 교육합니다.</div>
+          <div class="video-card">
+            <div class="video-inner" data-video-id="bX3h-fOqvPI">
+              <img src="https://img.youtube.com/vi/bX3h-fOqvPI/hqdefault.jpg" alt="CNC 가공 데모 영상 썸네일" loading="lazy">
+              <button class="play-btn" aria-label="영상 재생"><span class="circle"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></span></button>
+            </div>
+            <div class="video-caption">CNC 조각기 가공 데모 영상</div>
+          </div>
+          <div class="feature-note">※ 교육생 개인별 완성품은 제공하지 않으며, 실제 가공은 강사가 대표 모델로 시연합니다.</div>
+        </div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-num">05</div>
+        <div>
+          <div class="feature-title">현업에 바로 적용할 수 있는 실용 예제</div>
+          <div class="feature-desc">명판, 스마트폰 거치대, 간단한 지그, 고정구, 데스크용 소품 등 짧은 시간 안에 설계와 CNC 가공이 가능한 실용적인 예제를 활용합니다.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="panel" id="curriculum">
+  <div class="wrap">
+    <span class="eyebrow">커리큘럼</span>
+    <h2 class="section-title">제품 제조와 AI 기능을 결합</h2>
+    <p class="section-lede">시제품 제작 프로세스 이해부터 실제 CNC 가공 실습까지, 6단계로 진행됩니다.</p>
+    <div class="curriculum">
+      <div class="curric-item" data-n="1">
+        <div class="curric-title">시제품 제작 프로세스 이해</div>
+        <div class="curric-desc">CAD·CAM·CNC의 역할과 작업 순서 / CNC 가공 방식과 시제품 제작 사례 소개</div>
+      </div>
+      <div class="curric-item" data-n="2">
+        <div class="curric-title">Fusion 기초</div>
+        <div class="curric-desc">Fusion 작업환경 및 인터페이스</div>
+      </div>
+      <div class="curric-item" data-n="3">
+        <div class="curric-title">2D 스케치 및 3D 모델링 <span class="curric-shift">오늘 오전, 당신은 CAD 설계자가 됩니다</span></div>
+        <div class="curric-desc">스케치(선·사각형·원·호) / 치수 및 구속조건 설정 / 모델링(돌출·잘라내기·홀·모깎기·모따기) / AI 활용 형상 수정 및 설계 최적화</div>
+      </div>
+      <div class="curric-item" data-n="4">
+        <div class="curric-title">도면 생성</div>
+        <div class="curric-desc">레이아웃에 구성요소 배치 / AI 활용 부품 배치 및 시트 효율성 검증</div>
+      </div>
+      <div class="curric-item" data-n="5">
+        <div class="curric-title">CAM 작업 <span class="curric-shift">오늘 오후, 당신은 CAM 프로그래머가 됩니다</span></div>
+        <div class="curric-desc">가공 원점 설정 / 공구 선택 및 포켓·윤곽·각인 툴패스 생성 / 시뮬레이션 및 NC 데이터 생성</div>
+      </div>
+      <div class="curric-item" data-n="6">
+        <div class="curric-title">CNC 장비 운용 및 실습 <span class="curric-shift">CNC 오퍼레이터의 하루를 경험합니다</span></div>
+        <div class="curric-desc">CNC 장비 안전수칙 / 소재 고정, 공구 장착 및 기계 원점 설정 / NC 데이터 적용 및 가공 실습 / 가공 결과 확인 및 설계 데이터와 비교</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="panel" id="faq">
+  <div class="wrap">
+    <span class="eyebrow">자주 묻는 질문</span>
+    <h2 class="section-title">신청 전에 확인하세요</h2>
+    <div class="objection">
+      <div class="objection-q"><svg width="13" height="13" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" stroke="currentColor" fill="none" stroke-width="1.3"/><path d="M8 11v.01M8 5.5c1.1 0 1.8.7 1.8 1.6 0 1.1-1.8 1.2-1.8 2.6" stroke="currentColor" fill="none" stroke-width="1.2" stroke-linecap="round"/></svg>비전공자인데 따라갈 수 있을까요?</div>
+      <div class="objection-a"><svg width="13" height="13" viewBox="0 0 16 16"><path d="M2 8.5l4 4 8-9" stroke="currentColor" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>강사의 단계별 시연과 따라 하기 실습으로 구성되어 있습니다.</div>
+    </div>
+    <div class="objection">
+      <div class="objection-q"><svg width="13" height="13" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" stroke="currentColor" fill="none" stroke-width="1.3"/><path d="M8 11v.01M8 5.5c1.1 0 1.8.7 1.8 1.6 0 1.1-1.8 1.2-1.8 2.6" stroke="currentColor" fill="none" stroke-width="1.2" stroke-linecap="round"/></svg>하루 만에 배우는 게 충분할까요?</div>
+      <div class="objection-a"><svg width="13" height="13" viewBox="0 0 16 16"><path d="M2 8.5l4 4 8-9" stroke="currentColor" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>핵심 기능 중심의 입문형 실습이며, 실제 CNC 가공까지 전 과정을 눈으로 확인합니다.</div>
+    </div>
+    <div class="objection">
+      <div class="objection-q"><svg width="13" height="13" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" stroke="currentColor" fill="none" stroke-width="1.3"/><path d="M8 11v.01M8 5.5c1.1 0 1.8.7 1.8 1.6 0 1.1-1.8 1.2-1.8 2.6" stroke="currentColor" fill="none" stroke-width="1.2" stroke-linecap="round"/></svg>환급 절차가 복잡하지 않을까요?</div>
+      <div class="objection-a"><svg width="13" height="13" viewBox="0 0 16 16"><path d="M2 8.5l4 4 8-9" stroke="currentColor" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>기업 또는 재직자가 훈련비를 선납한 뒤, 수료하면 90%가 환급되는 구조입니다.</div>
+    </div>
+  </div>
+</section>
+
+<section class="panel" id="cost">
+  <div class="wrap">
+    <span class="eyebrow">교육 비용</span>
+    <h2 class="section-title">국비지원으로 부담 없이</h2>
+    <div class="cost-box">
+      <span class="cost-old">1,000,000원</span>
+      <span class="cost-arrow">→</span>
+      <span class="cost-new">100,000원</span>
+      <span class="cost-badge">국비지원 최대 90% 환급</span>
+    </div>
+    <p class="cost-note">해당 교육은 <b>'중소기업 인재키움 프리미엄 훈련 사업'</b> 국비 지원 교육입니다. 우선지원대상기업 재직자를 대상으로, 직무 연계 프리미엄 교육 수강료의 최대 90%를 지원하는 제도입니다. 기업 또는 재직자가 훈련비를 선납한 후, 근로자가 훈련을 수료하면 납부한 훈련비의 최대 90%가 환급됩니다.</p>
+    <p class="cost-fine">※ 요건 충족 시 적용되며, 정부 예산 소진 시 접수가 조기 마감될 수 있습니다.</p>
+  </div>
+</section>
+
+<section class="panel" id="apply">
+  <div class="wrap">
+    <div class="apply-panel">
+      <div class="eyebrow" style="justify-content:center;">지금 신청하기</div>
+      <p class="apply-q">혼자 오시나요, 팀으로 오시나요?</p>
+      <div class="apply-ctas">
+        <div class="apply-cta">
+          <div class="apply-cta-label">개인 신청</div>
+          <a class="btn btn-primary" href="https://forms.monday.com/forms/c882da9452a1407e6856d3ac7b28e10b?r=apse2" target="_blank" rel="noopener">개별 교육 신청하기</a>
+        </div>
+        <div class="apply-cta">
+          <div class="apply-cta-label">단체 신청 · 20인 이상 출강 가능</div>
+          <a class="btn btn-ghost" href="https://forms.monday.com/forms/43d83fe00af35a5146b27b6ac97803f7?r=apse2" target="_blank" rel="noopener">단체 교육 신청하기</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-links">
+      <a href="https://metaunix.co.kr/policy" target="_blank" rel="noopener">이용약관</a>
+      <a href="https://metaunix.co.kr/privacy" target="_blank" rel="noopener">개인정보처리방침</a>
+    </div>
+    <div class="footer-legal">
+      상호: (주)메타유닉스 | 대표: 홍주희 | 개인정보관리책임자: 김유천 | 이메일: <a href="mailto:yc@metaunix.co.kr">yc@metaunix.co.kr</a><br>
+      주소: 서울시 영등포구 양평로21길 26, 1703호(선유도역 1차 아이에스비즈타워) | 사업자등록번호: 749-87-03404 | 호스팅제공자: (주)식스샵
+    </div>
+  </div>
+</footer>
+
+<div class="sticky-cta" id="stickyCta">
+  <a class="btn btn-primary" href="#apply">교육 신청하기</a>
+</div>
+
+<script>
+(function(){
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Hero copy branching by campaign entry point: ?ad=curiosity | loss | authority
+  var variants = {
+    curiosity: {
+      title: '3D 설계,<br><span class="hi">유튜브로만 보셨죠?</span>',
+      sub: '스케치 한 장이 오늘 안에 실물이 됩니다. Fusion 원데이 클래스에서 직접 확인하세요.'
+    },
+    loss: {
+      title: '이번 기수를 놓치면,<br><span class="hi">내년에도 2D에 머물 수 있습니다</span>',
+      sub: '정부 예산 소진 시 접수가 조기 마감될 수 있습니다. 국비지원 최대 90% 환급 조건을 지금 확인하세요.'
+    }
+  };
+  try{
+    var params = new URLSearchParams(window.location.search);
+    var v = variants[params.get('ad')];
+    if(v){
+      document.getElementById('heroTitle').innerHTML = v.title;
+      document.getElementById('heroSub').textContent = v.sub;
+    }
+  }catch(e){}
+
+  // Hero background video: hide fallback once iframe loads, respect reduced motion (skip autoplay video, keep static fallback only)
+  var heroVideo = document.getElementById('heroVideo');
+  var heroFallback = document.getElementById('heroFallback');
+  if(reduceMotion){
+    heroVideo.remove();
+  } else {
+    heroVideo.addEventListener('load', function(){ heroFallback.style.opacity = '0'; });
+  }
+
+  // Feature video click-to-play
+  document.querySelectorAll('.video-inner').forEach(function(box){
+    box.addEventListener('click', function(){
+      var id = box.getAttribute('data-video-id');
+      box.innerHTML = '<iframe src="https://www.youtube-nocookie.com/embed/' + id + '?autoplay=1&rel=0" title="YouTube video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
+    });
+  });
+
+  // Mobile sticky CTA: show after hero is scrolled past
+  var stickyCta = document.getElementById('stickyCta');
+  var heroEl = document.querySelector('.hero');
+  var applyEl = document.getElementById('apply');
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      if(entry.target === heroEl){
+        if(!entry.isIntersecting) stickyCta.classList.add('show');
+        else stickyCta.classList.remove('show');
+      }
+    });
+  }, { threshold: 0 });
+  io.observe(heroEl);
+  var applyIo = new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      if(entry.isIntersecting) stickyCta.classList.remove('show');
+    });
+  }, { threshold: 0.3 });
+  applyIo.observe(applyEl);
+
+  // Subtle hero parallax (background layer drifts slower than scroll)
+  if(!reduceMotion){
+    var bg = document.querySelector('.hero-bg');
+    var ticking = false;
+    function onScroll(){
+      if(!ticking){
+        window.requestAnimationFrame(function(){
+          var y = window.scrollY || window.pageYOffset;
+          if(y < window.innerHeight * 1.2){
+            bg.style.transform = 'translateY(' + (y * 0.25).toFixed(1) + 'px)';
+          }
+          ticking = false;
+        });
+        ticking = true;
+      }
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+  }
+})();
+</script>
+</body>
+</html>
