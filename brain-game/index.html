@@ -642,12 +642,11 @@ function buildStages(L){
 function startSession(){
   markPlayedToday();
   const L=curLevel();
-  session={ stages:buildStages(L), idx:0, stageScores:[], domainScores:{speed:[],memory:[],seq:[],math:[]} };
+  session={ stages:buildStages(L), idx:0, domainScores:{speed:[],memory:[],seq:[],math:[]} };
   showTransition(null,null,true);
 }
 function onGameDone(score100){
   const stage=session.stages[session.idx];
-  session.stageScores.push(score100);
   session.domainScores[stage.domain].push(score100);
   session.idx++;
   if(session.idx>=session.stages.length) showFinalResult();
@@ -883,7 +882,7 @@ function playSeq({lv, onDone=null}={}){
     pads.forEach(p=>p.classList.remove('on'));
     if(!success) beep(160,0.3);
     const reached=Math.max(0,maxReached-(startLen-1));
-    const score=Math.round(Math.min(100,reached/7*100));
+    const score=Math.round(Math.min(100,reached/8*100));
     setTimeout(()=>{ if(onDone) onDone(score); },500);
   }
   setTimeout(nextLevel,600);
@@ -1055,8 +1054,7 @@ function showCardZoomModal(card, img, countText=null){
 // FINAL RESULT
 // ==========================================================
 function showFinalResult(){
-  const{stageScores,domainScores}=session;
-  const totalScore=Math.round(stageScores.reduce((a,b)=>a+b,0)/stageScores.length);
+  const{domainScores}=session;
   const avg=d=>domainScores[d].length?Math.round(domainScores[d].reduce((a,b)=>a+b,0)/domainScores[d].length):0;
   const domains={
     speed:{label:'⚡ 처리속도',score:avg('speed')},
@@ -1064,6 +1062,8 @@ function showFinalResult(){
     math:{label:'🔢 계산력',score:avg('math')},
     memory:{label:'🃏 기억력',score:avg('memory')},
   };
+  const domainVals=Object.values(domains).map(d=>d.score);
+  const totalScore=Math.round(domainVals.reduce((a,b)=>a+b,0)/domainVals.length);
   if(totalScore>(currentMember.bestTotal||0)){ currentMember.bestTotal=totalScore; }
   currentMember.scoreLog = pushCapped(currentMember.scoreLog, {
     ts:new Date().toISOString(), total:totalScore,
