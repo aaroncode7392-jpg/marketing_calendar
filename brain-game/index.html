@@ -139,6 +139,16 @@
   /* modal */
   .overlay{position:fixed;inset:0;background:rgba(58,46,40,.5);display:flex;align-items:center;justify-content:center;padding:20px;z-index:60;}
   .modal{background:var(--paper);border-radius:26px;max-width:480px;width:100%;padding:26px 24px;box-shadow:var(--shadow);max-height:84vh;overflow:auto;}
+  /* verse card modal */
+  .verse-modal{background:linear-gradient(180deg,#FFFDF8 0%,#FAF3E6 100%);border:2px solid #EADBCA;border-radius:28px;max-width:440px;width:100%;padding:28px 22px 24px;box-shadow:0 14px 40px rgba(100,70,40,0.22);text-align:center;position:relative;}
+  .verse-badge{display:inline-flex;align-items:center;gap:6px;background:#FFF0D0;border:1.5px solid #E8C488;color:#9B5E14;border-radius:999px;padding:6px 16px;font-family:'Jua';font-size:15px;margin-bottom:14px;}
+  .verse-quote-wrap{position:relative;padding:6px 12px 14px;}
+  .verse-quote-mark{font-family:'Jua';font-size:32px;color:#D8BF9E;line-height:1;user-select:none;}
+  .verse-text{font-size:18px;line-height:1.8;color:#3A2E28;word-break:keep-all;text-wrap:balance;white-space:pre-line;font-weight:400;margin:4px 0 10px;}
+  .verse-ref{font-family:'Jua';font-size:15px;color:#EE7B5B;display:inline-block;background:#FFF;padding:6px 14px;border-radius:12px;border:1.5px solid #F5DECB;}
+  .verse-btn{margin-top:20px;width:100%;font-size:20px;padding:15px;border-radius:18px;background:linear-gradient(135deg,#EE7B5B,#E8633F);color:#fff;border:none;box-shadow:0 5px 0 #C95535;cursor:pointer;font-family:'Jua';}
+  .verse-btn:active{transform:translateY(3px);box-shadow:none;}
+  .topbar-btns{display:flex;align-items:center;gap:8px;}
   /* transition */
   .trans-next{background:var(--paper);border:2px solid var(--line);border-radius:20px;padding:16px 20px;margin-top:14px;text-align:left;}
   /* confetti */
@@ -225,6 +235,221 @@ async function stListKeys(prefix){
   const keys=[];
   try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&k.indexOf(prefix)===0) keys.push(k); } }catch(e){}
   return keys;
+}
+
+// ---------- 새번역 오늘의 말씀 큐레이션 데이터셋 & 6시간 주기 로직 ----------
+const BIBLE_VERSES = [
+  {
+    theme: "인도와 지혜",
+    ref: "시편 119:105",
+    content: "주님의 말씀은 내 발의 등불이요,\n내 길의 빛입니다."
+  },
+  {
+    theme: "평안과 위로",
+    ref: "빌립보서 4:6-7",
+    content: "아무것도 염려하지 말고,\n모든 일을 오직 기도와 간구로 하고,\n여러분이 바라는 것을 감사하는 마음으로\n하나님께 아뢰십시오.\n그리하면 하나님의 평화가\n여러분의 마음과 생각을 지켜 주실 것입니다."
+  },
+  {
+    theme: "용기와 동행",
+    ref: "여호수아 1:9",
+    content: "내가 너에게 굳세고 용감하라고 명하지 않았느냐!\n너는 두려워하거나 낙담하지 말아라.\n네가 어디로 가든지,\n주 너의 하나님이 너와 함께 계신다."
+  },
+  {
+    theme: "능력과 도우심",
+    ref: "이사야 41:10",
+    content: "내가 너와 함께 있으니 두려워하지 말아라.\n내가 너의 하나님이니 떨지 말아라.\n내가 너를 강하게 하겠다.\n내가 참으로 너를 도와주겠다.\n내 의로운 오른손으로 너를 붙들어 주겠다."
+  },
+  {
+    theme: "신뢰와 인도",
+    ref: "잠언 3:5-6",
+    content: "너의 마음을 다하여 주님을 의뢰하고,\n네 명철을 의지하지 말아라.\n네가 하는 모든 일에서 주님을 인정하여라.\n그러면 주님께서 네 갈 길을 곧게 하실 것이다."
+  },
+  {
+    theme: "쉼과 안식",
+    ref: "마태복음 11:28",
+    content: "수고하며 무거운 짐을 진 사람은\n모두 내게로 오너라.\n내가 너희를 쉬게 하겠다."
+  },
+  {
+    theme: "선한 목자",
+    ref: "시편 23:1-3",
+    content: "주님은 나의 목자이시니,\n내게 부족함 없어라.\n나를 푸른 풀밭에 누이시며\n쉴 만한 물 가로 인도하신다.\n내 영혼을 소생시키시고,\n바른 길로 이끌어 주신다."
+  },
+  {
+    theme: "평화의 선물",
+    ref: "요한복음 14:27",
+    content: "나는 평화를 너희에게 남겨 준다.\n곧 나의 평화를 너희에게 준다.\n너희는 마음에 근심하지 말고,\n두려워하지도 말아라."
+  },
+  {
+    theme: "소망과 미래",
+    ref: "예레미야 29:11",
+    content: "너희를 두고 계획하고 있는 일들은\n재앙이 아니라 번영이며,\n너희에게 미래와 희망을 주려는 것이다.\n나 주의 말이다."
+  },
+  {
+    theme: "합력하여 선을 이룸",
+    ref: "로마서 8:28",
+    content: "하나님을 사랑하는 사람들,\n곧 하나님의 뜻대로 부르심을 받은 사람들에게는,\n모든 일이 서로 협력해서\n선을 이룬다는 것을 우리는 압니다."
+  },
+  {
+    theme: "성령의 열매",
+    ref: "갈라디아서 5:22-23",
+    content: "성령의 열매는\n사랑과 기쁨과 평화와\n인내와 친절과 선함과\n신실과 온유와 절제입니다."
+  },
+  {
+    theme: "기쁨과 감사",
+    ref: "데살로니가전서 5:16-18",
+    content: "항상 기뻐하십시오.\n끊임없이 기도하십시오.\n모든 일에 감사하십시오.\n이것이 그리스도 예수 안에서\n여러분을 두고 뜻하신 하나님의 뜻입니다."
+  },
+  {
+    theme: "새 힘",
+    ref: "이사야 40:31",
+    content: "오직 주님을 소망하는 사람은 새 힘을 얻으며,\n독수리가 날개 치며 솟아오르듯 올라갈 것이요,\n뛰어도 지치지 않으며,\n걸어도 피곤하지 않을 것이다."
+  },
+  {
+    theme: "도움의 주님",
+    ref: "시편 121:1-2",
+    content: "내가 눈을 들어 산을 본다.\n내 도움이 어디에서 오는가?\n내 도움은 하늘과 땅을 만드신\n주님에게서 온다."
+  },
+  {
+    theme: "계획과 인도",
+    ref: "잠언 16:9",
+    content: "사람이 마음으로 자기의 앞길을 계획하지만,\n그 발걸음을 인도하시는 분은\n주님이시다."
+  },
+  {
+    theme: "피난처와 힘",
+    ref: "시편 46:1",
+    content: "하나님은 우리의 피난처시요 힘이시니,\n환난 중에 만날 큰 도움이시라."
+  },
+  {
+    theme: "사랑의 마음",
+    ref: "고린도전서 13:4, 7",
+    content: "사랑은 오래 참고, 친절합니다.\n사랑은 모든 것을 덮어 주며,\n모든 것을 믿으며,\n모든 것을 바라며,\n모든 것을 견딥니다."
+  },
+  {
+    theme: "감사와 찬양",
+    ref: "하박국 3:17-18",
+    content: "무화과나무에 과일이 없고,\n포도나무에 열매가 없을지라도,\n나는 주님 안에서 즐거워하렵니다.\n나를 구원하신 하나님 안에서 기뻐하렵니다."
+  },
+  {
+    theme: "모든 것을 더하심",
+    ref: "마태복음 6:33",
+    content: "너희는 먼저 하나님의 나라와\n하나님의 의를 구하여라.\n그리하면 이 모든 것을\n너희에게 더하여 주실 것이다."
+  },
+  {
+    theme: "능력의 주님",
+    ref: "빌립보서 4:13",
+    content: "나에게 능력을 주시는 분 안에서,\n나는 모든 것을 할 수 있습니다."
+  },
+  {
+    theme: "신뢰와 맡김",
+    ref: "시편 37:5",
+    content: "네 갈 길을 주님께 맡기고,\n주님을 신뢰하여라.\n주님께서 친히 이루어 주실 것이다."
+  },
+  {
+    theme: "은혜를 기억함",
+    ref: "시편 103:1-2",
+    content: "내 영혼아, 주님을 찬양하여라.\n내 속에 있는 모든 것들아,\n그분의 거룩한 이름을 찬양하여라.\n그분이 베푸신 모든 은혜를 잊지 말아라."
+  },
+  {
+    theme: "풍성한 응답",
+    ref: "에베소서 3:20",
+    content: "우리 가운데서 역사하시는 능력을 따라,\n우리가 구하거나 생각하는 것보다\n훨씬 더 넘치도록 능히 하실 분에게\n영광이 있기를 빕니다."
+  },
+  {
+    theme: "온전한 사랑",
+    ref: "요한일서 4:18",
+    content: "사랑에는 두려움이 없습니다.\n완전한 사랑은 두려움을 내쫓습니다."
+  },
+  {
+    theme: "흔들리지 않는 삶",
+    ref: "시편 16:8",
+    content: "내가 주님을 늘 내 앞에 모십니다.\n주님이 내 오른쪽에 계시니,\n내가 흔들리지 않을 것입니다."
+  },
+  {
+    theme: "영혼의 잠잠함",
+    ref: "시편 62:1-2",
+    content: "내 영혼이 잠잠히 하나님만 기다림은\n나의 구원이 그에게서 나오기 때문이다.\n오직 주님만이 나의 반석, 나의 구원,\n나의 요새이시니 나는 흔들리지 않는다."
+  },
+  {
+    theme: "완전한 평화",
+    ref: "이사야 26:3",
+    content: "주님께서는 생각을 주님께 고정시킨 사람에게\n완전한 평화를 베풀어 주십니다.\n그가 주님을 신뢰하기 때문입니다."
+  },
+  {
+    theme: "마음 지키기",
+    ref: "잠언 4:23",
+    content: "그 무엇보다도 너는 네 마음을 지켜라.\n그 마음이 바로\n생명의 근원이기 때문이다."
+  },
+  {
+    theme: "마음의 평화",
+    ref: "골로새서 3:15",
+    content: "그리스도의 평화가\n여러분의 마음을 다스리게 하십시오.\n여러분은 평화를 누리도록\n한 몸으로 부르심을 받았습니다."
+  },
+  {
+    theme: "돌보시는 주님",
+    ref: "베드로전서 5:7",
+    content: "여러분의 걱정을 모두 하나님께 맡기십시오.\n하나님께서는 여러분을\n돌보고 계십니다."
+  }
+];
+
+function getVerseSlotInfo() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const date = String(now.getDate()).padStart(2, '0');
+  const hour = now.getHours();
+  const slotIndex = Math.floor(hour / 6); // 0 (00-06), 1 (06-12), 2 (12-18), 3 (18-24)
+
+  const slotMeta = [
+    { name: '새벽의 묵상', icon: '✨', sub: '고요한 새벽을 밝히는 말씀' },
+    { name: '아침의 말씀', icon: '☀️', sub: '활기찬 하루를 여는 말씀' },
+    { name: '오후의 쉼',   icon: '🌿', sub: '지친 마음에 힘을 주는 말씀' },
+    { name: '평안한 밤',   icon: '🌙', sub: '하루를 감사로 맺는 말씀' }
+  ][slotIndex];
+
+  const slotKey = `verse_shown_${year}-${month}-${date}_slot_${slotIndex}`;
+  const dayNumber = Math.floor(now.getTime() / (24 * 60 * 60 * 1000));
+  const verseIndex = (dayNumber * 4 + slotIndex) % BIBLE_VERSES.length;
+
+  return { slotKey, slotIndex, slotMeta, verse: BIBLE_VERSES[verseIndex] };
+}
+
+function showVerseCard(force = false) {
+  const info = getVerseSlotInfo();
+  if (!force && localStorage.getItem(info.slotKey)) {
+    return false;
+  }
+
+  const v = info.verse;
+  const ov = el(`
+    <div class="overlay" style="z-index:90;">
+      <div class="verse-modal fade">
+        <div class="verse-badge">${info.slotMeta.icon} ${info.slotMeta.name}</div>
+        <div style="font-size:13px;color:var(--ink-soft);margin-top:-8px;margin-bottom:12px;">${info.slotMeta.sub}</div>
+        <div class="verse-quote-wrap">
+          <div class="verse-quote-mark" style="text-align:left;">“</div>
+          <div class="verse-text">${v.content}</div>
+          <div class="verse-quote-mark" style="text-align:right;">”</div>
+        </div>
+        <div>
+          <span class="verse-ref">${v.ref} <span style="font-size:12px;color:var(--ink-soft);font-weight:normal;">(새번역)</span></span>
+        </div>
+        <button class="verse-btn" id="closeVerseBtn">마음에 새기기 🙏</button>
+      </div>
+    </div>
+  `);
+
+  document.body.appendChild(ov);
+
+  const close = () => {
+    localStorage.setItem(info.slotKey, 'true');
+    ov.remove();
+  };
+
+  ov.querySelector('#closeVerseBtn').addEventListener('click', close);
+  ov.addEventListener('click', (e) => {
+    if (e.target === ov) close();
+  });
+  return true;
 }
 
 // ---------- 에셋 폴더 기본 카드 (코드에 직접 한 줄씩 등록하는 방식 — 필수 아님) ----------
@@ -1194,7 +1419,10 @@ async function renderHome(isNew=false){
     <div class="fade">
       <div class="topbar">
         <div class="brand">🧠 오늘의 두뇌 운동</div>
-        <button class="iconbtn" id="infoBtn">ℹ️</button>
+        <div class="topbar-btns">
+          <button class="iconbtn" id="verseBtn" title="오늘의 말씀">📖</button>
+          <button class="iconbtn" id="infoBtn" title="도움말">ℹ️</button>
+        </div>
       </div>
       <div class="hero">
         <p class="hello">${greet} 😊</p>
@@ -1222,6 +1450,7 @@ async function renderHome(isNew=false){
       </div>
     </div>`);
   app.appendChild(v);
+  v.querySelector('#verseBtn').addEventListener('click',()=>showVerseCard(true));
   v.querySelector('#infoBtn').addEventListener('click',showInfo);
   v.querySelector('#lvDown').addEventListener('click',()=>{setLevel(curLevel()-1);renderHome();});
   v.querySelector('#lvUp').addEventListener('click',()=>{setLevel(curLevel()+1);renderHome();});
@@ -1229,6 +1458,9 @@ async function renderHome(isNew=false){
   v.querySelector('#myCardsBtn').addEventListener('click',renderMyCards);
   v.querySelector('#switchUser').addEventListener('click',()=>{ currentMember=null; renderLoginScreen(); });
   v.querySelector('#toAdmin').addEventListener('click',()=>renderAdminPinScreen());
+
+  // 6시간 슬롯 기준 첫 접속 시 자동 팝업
+  setTimeout(()=>{ showVerseCard(false); }, 350);
 }
 function showInfo(){
   const ov=el(`
