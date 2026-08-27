@@ -1950,6 +1950,16 @@ async function renderAdminDashboard(){
       </div>` : ''}
 
       <div class="admin-panel">
+        <div class="section-title">🧪 선물상자 보상 화면 테스트</div>
+        <div style="font-size:12px;color:var(--ink-soft);margin-bottom:10px;line-height:1.5;">실제 확률(꽝 80% · 말씀카드 15% · 머털도사 카드 5%)과 상관없이 각 결과 화면을 바로 눌러서 미리 볼 수 있어요.</div>
+        <div class="btn-row">
+          <button class="btn btn-ghost btn-small" id="testEmptyBtn" style="margin-top:0;font-size:14px;padding:12px 8px;">💨 꽝<br><span style="font-size:11px;color:var(--ink-soft);">80%</span></button>
+          <button class="btn btn-ghost btn-small" id="testVerseBtn" style="margin-top:0;font-size:14px;padding:12px 8px;">📖 말씀카드<br><span style="font-size:11px;color:var(--ink-soft);">15%</span></button>
+          <button class="btn btn-ghost btn-small" id="testMeoteolBtn" style="margin-top:0;font-size:14px;padding:12px 8px;">🎴 머털도사<br><span style="font-size:11px;color:var(--ink-soft);">5%</span></button>
+        </div>
+      </div>
+
+      <div class="admin-panel">
         <div class="section-title">📥 카드 등록</div>
         <div class="dropzone" id="dropzone">
           이미지를 여기로 끌어다 놓으세요<br>
@@ -1986,6 +1996,12 @@ async function renderAdminDashboard(){
     if(giftBtn) giftBtn.addEventListener('click',()=>showGrantCardModal(currentMember));
   }
   v.querySelector('#exitAdmin2').addEventListener('click',exit);
+  v.querySelector('#testEmptyBtn').addEventListener('click', showEmptyRewardScreen);
+  v.querySelector('#testVerseBtn').addEventListener('click', showVerseRewardScreen);
+  v.querySelector('#testMeoteolBtn').addEventListener('click', ()=>{
+    if(!currentMember){ showToast('머털도사 카드 지급 테스트는 이 기기에 회원으로 로그인한 상태에서만 가능해요'); return; }
+    showMeoteolRewardScreen();
+  });
   v.querySelector('#toLibrary').addEventListener('click',renderAdminLibrary);
   v.querySelector('#exportCards').addEventListener('click', exportCardsToFile);
   const importFileInput=v.querySelector('#importFileInput');
