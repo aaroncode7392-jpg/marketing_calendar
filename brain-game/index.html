@@ -1530,12 +1530,28 @@ function showEmptyRewardScreen(){
 }
 
 /**
- * 말씀카드(15%) 책갈피 보상 화면 표시 (하늘/자연 배경 + 책갈피 레이아웃)
+ * 말씀카드 상단에 랜덤으로 적용되는 감성 풍경 이미지 에셋 4종
+ * 1. 바다와 구름 (assets/landscape-sea.jpg)
+ * 2. 나무와 구름 (assets/landscape-trees.jpg)
+ * 3. 숲 (assets/landscape-forest.jpg)
+ * 4. 교회 (assets/landscape-church.jpg)
+ */
+const LANDSCAPE_IMAGES = [
+  'assets/landscape-sea.jpg',
+  'assets/landscape-trees.jpg',
+  'assets/landscape-forest.jpg',
+  'assets/landscape-church.jpg'
+];
+
+/**
+ * 말씀카드(15%) 책갈피 보상 화면 표시 (하늘/자연 배경 + 4종 풍경 랜덤 상단 이미지 + 책갈피 레이아웃)
  */
 function showVerseRewardScreen(){
   confetti(6);
   playCardSound();
   const verse = pick(BIBLE_VERSES);
+  // 4종 풍경 에셋(바다와 구름, 나무와 구름, 숲, 교회) 중 1종 랜덤 선택
+  const topLandscape = pick(LANDSCAPE_IMAGES);
 
   const ov = el(`
     <div class="reward-overlay" style="position:fixed;inset:0;">
@@ -1553,11 +1569,11 @@ function showVerseRewardScreen(){
           마음에 평안과 힘을 주는 은혜의 책갈피예요
         </div>
 
-        <!-- 책갈피 카드 디자인 (첨부 레퍼런스 스타일) -->
+        <!-- 책갈피 카드 디자인 (상단에 4종 랜덤 풍경 에셋 적용) -->
         <div class="bookmark-card-wrap">
-          <div class="bookmark-header">
+          <div class="bookmark-header" style="background-image:url('${topLandscape}');background-size:cover;background-position:center;">
             <!-- 상단 펀칭 홀 디테일 -->
-            <div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,0.9);box-shadow:inset 0 1px 3px rgba(0,0,0,0.4);"></div>
+            <div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,0.92);box-shadow:inset 0 1px 3px rgba(0,0,0,0.4);"></div>
           </div>
           <div class="bookmark-body">
             <div style="margin-bottom:4px;">
@@ -1583,7 +1599,7 @@ function showVerseRewardScreen(){
 }
 
 /**
- * 머털도사 카드(5%) 보상 화면 표시 (메인 화면 영상 배경 + 카드 획득 연출)
+ * 머털도사 카드(5%) 보상 화면 표시 (메인 화면 영상 배경 + 카드가 화면에 꽉 차게 크게 보이는 연출)
  */
 async function showMeoteolRewardScreen(){
   confetti(12);
@@ -1602,31 +1618,32 @@ async function showMeoteolRewardScreen(){
   const countText = (currentMember.cards && currentMember.cards[card.id]) ? `보유 ${currentMember.cards[card.id]}장` : '신규 획득!';
 
   const ov = el(`
-    <div class="reward-overlay" style="position:fixed;inset:0;">
+    <div class="reward-overlay" style="position:fixed;inset:0;padding:12px;">
       <!-- 배경: 메인 화면 영상(GIF) -->
       <div style="position:fixed;inset:0;z-index:-1;overflow:hidden;">
         <img src="assets/main-bg.gif" alt="" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'">
         <div style="position:absolute;inset:0;background:linear-gradient(180deg, rgba(20,10,5,0.4) 0%, rgba(15,8,4,0.78) 100%);"></div>
       </div>
 
-      <div style="text-align:center;max-width:420px;width:100%;">
-        <div style="font-family:'Jua';font-size:26px;color:#FFD166;text-shadow:0 3px 12px rgba(0,0,0,0.7);margin-bottom:4px;">
+      <div style="text-align:center;max-width:460px;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+        <div style="font-family:'Jua';font-size:24px;color:#FFD166;text-shadow:0 3px 12px rgba(0,0,0,0.7);margin-bottom:2px;">
           🎉 머털도사 카드 획득! (5% 확률)
         </div>
-        <div style="font-size:15px;color:rgba(255,255,255,0.92);text-shadow:0 2px 8px rgba(0,0,0,0.6);margin-bottom:16px;">
+        <div style="font-size:14px;color:rgba(255,255,255,0.92);text-shadow:0 2px 8px rgba(0,0,0,0.6);margin-bottom:10px;">
           축하합니다! 희귀한 머털도사 카드를 뽑았어요!
         </div>
 
-        <div class="card-fx-wrap" id="meoteolFxWrap">
-          <div class="card-burst-ring"></div>
-          ${img ? `<img class="card-jelly" src="${img}" style="width:210px;max-width:72%;border-radius:20px;box-shadow:0 12px 32px rgba(0,0,0,0.45);background:#fff;border:3px solid #FFD166;">`
-                : `<div class="card-jelly" style="font-size:80px;">🎴</div>`}
+        <!-- 화면에 거의 꽉 차게 커진 머털도사 카드 -->
+        <div class="card-fx-wrap" id="meoteolFxWrap" style="margin:4px 0;width:100%;display:flex;justify-content:center;align-items:center;">
+          <div class="card-burst-ring" style="width:340px;height:340px;margin:-170px 0 0 -170px;"></div>
+          ${img ? `<img class="card-jelly" src="${img}" style="width:86vw;max-width:340px;max-height:56vh;object-fit:contain;border-radius:22px;box-shadow:0 16px 44px rgba(0,0,0,0.65);background:#fff;border:3.5px solid #FFD166;">`
+                : `<div class="card-jelly" style="font-size:100px;">🎴</div>`}
         </div>
 
-        <div style="font-family:'Jua';font-size:22px;color:#FFF;margin-top:14px;text-shadow:0 2px 10px rgba(0,0,0,0.6);">${card.name || '머털도사 카드'}</div>
-        <div style="font-size:14px;color:#FFEAA7;margin-top:4px;text-shadow:0 2px 8px rgba(0,0,0,0.6);">${countText} (라이브러리에 저장됨)</div>
+        <div style="font-family:'Jua';font-size:22px;color:#FFF;margin-top:10px;text-shadow:0 2px 10px rgba(0,0,0,0.6);">${card.name || '머털도사 카드'}</div>
+        <div style="font-size:14px;color:#FFEAA7;margin-top:2px;text-shadow:0 2px 8px rgba(0,0,0,0.6);">${countText} (라이브러리에 저장됨)</div>
 
-        <div class="touch-hint">👉 화면 아무 곳이나 터치하면 닫힙니다</div>
+        <div class="touch-hint" style="margin-top:14px;">👉 화면 아무 곳이나 터치하면 닫힙니다</div>
       </div>
     </div>
   `);
