@@ -237,7 +237,22 @@ async function stListKeys(prefix){
   return keys;
 }
 
-// ---------- 새번역 오늘의 말씀 큐레이션 데이터셋 & 6시간 주기 로직 ----------
+/* ==========================================================
+   [CLAUDE / DEV GUIDE] 새번역 오늘의 말씀 큐레이션 데이터셋 & 6시간 주기 로직
+   - 번역본: 대한성서공회 새번역 (RNKSV)
+   - 노출 주기: 하루 24시간을 4개 슬롯(6시간 단위)으로 분할
+     * Slot 0: 00:00 ~ 05:59 (새벽의 묵상)
+     * Slot 1: 06:00 ~ 11:59 (아침의 말씀)
+     * Slot 2: 12:00 ~ 17:59 (오후의 쉼)
+     * Slot 3: 18:00 ~ 23:59 (평안한 밤)
+   - 중복 방지: localStorage에 `verse_shown_YYYY-MM-DD_slot_N` 키를 저장하여 슬롯당 1회 자동 팝업
+   - 줄바꿈 원칙: 모바일 화면에서도 어색하게 끊기지 않도록 문맥/호흡 단위로 \n 개행 삽입
+   ========================================================== */
+
+/**
+ * 새번역 말씀카드 큐레이션 데이터 목록
+ * @type {Array<{theme: string, ref: string, content: string}>}
+ */
 const BIBLE_VERSES = [
   {
     theme: "인도와 지혜",
@@ -391,6 +406,10 @@ const BIBLE_VERSES = [
   }
 ];
 
+/**
+ * 현재 시간(24H)을 기준으로 6시간 주기 슬롯 정보 및 구절을 계산
+ * @returns {{slotKey: string, slotIndex: number, slotMeta: {name: string, icon: string, sub: string}, verse: Object}}
+ */
 function getVerseSlotInfo() {
   const now = new Date();
   const year = now.getFullYear();
@@ -399,6 +418,7 @@ function getVerseSlotInfo() {
   const hour = now.getHours();
   const slotIndex = Math.floor(hour / 6); // 0 (00-06), 1 (06-12), 2 (12-18), 3 (18-24)
 
+  // 시간대별 테마 및 인사말
   const slotMeta = [
     { name: '새벽의 묵상', icon: '✨', sub: '고요한 새벽을 밝히는 말씀' },
     { name: '아침의 말씀', icon: '☀️', sub: '활기찬 하루를 여는 말씀' },
@@ -406,15 +426,23 @@ function getVerseSlotInfo() {
     { name: '평안한 밤',   icon: '🌙', sub: '하루를 감사로 맺는 말씀' }
   ][slotIndex];
 
+  // 하루 4슬롯 고유 키 (예: verse_shown_2026-08-27_slot_1)
   const slotKey = `verse_shown_${year}-${month}-${date}_slot_${slotIndex}`;
+  // 날짜와 슬롯 인덱스를 조합하여 순차적으로 말씀이 순환되도록 인덱스 결정
   const dayNumber = Math.floor(now.getTime() / (24 * 60 * 60 * 1000));
   const verseIndex = (dayNumber * 4 + slotIndex) % BIBLE_VERSES.length;
 
   return { slotKey, slotIndex, slotMeta, verse: BIBLE_VERSES[verseIndex] };
 }
 
+/**
+ * 오늘의 말씀 모달 팝업 표시
+ * @param {boolean} force - true일 경우 이미 봤더라도 강제로 표시 (상단 📖 버튼 클릭 시)
+ * @returns {boolean} 실제로 팝업이 떴는지 여부
+ */
 function showVerseCard(force = false) {
   const info = getVerseSlotInfo();
+  // 자동 팝업 모드일 때 이미 해당 슬롯에 본 기록이 있으면 건너뜀
   if (!force && localStorage.getItem(info.slotKey)) {
     return false;
   }
@@ -440,6 +468,7 @@ function showVerseCard(force = false) {
 
   document.body.appendChild(ov);
 
+  // 모달 닫기 및 해당 슬롯 확인 기록 저장
   const close = () => {
     localStorage.setItem(info.slotKey, 'true');
     ov.remove();
