@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200" width="100%" height="100%" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#8E9AAF"/><stop offset="100%" stop-color="#CBC0D3"/></linearGradient>
+    <linearGradient id="g2" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#DEABDF"/><stop offset="100%" stop-color="#FEE1E8"/></linearGradient>
+    <linearGradient id="g3" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#9A8C98"/><stop offset="100%" stop-color="#C9ADA7"/></linearGradient>
+    <linearGradient id="g4" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#B8C0FF"/><stop offset="100%" stop-color="#E7C6FF"/></linearGradient>
+    <linearGradient id="gCenter" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#FFFFFF"/><stop offset="100%" stop-color="#F3E9D2"/></linearGradient>
+  </defs>
+
+  <!-- Mosaic Polygons -->
+  <polygon points="0,0 50,0 40,40 0,30" fill="#9BA2B8" stroke="#E2D9E8" stroke-width="1.5"/>
+  <polygon points="50,0 110,0 95,45 40,40" fill="#B3A5C4" stroke="#E2D9E8" stroke-width="1.5"/>
+  <polygon points="110,0 170,0 155,40 95,45" fill="#C4B4D8" stroke="#E2D9E8" stroke-width="1.5"/>
+  <polygon points="170,0 230,0 215,45 155,40" fill="#B8A8CC" stroke="#E2D9E8" stroke-width="1.5"/>
+  <polygon points="230,0 300,0 300,35 215,45" fill="#A89ABA" stroke="#E2D9E8" stroke-width="1.5"/>
+
+  <polygon points="0,30 40,40 35,90 0,80" fill="#A8B4CC" stroke="#E2D9E8" stroke-width="1.5"/>
+  <polygon points="40,40 95,45 85,95 35,90" fill="#CBC2DC" stroke="#E2D9E8" stroke-width="1.5"/>
+  <polygon points="95,45 155,40 145,95 85,95" fill="#E6DAF0" stroke="#E2D9E8" stroke-width="1.5"/>
+  <polygon points="155,40 215,45 205,95 145,95" fill="#DDD0EC" stroke="#E2D9E8" stroke-width="1.5"/>
+  <polygon points="215,45 300,35 300,85 205,95" fill="#BFAED2" stroke="#E2D9E8" stroke-width="1.5"/>
+
+  <polygon points="0,80 35,90 30,140 0,135" fill="#8E9CB8" stroke="#E2D9E8" stroke-width="1.5"/>
+  <polygon points="35,90 85,95 75,145 30,140" fill="#D6CCE6" stroke="#E2D9E8" stroke-width="1.5"/>
+  <!-- Bright Center Core -->
+  <polygon points="85,95 145,95 140,145 75,145" fill="#FFFDF8" stroke="#E2D9E8" stroke-width="1.5"/>
+  <polygon points="145,95 205,95 195,145 140,145" fill="#F0E5F8" stroke="#E2D9E8" stroke-width="1.5"/>
+  <polygon points="205,95 300,85 300,135 195,145" fill="#C9BEDC" stroke="#E2D9E8" stroke-width="1.5"/>
+
+  <polygon points="0,135 30,140 25,200 0,200" fill="#9BA6BE" stroke="#E2D9E8" stroke-width="1.5"/>
+  <polygon points="30,140 75,145 70,200 25,200" fill="#C2B8D6" stroke="#E2D9E8" stroke-width="1.5"/>
+  <polygon points="75,145 140,145 135,200 70,200" fill="#E8DEEE" stroke="#E2D9E8" stroke-width="1.5"/>
+  <polygon points="140,145 195,145 190,200 135,200" fill="#E4D6EE" stroke="#E2D9E8" stroke-width="1.5"/>
+  <polygon points="195,145 300,135 300,200 190,200" fill="#B4A6CA" stroke="#E2D9E8" stroke-width="1.5"/>
+
+  <!-- Center highlight glow -->
+  <circle cx="120" cy="115" r="50" fill="#FFF" opacity="0.35" filter="blur(15px)"/>
+</svg>

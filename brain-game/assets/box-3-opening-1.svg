@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <defs>
+    <radialGradient id="peekLight" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFDF0" stop-opacity="1"/>
+      <stop offset="40%" stop-color="#FFEAA7" stop-opacity="0.9"/>
+      <stop offset="80%" stop-color="#FDCB6E" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#E17055" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="shadowG" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#3A2E28" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#3A2E28" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="boxGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF7E5F"/>
+      <stop offset="50%" stop-color="#EE5A24"/>
+      <stop offset="100%" stop-color="#D63031"/>
+    </linearGradient>
+    <linearGradient id="lidGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFA07A"/>
+      <stop offset="100%" stop-color="#EA5229"/>
+    </linearGradient>
+    <linearGradient id="ribbonGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFEAA7"/>
+      <stop offset="40%" stop-color="#FDCB6E"/>
+      <stop offset="100%" stop-color="#E17055"/>
+    </linearGradient>
+    <filter id="softGlow">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Shadow -->
+  <ellipse cx="100" cy="172" rx="65" ry="14" fill="url(#shadowG)"/>
+
+  <!-- Inside Box Depth -->
+  <path d="M 46 88 L 154 88 L 150 120 L 50 120 Z" fill="#631709"/>
+
+  <!-- Light Peeking Out of Gap -->
+  <ellipse cx="100" cy="84" rx="55" ry="14" fill="url(#peekLight)" filter="url(#softGlow)"/>
+  <polygon points="70,82 100,50 130,82 100,88" fill="#FFF" opacity="0.75" filter="url(#softGlow)"/>
+
+  <!-- Box Body -->
+  <path d="M 40 85 L 160 85 L 152 160 C 152 164 148 168 144 168 L 56 168 C 52 168 48 164 48 160 Z" fill="url(#boxGrad)" stroke="#B33922" stroke-width="3" stroke-linejoin="round"/>
+
+  <!-- Vertical Ribbon on Body -->
+  <rect x="88" y="85" width="24" height="83" fill="url(#ribbonGold)" stroke="#D48A18" stroke-width="2"/>
+  <line x1="100" y1="85" x2="100" y2="168" stroke="#FFF" stroke-width="1.5" stroke-dasharray="4 2" opacity="0.6"/>
+
+  <!-- Box Lid (Slightly Open / Tilted up -8deg) -->
+  <g transform="translate(100, 72) rotate(-8) translate(-100, -72)">
+    <rect x="34" y="52" width="132" height="25" rx="6" fill="url(#lidGrad)" stroke="#B33922" stroke-width="3"/>
+    <rect x="88" y="52" width="24" height="25" fill="url(#ribbonGold)" stroke="#D48A18" stroke-width="2"/>
+    <line x1="100" y1="52" x2="100" y2="77" stroke="#FFF" stroke-width="1.5" stroke-dasharray="4 2" opacity="0.6"/>
+
+    <!-- Bow -->
+    <path d="M 92 52 C 65 26 60 12 80 12 C 95 12 98 40 99 52 Z" fill="url(#ribbonGold)" stroke="#D48A18" stroke-width="2"/>
+    <path d="M 108 52 C 135 26 140 12 120 12 C 105 12 102 40 101 52 Z" fill="url(#ribbonGold)" stroke="#D48A18" stroke-width="2"/>
+    <circle cx="100" cy="50" r="9" fill="url(#ribbonGold)" stroke="#D48A18" stroke-width="2.5"/>
+    <circle cx="98" cy="48" r="3" fill="#FFF" opacity="0.7"/>
+  </g>
+</svg>

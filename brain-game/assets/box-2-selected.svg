@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <defs>
+    <radialGradient id="auraGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFD166" stop-opacity="0.85"/>
+      <stop offset="50%" stop-color="#FF9F43" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#EE5253" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="shadowG" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#3A2E28" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#3A2E28" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="boxGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFA07A"/>
+      <stop offset="50%" stop-color="#FF6B4A"/>
+      <stop offset="100%" stop-color="#EE5253"/>
+    </linearGradient>
+    <linearGradient id="lidGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFC048"/>
+      <stop offset="50%" stop-color="#FF793F"/>
+      <stop offset="100%" stop-color="#EE5253"/>
+    </linearGradient>
+    <linearGradient id="ribbonGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFDF0"/>
+      <stop offset="40%" stop-color="#FFD166"/>
+      <stop offset="100%" stop-color="#F39C12"/>
+    </linearGradient>
+    <filter id="superGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Aura Glow Behind -->
+  <circle cx="100" cy="105" r="85" fill="url(#auraGlow)" filter="url(#superGlow)"/>
+
+  <!-- Sparkles around -->
+  <path d="M 35 50 Q 40 45 45 50 Q 40 55 35 50 Z" fill="#FFEAA7" filter="url(#superGlow)"/>
+  <path d="M 165 52 Q 170 47 175 52 Q 170 57 165 52 Z" fill="#FFEAA7" filter="url(#superGlow)"/>
+  <path d="M 175 110 Q 180 105 185 110 Q 180 115 175 110 Z" fill="#FFEAA7" filter="url(#superGlow)"/>
+  <path d="M 25 115 Q 30 110 35 115 Q 30 120 25 115 Z" fill="#FFEAA7" filter="url(#superGlow)"/>
+
+  <!-- Shadow -->
+  <ellipse cx="100" cy="172" rx="68" ry="16" fill="url(#shadowG)"/>
+
+  <!-- Selection Pulsing Outline -->
+  <path d="M 36 82 L 164 82 L 155 162 C 155 167 150 172 145 172 L 55 172 C 50 172 45 167 45 162 Z" fill="none" stroke="#FFD166" stroke-width="6" opacity="0.6"/>
+
+  <!-- Box Body -->
+  <path d="M 40 85 L 160 85 L 152 160 C 152 164 148 168 144 168 L 56 168 C 52 168 48 164 48 160 Z" fill="url(#boxGrad)" stroke="#B33922" stroke-width="3.5" stroke-linejoin="round"/>
+  <path d="M 40 85 L 62 85 L 66 168 L 56 168 C 52 168 48 164 48 160 Z" fill="#FFF" opacity="0.3"/>
+
+  <!-- Vertical Ribbon on Body -->
+  <rect x="87" y="85" width="26" height="83" fill="url(#ribbonGold)" stroke="#D48A18" stroke-width="2"/>
+  <line x1="100" y1="85" x2="100" y2="168" stroke="#FFF" stroke-width="2" stroke-dasharray="4 2"/>
+
+  <!-- Box Lid -->
+  <g id="lidGroup">
+    <rect x="32" y="66" width="136" height="27" rx="7" fill="url(#lidGrad)" stroke="#B33922" stroke-width="3.5"/>
+    <!-- Lid Ribbon -->
+    <rect x="87" y="66" width="26" height="27" fill="url(#ribbonGold)" stroke="#D48A18" stroke-width="2"/>
+    <line x1="100" y1="66" x2="100" y2="93" stroke="#FFF" stroke-width="2" stroke-dasharray="4 2"/>
+
+    <!-- Ribbon Bow -->
+    <path d="M 90 66 C 60 38 55 24 78 24 C 95 24 97 54 99 66 Z" fill="url(#ribbonGold)" stroke="#D48A18" stroke-width="2.2"/>
+    <path d="M 110 66 C 140 38 145 24 122 24 C 105 24 103 54 101 66 Z" fill="url(#ribbonGold)" stroke="#D48A18" stroke-width="2.2"/>
+    <circle cx="100" cy="64" r="10" fill="url(#ribbonGold)" stroke="#D48A18" stroke-width="2.5"/>
+    <circle cx="97" cy="62" r="3.5" fill="#FFF" opacity="0.85"/>
+  </g>
+</svg>

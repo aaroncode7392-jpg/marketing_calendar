@@ -139,7 +139,7 @@
   /* modal */
   .overlay{position:fixed;inset:0;background:rgba(58,46,40,.5);display:flex;align-items:center;justify-content:center;padding:20px;z-index:60;}
   .modal{background:var(--paper);border-radius:26px;max-width:480px;width:100%;padding:26px 24px;box-shadow:var(--shadow);max-height:84vh;overflow:auto;}
-  /* verse card modal */
+  /* verse card modal (6-hour popup) */
   .verse-modal{background:linear-gradient(180deg,#FFFDF8 0%,#FAF3E6 100%);border:2px solid #EADBCA;border-radius:28px;max-width:440px;width:100%;padding:28px 22px 24px;box-shadow:0 14px 40px rgba(100,70,40,0.22);text-align:center;position:relative;}
   .verse-badge{display:inline-flex;align-items:center;gap:6px;background:#FFF0D0;border:1.5px solid #E8C488;color:#9B5E14;border-radius:999px;padding:6px 16px;font-family:'Jua';font-size:15px;margin-bottom:14px;}
   .verse-quote-wrap{position:relative;padding:6px 12px 14px;}
@@ -149,6 +149,187 @@
   .verse-btn{margin-top:20px;width:100%;font-size:20px;padding:15px;border-radius:18px;background:linear-gradient(135deg,#EE7B5B,#E8633F);color:#fff;border:none;box-shadow:0 5px 0 #C95535;cursor:pointer;font-family:'Jua';}
   .verse-btn:active{transform:translateY(3px);box-shadow:none;}
   .topbar-btns{display:flex;align-items:center;gap:8px;}
+
+  /* ----------------------------------------------------
+     선물 상자 3개 선택 및 보상 화면 애니메이션 & 책갈피 스타일
+     ---------------------------------------------------- */
+  @keyframes chestFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-7px); }
+  }
+  @keyframes chestShake {
+    0%, 100% { transform: scale(1.08) rotate(0deg); }
+    20% { transform: scale(1.08) rotate(-6deg); }
+    40% { transform: scale(1.08) rotate(6deg); }
+    60% { transform: scale(1.08) rotate(-4deg); }
+    80% { transform: scale(1.08) rotate(4deg); }
+  }
+  @keyframes softPulse {
+    0%, 100% { opacity: 0.7; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.04); }
+  }
+  .chest-pick-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin: 18px 0 12px;
+  }
+  .chest-item {
+    background: #FFFBF4;
+    border: 2px solid #EADBCA;
+    border-radius: 20px;
+    padding: 12px 6px 14px;
+    cursor: pointer;
+    text-align: center;
+    transition: transform 0.2s, box-shadow 0.2s, opacity 0.3s;
+    box-shadow: 0 6px 0 rgba(0,0,0,0.06);
+    user-select: none;
+  }
+  .chest-item:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 0 rgba(0,0,0,0.08);
+    border-color: #E8633F;
+  }
+  .chest-item:active {
+    transform: translateY(2px);
+    box-shadow: none;
+  }
+  .chest-item.floating {
+    animation: chestFloat 2.2s ease-in-out infinite;
+  }
+  .chest-item:nth-child(2).floating {
+    animation-delay: 0.35s;
+  }
+  .chest-item:nth-child(3).floating {
+    animation-delay: 0.7s;
+  }
+  .chest-item.selected {
+    border-color: #FFD166;
+    background: #FFF3D6;
+    box-shadow: 0 0 24px rgba(255, 209, 102, 0.75);
+    animation: chestShake 0.6s ease;
+  }
+  .chest-item.dimmed {
+    opacity: 0.25;
+    pointer-events: none;
+    transform: scale(0.92);
+  }
+  .chest-item img {
+    width: 100%;
+    max-width: 105px;
+    aspect-ratio: 1/1;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.12));
+  }
+  .chest-label {
+    font-family: 'Jua', sans-serif;
+    font-size: 15px;
+    color: var(--ink);
+    margin-top: 6px;
+  }
+
+  /* 보상 화면 풀스크린 오버레이 */
+  .reward-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    cursor: pointer;
+    overflow-y: auto;
+    animation: zoomFadeIn 0.35s ease both;
+  }
+
+  /* 말씀카드 책갈피 (Bookmark Card Layout) */
+  .bookmark-card-wrap {
+    width: 260px;
+    max-width: 82vw;
+    background: #FFFFFF;
+    border-radius: 12px;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+    position: relative;
+    text-align: left;
+    margin: 10px auto;
+    animation: jellyPop 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+  .bookmark-header {
+    height: 145px;
+    width: 100%;
+    background-image: url('assets/bookmark-mosaic.svg');
+    background-size: cover;
+    background-position: center;
+    position: relative;
+  }
+  .bookmark-body {
+    padding: 16px 18px 20px;
+    background: #FFFFFF;
+    position: relative;
+  }
+  .bookmark-cross {
+    color: #C93B3B;
+    font-size: 18px;
+    font-weight: bold;
+    margin-right: 4px;
+    display: inline-block;
+  }
+  .bookmark-korean-verse {
+    font-size: 16px;
+    line-height: 1.75;
+    color: #2D2727;
+    font-weight: 500;
+    word-break: keep-all;
+    text-wrap: balance;
+    white-space: pre-line;
+    margin: 4px 0 12px;
+    letter-spacing: -0.2px;
+  }
+  .bookmark-seal {
+    display: inline-block;
+    vertical-align: middle;
+    background: #C93B3B;
+    color: #FFF;
+    font-size: 9px;
+    line-height: 1.1;
+    padding: 2px 3px;
+    border-radius: 2px;
+    font-weight: bold;
+    margin-left: 6px;
+    letter-spacing: 0.5px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(201, 59, 59, 0.4);
+  }
+  .bookmark-divider {
+    height: 1px;
+    background: linear-gradient(90deg, #E6A5A5 0%, #EADBCA 100%);
+    margin: 12px 0 10px;
+  }
+  .bookmark-ref {
+    font-family: 'Jua', sans-serif;
+    font-size: 14px;
+    color: #333333;
+    margin-bottom: 5px;
+  }
+  .bookmark-eng-verse {
+    font-size: 11px;
+    line-height: 1.45;
+    color: #7A6A5E;
+    font-style: normal;
+    word-break: keep-all;
+  }
+  .touch-hint {
+    font-family: 'Jua', sans-serif;
+    font-size: 15px;
+    color: #FFFFFF;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
+    margin-top: 18px;
+    animation: softPulse 1.6s infinite ease-in-out;
+  }
   /* transition */
   .trans-next{background:var(--paper);border:2px solid var(--line);border-radius:20px;padding:16px 20px;margin-top:14px;text-align:left;}
   /* confetti */
@@ -250,159 +431,129 @@ async function stListKeys(prefix){
    ========================================================== */
 
 /**
- * 새번역 말씀카드 큐레이션 데이터 목록
- * @type {Array<{theme: string, ref: string, content: string}>}
+ * 새번역 말씀카드 큐레이션 데이터 목록 (한국어 + 영어 번역 포함)
+ * @type {Array<{theme: string, ref: string, content: string, eng?: string}>}
  */
 const BIBLE_VERSES = [
   {
     theme: "인도와 지혜",
     ref: "시편 119:105",
-    content: "주님의 말씀은 내 발의 등불이요,\n내 길의 빛입니다."
+    content: "주님의 말씀은 내 발의 등불이요,\n내 길의 빛입니다.",
+    eng: "Your word is a lamp for my feet, a light on my path."
   },
   {
     theme: "평안과 위로",
     ref: "빌립보서 4:6-7",
-    content: "아무것도 염려하지 말고,\n모든 일을 오직 기도와 간구로 하고,\n여러분이 바라는 것을 감사하는 마음으로\n하나님께 아뢰십시오.\n그리하면 하나님의 평화가\n여러분의 마음과 생각을 지켜 주실 것입니다."
+    content: "아무것도 염려하지 말고,\n모든 일을 오직 기도와 간구로 하고,\n여러분이 바라는 것을 감사하는 마음으로\n하나님께 아뢰십시오.",
+    eng: "Do not be anxious about anything, but in every situation, by prayer and petition, with thanksgiving, present your requests to God."
   },
   {
     theme: "용기와 동행",
     ref: "여호수아 1:9",
-    content: "내가 너에게 굳세고 용감하라고 명하지 않았느냐!\n너는 두려워하거나 낙담하지 말아라.\n네가 어디로 가든지,\n주 너의 하나님이 너와 함께 계신다."
+    content: "내가 너에게 굳세고 용감하라고 명하지 않았느냐!\n너는 두려워하거나 낙담하지 말아라.\n네가 어디로 가든지,\n주 너의 하나님이 너와 함께 계신다.",
+    eng: "Have I not commanded you? Be strong and courageous. Do not be afraid; do not be discouraged, for the Lord your God will be with you wherever you go."
   },
   {
     theme: "능력과 도우심",
     ref: "이사야 41:10",
-    content: "내가 너와 함께 있으니 두려워하지 말아라.\n내가 너의 하나님이니 떨지 말아라.\n내가 너를 강하게 하겠다.\n내가 참으로 너를 도와주겠다.\n내 의로운 오른손으로 너를 붙들어 주겠다."
+    content: "내가 너와 함께 있으니 두려워하지 말아라.\n내가 너의 하나님이니 떨지 말아라.\n내가 너를 강하게 하겠다.\n내가 참으로 너를 도와주겠다.",
+    eng: "So do not fear, for I am with you; do not be dismayed, for I am your God. I will strengthen you and help you; I will uphold you with my righteous right hand."
   },
   {
     theme: "신뢰와 인도",
     ref: "잠언 3:5-6",
-    content: "너의 마음을 다하여 주님을 의뢰하고,\n네 명철을 의지하지 말아라.\n네가 하는 모든 일에서 주님을 인정하여라.\n그러면 주님께서 네 갈 길을 곧게 하실 것이다."
+    content: "너의 마음을 다하여 주님을 의뢰하고,\n네 명철을 의지하지 말아라.\n네가 하는 모든 일에서 주님을 인정하여라.\n그러면 주님께서 네 갈 길을 곧게 하실 것이다.",
+    eng: "Trust in the Lord with all your heart and lean not on your own understanding; in all your ways submit to him, and he will make your paths straight."
   },
   {
     theme: "쉼과 안식",
     ref: "마태복음 11:28",
-    content: "수고하며 무거운 짐을 진 사람은\n모두 내게로 오너라.\n내가 너희를 쉬게 하겠다."
+    content: "수고하며 무거운 짐을 진 사람은\n모두 내게로 오너라.\n내가 너희를 쉬게 하겠다.",
+    eng: "Come to me, all you who are weary and burdened, and I will give you rest."
   },
   {
     theme: "선한 목자",
     ref: "시편 23:1-3",
-    content: "주님은 나의 목자이시니,\n내게 부족함 없어라.\n나를 푸른 풀밭에 누이시며\n쉴 만한 물 가로 인도하신다.\n내 영혼을 소생시키시고,\n바른 길로 이끌어 주신다."
+    content: "주님은 나의 목자이시니,\n내게 부족함 없어라.\n나를 푸른 풀밭에 누이시며\n쉴 만한 물 가로 인도하신다.",
+    eng: "The Lord is my shepherd, I lack nothing. He makes me lie down in green pastures, he leads me beside quiet waters."
   },
   {
     theme: "평화의 선물",
     ref: "요한복음 14:27",
-    content: "나는 평화를 너희에게 남겨 준다.\n곧 나의 평화를 너희에게 준다.\n너희는 마음에 근심하지 말고,\n두려워하지도 말아라."
+    content: "나는 평화를 너희에게 남겨 준다.\n곧 나의 평화를 너희에게 준다.\n너희는 마음에 근심하지 말고,\n두려워하지도 말아라.",
+    eng: "Peace I leave with you; my peace I give you. Do not let your hearts be troubled and do not be afraid."
   },
   {
     theme: "소망과 미래",
     ref: "예레미야 29:11",
-    content: "너희를 두고 계획하고 있는 일들은\n재앙이 아니라 번영이며,\n너희에게 미래와 희망을 주려는 것이다.\n나 주의 말이다."
+    content: "너희를 두고 계획하고 있는 일들은\n재앙이 아니라 번영이며,\n너희에게 미래와 희망을 주려는 것이다.\n나 주의 말이다.",
+    eng: "For I know the plans I have for you, plans to prosper you and not to harm you, plans to give you hope and a future."
   },
   {
     theme: "합력하여 선을 이룸",
     ref: "로마서 8:28",
-    content: "하나님을 사랑하는 사람들,\n곧 하나님의 뜻대로 부르심을 받은 사람들에게는,\n모든 일이 서로 협력해서\n선을 이룬다는 것을 우리는 압니다."
+    content: "하나님을 사랑하는 사람들,\n곧 하나님의 뜻대로 부르심을 받은 사람들에게는,\n모든 일이 서로 협력해서\n선을 이룬다는 것을 우리는 압니다.",
+    eng: "And we know that in all things God works for the good of those who love him, who have been called according to his purpose."
   },
   {
     theme: "성령의 열매",
     ref: "갈라디아서 5:22-23",
-    content: "성령의 열매는\n사랑과 기쁨과 평화와\n인내와 친절과 선함과\n신실과 온유와 절제입니다."
+    content: "성령의 열매는\n사랑과 기쁨과 평화와\n인내와 친절과 선함과\n신실과 온유와 절제입니다.",
+    eng: "But the fruit of the Spirit is love, joy, peace, forbearance, kindness, goodness, faithfulness, gentleness and self-control."
   },
   {
     theme: "기쁨과 감사",
     ref: "데살로니가전서 5:16-18",
-    content: "항상 기뻐하십시오.\n끊임없이 기도하십시오.\n모든 일에 감사하십시오.\n이것이 그리스도 예수 안에서\n여러분을 두고 뜻하신 하나님의 뜻입니다."
+    content: "항상 기뻐하십시오.\n끊임없이 기도하십시오.\n모든 일에 감사하십시오.\n이것이 하나님의 뜻입니다.",
+    eng: "Rejoice always, pray continually, give thanks in all circumstances; for this is God’s will for you in Christ Jesus."
   },
   {
     theme: "새 힘",
     ref: "이사야 40:31",
-    content: "오직 주님을 소망하는 사람은 새 힘을 얻으며,\n독수리가 날개 치며 솟아오르듯 올라갈 것이요,\n뛰어도 지치지 않으며,\n걸어도 피곤하지 않을 것이다."
+    content: "오직 주님을 소망하는 사람은 새 힘을 얻으며,\n독수리가 날개 치며 솟아오르듯 올라갈 것이요,\n뛰어도 지치지 않으며,\n걸어도 피곤하지 않을 것이다.",
+    eng: "Those who hope in the Lord will renew their strength. They will soar on wings like eagles; they will run and not grow weary."
   },
   {
     theme: "도움의 주님",
     ref: "시편 121:1-2",
-    content: "내가 눈을 들어 산을 본다.\n내 도움이 어디에서 오는가?\n내 도움은 하늘과 땅을 만드신\n주님에게서 온다."
+    content: "내가 눈을 들어 산을 본다.\n내 도움이 어디에서 오는가?\n내 도움은 하늘과 땅을 만드신\n주님에게서 온다.",
+    eng: "I lift up my eyes to the mountains—where does my help come from? My help comes from the Lord, the Maker of heaven and earth."
   },
   {
     theme: "계획과 인도",
     ref: "잠언 16:9",
-    content: "사람이 마음으로 자기의 앞길을 계획하지만,\n그 발걸음을 인도하시는 분은\n주님이시다."
+    content: "사람이 마음으로 자기의 앞길을 계획하지만,\n그 발걸음을 인도하시는 분은\n주님이시다.",
+    eng: "In their hearts humans plan their course, but the Lord establishes their steps."
   },
   {
     theme: "피난처와 힘",
     ref: "시편 46:1",
-    content: "하나님은 우리의 피난처시요 힘이시니,\n환난 중에 만날 큰 도움이시라."
+    content: "하나님은 우리의 피난처시요 힘이시니,\n환난 중에 만날 큰 도움이시라.",
+    eng: "God is our refuge and strength, an ever-present help in trouble."
+  },
+  {
+    theme: "부활과 생명",
+    ref: "요한복음 11:25",
+    content: "예수께서 이르시되\n나는 부활이요 생명이니\n나를 믿는 자는 죽어도 살겠고",
+    eng: "Jesus said to her, \"I am the resurrection and the life. The one who believes in me will live, even though they die.\""
   },
   {
     theme: "사랑의 마음",
     ref: "고린도전서 13:4, 7",
-    content: "사랑은 오래 참고, 친절합니다.\n사랑은 모든 것을 덮어 주며,\n모든 것을 믿으며,\n모든 것을 바라며,\n모든 것을 견딥니다."
+    content: "사랑은 오래 참고, 친절합니다.\n사랑은 모든 것을 덮어 주며,\n모든 것을 믿으며,\n모든 것을 바라며 견딥니다.",
+    eng: "Love is patient, love is kind. It always protects, always trusts, always hopes, always perseveres."
   },
   {
     theme: "감사와 찬양",
     ref: "하박국 3:17-18",
-    content: "무화과나무에 과일이 없고,\n포도나무에 열매가 없을지라도,\n나는 주님 안에서 즐거워하렵니다.\n나를 구원하신 하나님 안에서 기뻐하렵니다."
-  },
-  {
-    theme: "모든 것을 더하심",
-    ref: "마태복음 6:33",
-    content: "너희는 먼저 하나님의 나라와\n하나님의 의를 구하여라.\n그리하면 이 모든 것을\n너희에게 더하여 주실 것이다."
+    content: "무화과나무에 과일이 없고,\n포도나무에 열매가 없을지라도,\n나는 주님 안에서 즐거워하렵니다.",
+    eng: "Though the fig tree does not bud and there are no grapes on the vines, yet I will rejoice in the Lord."
   },
   {
     theme: "능력의 주님",
     ref: "빌립보서 4:13",
-    content: "나에게 능력을 주시는 분 안에서,\n나는 모든 것을 할 수 있습니다."
-  },
-  {
-    theme: "신뢰와 맡김",
-    ref: "시편 37:5",
-    content: "네 갈 길을 주님께 맡기고,\n주님을 신뢰하여라.\n주님께서 친히 이루어 주실 것이다."
-  },
-  {
-    theme: "은혜를 기억함",
-    ref: "시편 103:1-2",
-    content: "내 영혼아, 주님을 찬양하여라.\n내 속에 있는 모든 것들아,\n그분의 거룩한 이름을 찬양하여라.\n그분이 베푸신 모든 은혜를 잊지 말아라."
-  },
-  {
-    theme: "풍성한 응답",
-    ref: "에베소서 3:20",
-    content: "우리 가운데서 역사하시는 능력을 따라,\n우리가 구하거나 생각하는 것보다\n훨씬 더 넘치도록 능히 하실 분에게\n영광이 있기를 빕니다."
-  },
-  {
-    theme: "온전한 사랑",
-    ref: "요한일서 4:18",
-    content: "사랑에는 두려움이 없습니다.\n완전한 사랑은 두려움을 내쫓습니다."
-  },
-  {
-    theme: "흔들리지 않는 삶",
-    ref: "시편 16:8",
-    content: "내가 주님을 늘 내 앞에 모십니다.\n주님이 내 오른쪽에 계시니,\n내가 흔들리지 않을 것입니다."
-  },
-  {
-    theme: "영혼의 잠잠함",
-    ref: "시편 62:1-2",
-    content: "내 영혼이 잠잠히 하나님만 기다림은\n나의 구원이 그에게서 나오기 때문이다.\n오직 주님만이 나의 반석, 나의 구원,\n나의 요새이시니 나는 흔들리지 않는다."
-  },
-  {
-    theme: "완전한 평화",
-    ref: "이사야 26:3",
-    content: "주님께서는 생각을 주님께 고정시킨 사람에게\n완전한 평화를 베풀어 주십니다.\n그가 주님을 신뢰하기 때문입니다."
-  },
-  {
-    theme: "마음 지키기",
-    ref: "잠언 4:23",
-    content: "그 무엇보다도 너는 네 마음을 지켜라.\n그 마음이 바로\n생명의 근원이기 때문이다."
-  },
-  {
-    theme: "마음의 평화",
-    ref: "골로새서 3:15",
-    content: "그리스도의 평화가\n여러분의 마음을 다스리게 하십시오.\n여러분은 평화를 누리도록\n한 몸으로 부르심을 받았습니다."
-  },
-  {
-    theme: "돌보시는 주님",
-    ref: "베드로전서 5:7",
-    content: "여러분의 걱정을 모두 하나님께 맡기십시오.\n하나님께서는 여러분을\n돌보고 계십니다."
+    content: "나에게 능력을 주시는 분 안에서,\n나는 모든 것을 할 수 있습니다.",
+    eng: "I can do all this through him who gives me strength."
   }
 ];
 
@@ -1250,27 +1401,240 @@ function playMath({lv, qs=10, onDone=null}={}){
 }
 
 // ==========================================================
-// CARD AWARD LOGIC
+// [CLAUDE / DEV GUIDE] 게임 완료 후 3개 선물 상자 선택 & 드롭 확률 시스템
+// - 확률 구조:
+//   * 꽝 (80%): "아쉽게도 아무것도 안나왔습니다" 화면 노출
+//   * 말씀카드 (15%): assets/verse-bg.jpg 배경 + 책갈피(Bookmark) 디자인 말씀카드 노출
+//   * 머털도사 카드 (5%): assets/main-bg.gif 영상 배경 + 머털도사 카드 획득 및 라이브러리 저장
+// - 상자 애니메이션 단계 (5단계 SVG 에셋 활용):
+//   1) assets/box-1-closed.svg (닫힌 상자 3개)
+//   2) assets/box-2-selected.svg (유저가 터치한 상자 선택 효과 & 흔들림)
+//   3) assets/box-3-opening-1.svg (상자 뚜껑 살짝 열림)
+//   4) assets/box-4-opening-2.svg (상자 뚜껑 많이 열리고 빛 방출)
+//   5) assets/box-5-opened.svg (완전 개방 & 찬란한 빛 폭발 연출)
+// - 터치 인터랙션: 모든 보상 화면은 화면 어디든 터치 시 부드럽게 닫히며 재도전/홈으로 이동 가능
 // ==========================================================
-async function maybeAwardCard(totalScore){
+
+/**
+ * 8스테이지 완료 후 3개의 선물 상자 선택 모달 표시
+ */
+function showChestRewardModal(){
+  const ov = el(`
+    <div class="overlay" style="z-index:95;">
+      <div class="modal fade" style="text-align:center;max-width:440px;padding:26px 18px 22px;">
+        <div style="display:inline-block;background:#FFEAA7;color:#9B5E14;font-family:'Jua';font-size:14px;padding:4px 14px;border-radius:999px;margin-bottom:8px;border:1px solid #FDCB6E;">🎁 스테이지 클리어 보너스</div>
+        <div style="font-family:'Jua';font-size:24px;color:var(--ink);margin-bottom:4px;">선물 상자를 열어보세요!</div>
+        <div style="font-size:14px;color:var(--ink-soft);margin-bottom:14px;">세 개의 상자 중 마음에 드는 상자 하나를 골라주세요</div>
+        
+        <div class="chest-pick-grid" id="chestGrid">
+          <div class="chest-item floating" data-idx="0">
+            <img src="assets/box-1-closed.svg" class="chest-img" alt="상자 1">
+            <div class="chest-label">1번 상자</div>
+          </div>
+          <div class="chest-item floating" data-idx="1">
+            <img src="assets/box-1-closed.svg" class="chest-img" alt="상자 2">
+            <div class="chest-label">2번 상자</div>
+          </div>
+          <div class="chest-item floating" data-idx="2">
+            <img src="assets/box-1-closed.svg" class="chest-img" alt="상자 3">
+            <div class="chest-label">3번 상자</div>
+          </div>
+        </div>
+
+        <div style="font-size:12px;color:var(--ink-soft);margin-top:10px;">
+          꽝 80% · 말씀카드 15% · 머털도사 카드 5%
+        </div>
+      </div>
+    </div>
+  `);
+  document.body.appendChild(ov);
+
+  let isPicking = false;
+  const items = ov.querySelectorAll('.chest-item');
+
+  items.forEach(item => {
+    item.addEventListener('click', async () => {
+      if(isPicking) return;
+      isPicking = true;
+
+      // 1. 선택된 상자 강조 및 다른 상자 반투명 처리
+      items.forEach(other => {
+        if(other !== item) other.classList.add('dimmed');
+      });
+      item.classList.remove('floating');
+      item.classList.add('selected');
+      const img = item.querySelector('.chest-img');
+      img.src = 'assets/box-2-selected.svg';
+      beep(440, 0.12); setTimeout(()=>beep(554, 0.12), 100);
+
+      // 드롭 확률 판정: 꽝 80%, 말씀카드 15%, 머털도사 카드 5%
+      const rand = Math.random();
+      let outcome = 'empty';
+      if(rand < 0.80){
+        outcome = 'empty';
+      } else if(rand < 0.95){
+        outcome = 'verse';
+      } else {
+        outcome = 'meoteol';
+      }
+
+      // 2~5단계 상자 열림 순차 애니메이션
+      await new Promise(r => setTimeout(r, 600));
+      img.src = 'assets/box-3-opening-1.svg';
+      beep(659, 0.14);
+
+      await new Promise(r => setTimeout(r, 380));
+      img.src = 'assets/box-4-opening-2.svg';
+      beep(784, 0.16);
+
+      await new Promise(r => setTimeout(r, 380));
+      img.src = 'assets/box-5-opened.svg';
+      beep(880, 0.25);
+
+      await new Promise(r => setTimeout(r, 450));
+      ov.remove();
+
+      // 결과 화면 노출
+      if(outcome === 'empty'){
+        showEmptyRewardScreen();
+      } else if(outcome === 'verse'){
+        showVerseRewardScreen();
+      } else {
+        await showMeoteolRewardScreen();
+      }
+    });
+  });
+}
+
+/**
+ * 꽝(80%) 결과 화면 표시
+ */
+function showEmptyRewardScreen(){
+  beep(330, 0.2);
+  const ov = el(`
+    <div class="reward-overlay" style="background:rgba(30,20,15,0.85);backdrop-filter:blur(6px);">
+      <div style="text-align:center;max-width:380px;animation:zoomFadeIn 0.35s ease both;padding:24px;">
+        <div style="font-size:64px;margin-bottom:12px;animation:jellyPop 0.6s ease;">💨</div>
+        <div style="font-family:'Jua';font-size:26px;color:#FFEAA7;margin-bottom:8px;text-shadow:0 2px 8px rgba(0,0,0,0.5);">
+          아쉽게도 아무것도 안나왔습니다
+        </div>
+        <div style="font-size:16px;color:rgba(255,255,255,0.9);line-height:1.6;margin-bottom:16px;">
+          두뇌 운동 8스테이지를 멋지게 완료한 것만으로도<br>충분히 대단해요! 😊<br>다음 판에 또 도전해보세요!
+        </div>
+        <div class="touch-hint">👉 화면 아무 곳이나 터치하면 닫힙니다</div>
+      </div>
+    </div>
+  `);
+  document.body.appendChild(ov);
+  ov.addEventListener('click', () => ov.remove());
+}
+
+/**
+ * 말씀카드(15%) 책갈피 보상 화면 표시 (하늘/자연 배경 + 책갈피 레이아웃)
+ */
+function showVerseRewardScreen(){
+  confetti(6);
+  playCardSound();
+  const verse = pick(BIBLE_VERSES);
+
+  const ov = el(`
+    <div class="reward-overlay" style="position:fixed;inset:0;">
+      <!-- 배경: 유저 첨부 푸른 하늘/나뭇잎 이미지 -->
+      <div style="position:fixed;inset:0;z-index:-1;overflow:hidden;">
+        <img src="assets/verse-bg.jpg" alt="" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'">
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg, rgba(15,25,35,0.35) 0%, rgba(10,20,30,0.65) 100%);backdrop-filter:blur(2px);"></div>
+      </div>
+
+      <div style="text-align:center;max-width:440px;width:100%;">
+        <div style="font-family:'Jua';font-size:23px;color:#FFEAA7;text-shadow:0 2px 10px rgba(0,0,0,0.7);margin-bottom:4px;">
+          ✨ 말씀카드 획득! (15% 확률)
+        </div>
+        <div style="font-size:14px;color:rgba(255,255,255,0.9);text-shadow:0 2px 8px rgba(0,0,0,0.6);margin-bottom:12px;">
+          마음에 평안과 힘을 주는 은혜의 책갈피예요
+        </div>
+
+        <!-- 책갈피 카드 디자인 (첨부 레퍼런스 스타일) -->
+        <div class="bookmark-card-wrap">
+          <div class="bookmark-header">
+            <!-- 상단 펀칭 홀 디테일 -->
+            <div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,0.9);box-shadow:inset 0 1px 3px rgba(0,0,0,0.4);"></div>
+          </div>
+          <div class="bookmark-body">
+            <div style="margin-bottom:4px;">
+              <span class="bookmark-cross">†</span>
+              <span style="font-size:12px;color:#8E7A6B;font-weight:600;">새번역 성경</span>
+            </div>
+            <div class="bookmark-korean-verse">
+              ${verse.content}
+              <span class="bookmark-seal">말씀<br>사랑</span>
+            </div>
+            <div class="bookmark-divider"></div>
+            <div class="bookmark-ref">[${verse.ref}]</div>
+            ${verse.eng ? `<div class="bookmark-eng-verse">${verse.eng}</div>` : ''}
+          </div>
+        </div>
+
+        <div class="touch-hint">👉 화면 아무 곳이나 터치하면 닫힙니다</div>
+      </div>
+    </div>
+  `);
+  document.body.appendChild(ov);
+  ov.addEventListener('click', () => ov.remove());
+}
+
+/**
+ * 머털도사 카드(5%) 보상 화면 표시 (메인 화면 영상 배경 + 카드 획득 연출)
+ */
+async function showMeoteolRewardScreen(){
+  confetti(12);
+  playCardSound();
   cardIndex = await loadCardIndex();
-  if(!cardIndex.length) return;
-  let awarded=false, reason=null;
-  if(totalScore>=90){ awarded=true; reason='clear'; }
-  else if(Math.random()<0.01){ awarded=true; reason='lucky'; }
-  if(!awarded) return;
-  const card=pick(cardIndex);
-  currentMember.cards=currentMember.cards||{};
-  currentMember.cards[card.id]=(currentMember.cards[card.id]||0)+1;
-  saveMember();
-  const img=await getCardImage(card.id);
-  showCardRevealModal(card, img, reason);
+  
+  // 멤버 인벤토리에 카드 추가 및 저장
+  let card = { id: 'default_meoteol', name: '머털도사' };
+  if(cardIndex.length){
+    card = pick(cardIndex);
+    currentMember.cards = currentMember.cards || {};
+    currentMember.cards[card.id] = (currentMember.cards[card.id] || 0) + 1;
+    saveMember();
+  }
+  const img = cardIndex.length ? await getCardImage(card.id) : null;
+  const countText = (currentMember.cards && currentMember.cards[card.id]) ? `보유 ${currentMember.cards[card.id]}장` : '신규 획득!';
+
+  const ov = el(`
+    <div class="reward-overlay" style="position:fixed;inset:0;">
+      <!-- 배경: 메인 화면 영상(GIF) -->
+      <div style="position:fixed;inset:0;z-index:-1;overflow:hidden;">
+        <img src="assets/main-bg.gif" alt="" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'">
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg, rgba(20,10,5,0.4) 0%, rgba(15,8,4,0.78) 100%);"></div>
+      </div>
+
+      <div style="text-align:center;max-width:420px;width:100%;">
+        <div style="font-family:'Jua';font-size:26px;color:#FFD166;text-shadow:0 3px 12px rgba(0,0,0,0.7);margin-bottom:4px;">
+          🎉 머털도사 카드 획득! (5% 확률)
+        </div>
+        <div style="font-size:15px;color:rgba(255,255,255,0.92);text-shadow:0 2px 8px rgba(0,0,0,0.6);margin-bottom:16px;">
+          축하합니다! 희귀한 머털도사 카드를 뽑았어요!
+        </div>
+
+        <div class="card-fx-wrap" id="meoteolFxWrap">
+          <div class="card-burst-ring"></div>
+          ${img ? `<img class="card-jelly" src="${img}" style="width:210px;max-width:72%;border-radius:20px;box-shadow:0 12px 32px rgba(0,0,0,0.45);background:#fff;border:3px solid #FFD166;">`
+                : `<div class="card-jelly" style="font-size:80px;">🎴</div>`}
+        </div>
+
+        <div style="font-family:'Jua';font-size:22px;color:#FFF;margin-top:14px;text-shadow:0 2px 10px rgba(0,0,0,0.6);">${card.name || '머털도사 카드'}</div>
+        <div style="font-size:14px;color:#FFEAA7;margin-top:4px;text-shadow:0 2px 8px rgba(0,0,0,0.6);">${countText} (라이브러리에 저장됨)</div>
+
+        <div class="touch-hint">👉 화면 아무 곳이나 터치하면 닫힙니다</div>
+      </div>
+    </div>
+  `);
+  document.body.appendChild(ov);
+  spawnBurstParticles(ov.querySelector('#meoteolFxWrap'));
+  ov.addEventListener('click', () => ov.remove());
 }
-function showCardRevealModal(card, img, reason){
-  const subtitle = reason==='clear' ? '90점 클리어 보상 🎯' : '행운의 카드! (1% 확률) 🍀';
-  const countText = `보유 ${currentMember.cards[card.id]}장`;
-  playCardRevealEffect(card, img, {subtitle, countText, showNav:true});
-}
+
 function playCardSound(){
   beep(523,0.12); setTimeout(()=>beep(659,0.12),90); setTimeout(()=>beep(784,0.2),180);
 }
@@ -1408,7 +1772,11 @@ function showFinalResult(){
   app.appendChild(v);
   v.querySelector('#retry').addEventListener('click',startSession);
   v.querySelector('#home').addEventListener('click',()=>renderHome());
-  maybeAwardCard(totalScore);
+
+  // 8스테이지 완료 후 3개 상자 선택 보너스 모달 팝업
+  setTimeout(() => {
+    showChestRewardModal();
+  }, 650);
 }
 function getDiagnosis(total,domains){
   const entries=Object.entries(domains).sort((a,b)=>a[1].score-b[1].score);
@@ -1719,7 +2087,7 @@ async function renderAdminDashboard(){
       const fmt=fmtBirthdate(m.birthdate);
       const cardCount=Object.keys(m.cards||{}).length;
       const totalCards=Object.values(m.cards||{}).reduce((a,b)=>a+b,0);
-      const last=m.lastLogin? new Date(m.lastLogin).toLocaleDateString('ko-KR') : '-';
+      const last=fmtDateTime(m.lastLogin);
       const row=el(`<div class="member-row">
         <button class="member-info-btn" style="background:none;border:none;text-align:left;cursor:pointer;padding:0;flex:1;">
           <div style="font-family:'Jua';font-size:15px;">${fmt} <span style="font-size:11px;color:var(--speed);">보기 ›</span></div>
