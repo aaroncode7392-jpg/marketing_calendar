@@ -116,11 +116,15 @@
   .mcard.matched .mback{border-color:var(--ok);background:#E5F6F0;}
   /* seq pads */
   .padwrap{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:360px;margin:8px auto;}
-  .pad{aspect-ratio:1/1;border-radius:24px;cursor:pointer;border:4px solid rgba(0,0,0,.08);opacity:.5;transition:opacity .12s,transform .08s;box-shadow:0 6px 0 rgba(0,0,0,.12);}
+  .pad{aspect-ratio:1/1;border-radius:24px;cursor:pointer;border:4px solid rgba(0,0,0,.08);opacity:.5;filter:saturate(1) brightness(1);transition:opacity .12s,transform .16s cubic-bezier(.34,1.56,.64,1),filter .16s;box-shadow:0 6px 0 rgba(0,0,0,.12);}
   .pad:active{transform:translateY(3px);}
-  .pad.on{opacity:1;transform:scale(1.03);}
+  .pad.on{opacity:1;transform:scale(1.16);filter:saturate(1.75) brightness(1.15);}
   .pad.p0{background:#E8635B;}.pad.p1{background:#5BB98C;}
   .pad.p2{background:#5B8DEF;}.pad.p3{background:#EAC23D;}
+  .pad.p0.on{box-shadow:0 6px 0 rgba(0,0,0,.12),0 0 26px 8px rgba(232,99,91,.6);}
+  .pad.p1.on{box-shadow:0 6px 0 rgba(0,0,0,.12),0 0 26px 8px rgba(91,185,140,.6);}
+  .pad.p2.on{box-shadow:0 6px 0 rgba(0,0,0,.12),0 0 26px 8px rgba(91,141,239,.6);}
+  .pad.p3.on{box-shadow:0 6px 0 rgba(0,0,0,.12),0 0 26px 8px rgba(234,194,61,.6);}
   /* math */
   .qbox{font-family:'Jua';font-size:60px;margin:6px 0;}
   .timerbar{height:14px;background:#EFE2CC;border-radius:999px;overflow:hidden;margin:4px 0 16px;}
@@ -941,8 +945,8 @@ function toStorableImage(file, maxDim=640){
 function curLevel(){return Math.min(10,Math.max(1,(currentMember&&currentMember.level)||8));}
 function setLevel(n){currentMember.level=Math.min(10,Math.max(1,n));saveMember();}
 function speedStart(L){
-  const findCount=L<=6?3:4;
-  const size=findCount===3?3:4;
+  const findCount=L<=2?3:L<=4?4:L<=6?5:6;
+  const size=findCount<=3?3:4;
   const flash=Math.max(350,1700-L*120);
   return{size,flash,findCount};
 }
@@ -1129,12 +1133,10 @@ function showTransition(prevStage, prevScore, isFirst){
         <button class="btn" id="goNext" style="background:${colorMap[next.type]};margin-top:16px;font-size:23px;padding:19px;">
           ${isFirst?'시작하기':'다음 스테이지 →'}
         </button>
-        <button class="btn btn-ghost" id="quitBtn" style="font-size:17px;padding:13px;margin-top:8px;">홈으로</button>
       </div>
     </div>`);
   app.appendChild(v);
   v.querySelector('#goNext').addEventListener('click',()=>runGame(next, onGameDone));
-  v.querySelector('#quitBtn').addEventListener('click',()=>renderHome());
 }
 function runGame(stage, onDone){
   if(stage.type==='speed') playSpeed({lv:stage.lv, rounds:5, onDone});
