@@ -97,23 +97,35 @@
   .stage-bar.seq-bar{background:linear-gradient(135deg,#ECB857,#D9952A);}
   .stage-bar.math-bar{background:linear-gradient(135deg,#AD85C2,#8A5BA2);}
   /* speed game */
+  /* speed game cell touch flourish */
   .flashgrid{display:grid;gap:12px;margin:8px auto 4px;}
-  .cell{background:#FFF;border:3px solid var(--line);border-radius:22px;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 5px 0 rgba(0,0,0,.05);transition:transform .08s;}
-  .cell:active{transform:translateY(3px);}
+  .cell{position:relative;background:#FFF;border:3px solid var(--line);border-radius:22px;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 5px 0 rgba(0,0,0,.05);transition:transform .12s cubic-bezier(.34,1.56,.64,1),background .15s,border-color .15s,box-shadow .15s;}
+  .cell:active{transform:scale(.9) translateY(2px);}
   .cell.lit{background:#FFF3DF;border-color:var(--speed);animation:flashIn .15s ease;}
-  .cell.correct{background:#E5F6F0;border-color:var(--ok);}
-  .cell.wrong{background:#FCE7E5;border-color:var(--warn);animation:shake .3s;}
-  .cell.selected{background:#FFF3DF;border-color:var(--speed);border-width:4px;}
+  .cell.correct{background:#E5F6F0;border-color:var(--ok);box-shadow:0 0 20px rgba(63,167,150,.5);animation:tapPop .38s cubic-bezier(.34,1.56,.64,1);}
+  .cell.wrong{background:#FCE7E5;border-color:var(--warn);animation:shake .35s ease;}
+  .cell.selected{background:#FFF3DF;border-color:var(--speed);border-width:4px;box-shadow:0 0 18px rgba(238,123,91,.55);animation:tapPop .32s cubic-bezier(.34,1.56,.64,1);}
   .countdown{font-family:'Jua';font-size:80px;color:var(--speed);animation:pop .4s;}
-  /* memory */
-  .memgrid{display:grid;gap:10px;margin-top:6px;justify-content:center;}
-  .mcard{aspect-ratio:3/4;border-radius:16px;cursor:pointer;position:relative;perspective:600px;}
+  .score-float{position:absolute;font-family:'Jua';font-size:22px;color:var(--ok);pointer-events:none;z-index:30;animation:scoreFloatUp .8s cubic-bezier(.1,.8,.2,1) forwards;text-shadow:0 2px 8px rgba(0,0,0,.18);}
+  @keyframes scoreFloatUp{0%{opacity:0;transform:translateY(0) scale(.5);}30%{opacity:1;transform:translateY(-18px) scale(1.25);}100%{opacity:0;transform:translateY(-42px) scale(1);}}
+
+  /* memory card dealing drop animation */
+  .memgrid{display:grid;gap:10px;margin-top:6px;justify-content:center;perspective:800px;}
+  .mcard{aspect-ratio:3/4;border-radius:16px;cursor:pointer;position:relative;perspective:600px;transition:transform .12s;}
+  .mcard:active{transform:scale(.95);}
   .mcard .inner{position:absolute;inset:0;transition:transform .35s;transform-style:preserve-3d;}
   .mcard.flipped .inner,.mcard.matched .inner{transform:rotateY(180deg);}
   .mface{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:16px;backface-visibility:hidden;}
   .mfront{background:linear-gradient(150deg,#46B7A2,#1E8E7B);color:#fff;font-family:'Jua';font-size:28px;box-shadow:0 5px 0 rgba(0,0,0,.08);}
   .mback{background:#FFF;border:3px solid var(--line);transform:rotateY(180deg);font-size:36px;}
   .mcard.matched .mback{border-color:var(--ok);background:#E5F6F0;}
+  @keyframes dealDrop{
+    0%{opacity:0;transform:translate(var(--dx, 0px), var(--dy, -160px)) scale(0.3) rotate(var(--drot, 20deg));}
+    65%{opacity:1;transform:translate(0, 0) scale(1.1) rotate(0deg);}
+    85%{transform:scale(0.95);}
+    100%{opacity:1;transform:scale(1) rotate(0deg);}
+  }
+  .mcard.dealing{animation:dealDrop .45s cubic-bezier(.34,1.5,.64,1) both;}
   /* seq pads */
   .padwrap{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:360px;margin:8px auto;}
   .pad{aspect-ratio:1/1;border-radius:24px;cursor:pointer;border:4px solid rgba(0,0,0,.08);opacity:.5;filter:saturate(1) brightness(1);transition:opacity .12s,transform .16s cubic-bezier(.34,1.56,.64,1),filter .16s;box-shadow:0 6px 0 rgba(0,0,0,.12);}
@@ -1209,9 +1221,20 @@ function playSpeed({lv, rounds=5, onDone=null}={}){
       c.addEventListener('click',()=>{
         if(done) return;
         const i=+c.dataset.i;
-        if(selected.has(i)){selected.delete(i);c.classList.remove('selected');c.innerHTML='';cnt.textContent=`${selected.size}/${findCount}`;return;}
-        selected.add(i);c.classList.add('selected');c.innerHTML='<span style="opacity:.5">✓</span>';
+        if(selected.has(i)){
+          selected.delete(i);
+          c.classList.remove('selected');
+          c.innerHTML='';
+          beep(440, 0.06);
+          cnt.textContent=`${selected.size}/${findCount}`;
+          return;
+        }
+        selected.add(i);
+        c.classList.add('selected');
+        c.innerHTML='<span style="font-size:26px;animation:pop .25s ease;">✓</span>';
         juiceTap(c);
+        celebrateAt(c, {count: 7, parts: ['✨','⚡','💥','🔸','⭐']});
+        beep(660, 0.08);
         cnt.textContent=`${selected.size}/${findCount}`;
         if(selected.size>=findCount) submitAnswer();
       });
@@ -1221,10 +1244,33 @@ function playSpeed({lv, rounds=5, onDone=null}={}){
       grid.querySelectorAll('.cell').forEach(c=>{
         const i=+c.dataset.i,isTgt=targetSet.has(i),isPick=selected.has(i);
         c.classList.remove('selected'); c.innerHTML='';
-        if(isTgt&&isPick){c.classList.add('correct');c.innerHTML='✅';roundScore++;juiceTap(c);celebrateAt(c,{count:8});}
-        else if(!isTgt&&isPick){c.classList.add('wrong');c.innerHTML='❌';}
-        else if(isTgt&&!isPick){c.classList.add('correct');c.style.opacity='.5';c.innerHTML='⭐';}
+        if(isTgt&&isPick){
+          c.classList.add('correct');
+          c.innerHTML='✅';
+          roundScore++;
+          juiceTap(c);
+          celebrateAt(c,{count:14, parts:['✨','⭐','🌟','🎉','🎊']});
+          // Floating 점수 태그 효과
+          const floatTag = el(`<div class="score-float">+1 ⭐</div>`);
+          c.appendChild(floatTag);
+          setTimeout(()=>floatTag.remove(), 850);
+        }
+        else if(!isTgt&&isPick){
+          c.classList.add('wrong');
+          c.innerHTML='❌';
+          celebrateAt(c,{count:5, parts:['💨','❌']});
+        }
+        else if(isTgt&&!isPick){
+          c.classList.add('correct');
+          c.style.opacity='.55';
+          c.innerHTML='⭐';
+        }
       });
+      if(roundScore > 0){
+        beep(587, 0.09); setTimeout(()=>beep(784, 0.16), 80);
+      } else {
+        beep(220, 0.15);
+      }
       totalScore+=roundScore;
       const sc=document.querySelector('#sc'); if(sc) sc.textContent='맞춘 칸 '+totalScore;
       const allRight=roundScore===findCount;
@@ -1242,27 +1288,74 @@ function playSpeed({lv, rounds=5, onDone=null}={}){
 }
 
 // ==========================================================
-// GAME 2: 짝 맞추기
+// GAME 2: 짝 맞추기 (카드 덱 딜링 애니메이션 연출 포함)
 // ==========================================================
 function playMemory({lv, onDone=null}={}){
   const pairs=memPairs(lv||curLevel());
   const faces=shuffle(EMOJIS).slice(0,pairs);
   const deck=shuffle([...faces,...faces]);
-  let first=null,lock=false,moves=0,matched=0;
+  let first=null,lock=true,moves=0,matched=0;
   const cols=4;
   const cw=pairs<=4?'80px':pairs<=6?'68px':'60px';
   clear();
   let cards='';
-  deck.forEach((f,i)=>{ cards+=`<div class="mcard" data-i="${i}" data-f="${f}"><div class="inner"><div class="mface mfront">?</div><div class="mface mback">${f}</div></div></div>`; });
+  deck.forEach((f,i)=>{
+    cards+=`<div class="mcard dealing" data-i="${i}" data-f="${f}" style="opacity:0;"><div class="inner"><div class="mface mfront">?</div><div class="mface mback">${f}</div></div></div>`;
+  });
   const v=el(`
     <div class="fade">
       ${stageBar()}
-      <div class="scoreline"><span class="pill">짝 ${pairs}쌍</span><span class="pill" id="mv">뒤집기 ${moves}</span></div>
+      <div class="scoreline">
+        <span class="pill">짝 ${pairs}쌍</span>
+        <span class="pill" id="stMsg" style="color:var(--memory);">🎴 카드 분배 중...</span>
+        <span class="pill" id="mv">뒤집기 0</span>
+      </div>
       <div class="memgrid" style="grid-template-columns:repeat(${cols},${cw});">${cards}</div>
     </div>`);
   app.appendChild(v);
+
   const mv=v.querySelector('#mv');
-  v.querySelectorAll('.mcard').forEach(card=>{
+  const stMsg=v.querySelector('#stMsg');
+  const cardEls=[...v.querySelectorAll('.mcard')];
+  const grid=v.querySelector('.memgrid');
+
+  // 카드 덱에서 하나씩 드랍되면서 등장하는 딜링 애니메이션 연출
+  const gridRect = grid.getBoundingClientRect();
+  const deckCenterX = gridRect.left + gridRect.width / 2;
+  const deckCenterY = gridRect.top - 60;
+
+  cardEls.forEach((card, idx) => {
+    const cardRect = card.getBoundingClientRect();
+    const cx = cardRect.left + cardRect.width / 2;
+    const cy = cardRect.top + cardRect.height / 2;
+    const dx = (deckCenterX - cx);
+    const dy = (deckCenterY - cy);
+    const rot = (Math.sin(idx) * 18).toFixed(1) + 'deg';
+    card.style.setProperty('--dx', `${dx}px`);
+    card.style.setProperty('--dy', `${dy}px`);
+    card.style.setProperty('--drot', rot);
+    card.style.animationDelay = `${idx * 75}ms`;
+
+    setTimeout(() => {
+      beep(550 + idx * 25, 0.04);
+    }, idx * 75);
+  });
+
+  // 모든 카드가 딜링 완료된 후 게임 시작
+  const totalDealTime = cardEls.length * 75 + 450;
+  setTimeout(() => {
+    cardEls.forEach(c => {
+      c.classList.remove('dealing');
+      c.style.opacity = '1';
+    });
+    lock = false;
+    stMsg.textContent = '시작! 짝을 찾아보세요';
+    stMsg.style.color = 'var(--ok)';
+    celebrateAt(grid, { count: 8, parts: ['✨','⭐','🃏'] });
+    beep(784, 0.15);
+  }, totalDealTime);
+
+  cardEls.forEach(card=>{
     card.addEventListener('click',()=>{
       if(lock||card.classList.contains('flipped')||card.classList.contains('matched')) return;
       card.classList.add('flipped'); juiceTap(card);
