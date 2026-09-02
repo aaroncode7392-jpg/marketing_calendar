@@ -1025,21 +1025,33 @@ function renderNumpadScreen({title, subtitle, length, mask=false, errorMsg='', o
 }
 
 // ---------- 메인(스플래시) 화면 ----------
-function renderSplashScreen(){
+function renderSplashScreen(isNew = false){
   clear();
-  const v=el(`
-    <div class="fade" style="position:relative;min-height:88vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;text-align:center;padding-bottom:16px;">
+  let bgHtml = `
       <div style="position:fixed;inset:0;z-index:-1;overflow:hidden;">
         <img src="assets/main-bg.gif" alt="" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'">
         <div style="position:absolute;inset:0;background:linear-gradient(180deg, rgba(30,20,15,.12) 0%, rgba(30,20,15,.5) 65%, rgba(20,14,10,.74) 100%);"></div>
       </div>
+  `;
+  if (currentMember && currentMember.birthdate === '691105') {
+    bgHtml = `
+      <div style="position:fixed;inset:0;z-index:-1;overflow:hidden;">
+        <video src="assets/691105.mp4" autoplay loop muted playsinline style="width:100%;height:100%;object-fit:cover;"></video>
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg, rgba(30,20,15,.12) 0%, rgba(30,20,15,.5) 65%, rgba(20,14,10,.74) 100%);"></div>
+      </div>
+    `;
+  }
+
+  const v=el(`
+    <div class="fade" style="position:relative;min-height:88vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;text-align:center;padding-bottom:16px;">
+      ${bgHtml}
       <div style="font-family:'Jua';font-size:32px;color:#fff;text-shadow:0 3px 12px rgba(0,0,0,.55);margin-bottom:8px;">🧠 오늘의 두뇌 운동</div>
       <div style="font-size:16px;color:rgba(255,255,255,.92);text-shadow:0 2px 8px rgba(0,0,0,.5);margin-bottom:26px;">두뇌 운동으로 치매 요괴를 물리쳐요!</div>
-      <button class="btn" id="goStart" style="background:#E8633F;font-size:24px;padding:22px;max-width:340px;box-shadow:0 8px 0 rgba(0,0,0,.25);">👹 치매 요괴 퇴치하기</button>
+      <button class="btn" id="goStart" style="background:#E8633F;font-size:24px;padding:22px;max-width:340px;box-shadow:0 8px 0 rgba(0,0,0,.25);">✨ [매일 머리 좋아지기]</button>
       <button class="footer-link" id="splashAdmin" style="margin-top:18px;color:rgba(255,255,255,.82);">관리자 페이지</button>
     </div>`);
   app.appendChild(v);
-  v.querySelector('#goStart').addEventListener('click', ()=>renderLoginScreen());
+  v.querySelector('#goStart').addEventListener('click', ()=>renderHome(isNew));
   v.querySelector('#splashAdmin').addEventListener('click', ()=>renderAdminPinScreen());
 }
 
@@ -1069,7 +1081,7 @@ async function attemptLogin(bd){
   currentMember.loginLog = pushCapped(currentMember.loginLog, new Date().toISOString());
   saveMember();
   cardIndex = await loadCardIndex();
-  renderHome(isNew);
+  renderSplashScreen(isNew);
   await checkPendingGift();
 }
 
@@ -1942,17 +1954,7 @@ async function renderHome(isNew=false){
 
   const lastDigit = parseInt(currentMember.birthdate.slice(-1)) || 0;
   let themeStyle = '';
-  let videoBgHtml = '';
-  
-  if (currentMember.birthdate === '691105') {
-    videoBgHtml = `
-      <div style="position:fixed;inset:0;z-index:-1;overflow:hidden;">
-        <video src="assets/691105.mp4" autoplay loop muted playsinline style="width:100%;height:100%;object-fit:cover;"></video>
-        <div style="position:absolute;inset:0;background:rgba(255,255,255,0.4);backdrop-filter:blur(3px);"></div>
-      </div>
-    `;
-    themeStyle = '<style>body{background:transparent !important;} .hero{background:rgba(255,255,255,0.85);backdrop-filter:blur(6px);border-color:rgba(255,255,255,0.5);} .streak{background:rgba(255,255,255,0.9) !important;}</style>';
-  } else if (lastDigit % 4 === 1) { // Blue theme
+  if (lastDigit % 4 === 1) { // Blue theme
     themeStyle = '<style>body{background-image:radial-gradient(circle at 20% 0%,#F0F8FF 0%,#E6F4FF 60%);} .hero{background:#FFF;border-color:#BBDDF4;} .streak{background:#E6F4FF !important;border-color:#BBDDF4 !important;color:#2C73B4 !important;}</style>';
   } else if (lastDigit % 4 === 2) { // Green theme
     themeStyle = '<style>body{background-image:radial-gradient(circle at 20% 0%,#F2FCEF 0%,#E9F7E5 60%);} .hero{background:#FFF;border-color:#C6E8C0;} .streak{background:#E9F7E5 !important;border-color:#C6E8C0 !important;color:#388E3C !important;}</style>';
@@ -1961,8 +1963,7 @@ async function renderHome(isNew=false){
   }
 
   const v=el(`
-    <div class="fade" style="position:relative;z-index:1;min-height:100vh;">
-      ${videoBgHtml}
+    <div class="fade">
       ${themeStyle}
       <div class="topbar">
         <div class="brand">🧠 오늘의 두뇌 운동</div>
