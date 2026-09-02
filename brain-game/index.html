@@ -1391,13 +1391,14 @@ function playSeq({lv, onDone=null}={}){
   const flashMs=seqFlashMs(L);
   const maxLen=startLen+7;
   const freqs=[330,392,494,587];
-  let seq=[],level=startLen-1,lock=true,maxReached=startLen-1;
+  const maxLives=5;
+  let seq=[],level=startLen-1,lock=true,maxReached=startLen-1,lives=maxLives;
   for(let i=0;i<startLen-1;i++) seq.push(rnd(4));
   clear();
   const v=el(`
     <div class="fade">
       ${stageBar()}
-      <div class="scoreline"><span class="pill" id="lv">${startLen}단계</span><span class="pill" id="st">잘 보세요</span></div>
+      <div class="scoreline"><span class="pill" id="lv">${startLen}단계</span><span class="pill" id="lives">${'❤️'.repeat(maxLives)}</span><span class="pill" id="st">잘 보세요</span></div>
       <div class="padwrap">
         <div class="pad p0" data-p="0"></div><div class="pad p1" data-p="1"></div>
         <div class="pad p2" data-p="2"></div><div class="pad p3" data-p="3"></div>
@@ -1406,13 +1407,13 @@ function playSeq({lv, onDone=null}={}){
   app.appendChild(v);
   const pads=[...v.querySelectorAll('.pad')];
   const padwrap=v.querySelector('.padwrap');
-  const lvEl=v.querySelector('#lv'),stEl=v.querySelector('#st');
+  const lvEl=v.querySelector('#lv'),stEl=v.querySelector('#st'),livesEl=v.querySelector('#lives');
   let input=[];
   pads.forEach(p=>p.addEventListener('click',()=>{
     if(lock) return;
     const i=+p.dataset.p; flashPad(i); juiceTap(p); input.push(i);
     const idx=input.length-1;
-    if(input[idx]!==seq[idx]) return gameover();
+    if(input[idx]!==seq[idx]) return onMistake();
     if(input.length===seq.length){
       lock=true; maxReached=level; stEl.textContent='좋아요! 😊';
       celebrateAt(padwrap,{count:12});
@@ -1421,14 +1422,29 @@ function playSeq({lv, onDone=null}={}){
     }
   }));
   function flashPad(i,dur=320){ pads[i].classList.add('on'); beep(freqs[i]); setTimeout(()=>pads[i].classList.remove('on'),dur); }
-  function nextLevel(){
-    level++; lvEl.textContent=level+'단계'; stEl.textContent='잘 보세요';
-    seq.push(rnd(4)); input=[]; lock=true;
+  function playbackSeq(){
+    lock=true;
     let k=0;
     const t=setInterval(()=>{
       if(k<seq.length){flashPad(seq[k]);k++;}
       else{clearInterval(t);lock=false;stEl.textContent='따라 누르세요';}
     },flashMs);
+  }
+  function nextLevel(){
+    level++; lvEl.textContent=level+'단계'; stEl.textContent='잘 보세요';
+    seq.push(rnd(4)); input=[];
+    playbackSeq();
+  }
+  function onMistake(){
+    lock=true;
+    pads.forEach(p=>p.classList.remove('on'));
+    beep(220,0.18);
+    lives--;
+    livesEl.textContent='❤️'.repeat(Math.max(0,lives))+'🤍'.repeat(maxLives-Math.max(0,lives));
+    if(lives<=0) return gameover();
+    input=[];
+    stEl.textContent=`다시 해봐요! (기회 ${lives}번 남음)`;
+    setTimeout(playbackSeq,900);
   }
   function gameover(success=false){
     pads.forEach(p=>p.classList.remove('on'));
@@ -1924,8 +1940,30 @@ async function renderHome(isNew=false){
   const bestHtml=currentMember.bestTotal?`<div class="streak" style="background:#E5F6F0;border-color:#A5DDD0;color:#1E8E7B;">🏆 최고 ${currentMember.bestTotal}점</div>`:'';
   const cardHtml=`<div class="streak card-badge">🎴 카드 ${owned}/${cardIndex.length}종</div>`;
 
+  const lastDigit = parseInt(currentMember.birthdate.slice(-1)) || 0;
+  let themeStyle = '';
+  let videoBgHtml = '';
+  
+  if (currentMember.birthdate === '691105') {
+    videoBgHtml = `
+      <div style="position:fixed;inset:0;z-index:-1;overflow:hidden;">
+        <video src="assets/691105.mp4" autoplay loop muted playsinline style="width:100%;height:100%;object-fit:cover;"></video>
+        <div style="position:absolute;inset:0;background:rgba(255,255,255,0.4);backdrop-filter:blur(3px);"></div>
+      </div>
+    `;
+    themeStyle = '<style>body{background:transparent !important;} .hero{background:rgba(255,255,255,0.85);backdrop-filter:blur(6px);border-color:rgba(255,255,255,0.5);} .streak{background:rgba(255,255,255,0.9) !important;}</style>';
+  } else if (lastDigit % 4 === 1) { // Blue theme
+    themeStyle = '<style>body{background-image:radial-gradient(circle at 20% 0%,#F0F8FF 0%,#E6F4FF 60%);} .hero{background:#FFF;border-color:#BBDDF4;} .streak{background:#E6F4FF !important;border-color:#BBDDF4 !important;color:#2C73B4 !important;}</style>';
+  } else if (lastDigit % 4 === 2) { // Green theme
+    themeStyle = '<style>body{background-image:radial-gradient(circle at 20% 0%,#F2FCEF 0%,#E9F7E5 60%);} .hero{background:#FFF;border-color:#C6E8C0;} .streak{background:#E9F7E5 !important;border-color:#C6E8C0 !important;color:#388E3C !important;}</style>';
+  } else if (lastDigit % 4 === 3) { // Purple theme
+    themeStyle = '<style>body{background-image:radial-gradient(circle at 20% 0%,#FAF5FF 0%,#F3E8FF 60%);} .hero{background:#FFF;border-color:#E6D6FA;} .streak{background:#F3E8FF !important;border-color:#E6D6FA !important;color:#8E24AA !important;}</style>';
+  }
+
   const v=el(`
-    <div class="fade">
+    <div class="fade" style="position:relative;z-index:1;min-height:100vh;">
+      ${videoBgHtml}
+      ${themeStyle}
       <div class="topbar">
         <div class="brand">🧠 오늘의 두뇌 운동</div>
         <div class="topbar-btns">
@@ -2444,7 +2482,7 @@ async function renderAdminLibrary(){
 }
 
 // ---------- INIT ----------
-(function init(){ renderSplashScreen(); })();
+(function init(){ renderLoginScreen(); })();
 </script>
 </body>
 </html>
