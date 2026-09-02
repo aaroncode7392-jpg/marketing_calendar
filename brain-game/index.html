@@ -1033,7 +1033,7 @@ function renderSplashScreen(isNew = false){
         <div style="position:absolute;inset:0;background:linear-gradient(180deg, rgba(30,20,15,.12) 0%, rgba(30,20,15,.5) 65%, rgba(20,14,10,.74) 100%);"></div>
       </div>
   `;
-  if (currentMember && currentMember.birthdate === '691105') {
+  if (currentMember && currentMember.birthdate === '691105' && Math.random() < 0.5) {
     bgHtml = `
       <div style="position:fixed;inset:0;z-index:-1;overflow:hidden;">
         <video src="assets/691105.mp4" autoplay loop muted playsinline style="width:100%;height:100%;object-fit:cover;"></video>
