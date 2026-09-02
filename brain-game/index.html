@@ -1045,10 +1045,10 @@ function renderSplashScreen(isNew = false){
   const v=el(`
     <div class="fade" style="position:relative;min-height:88vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;text-align:center;padding-bottom:16px;">
       ${bgHtml}
+      <button class="btn" id="goStart" style="background:#E8633F;font-size:22px;padding:16px;max-width:340px;box-shadow:0 6px 0 rgba(0,0,0,.25);margin-bottom:26px;">✨ [매일 머리 좋아지기]</button>
       <div style="font-family:'Jua';font-size:32px;color:#fff;text-shadow:0 3px 12px rgba(0,0,0,.55);margin-bottom:8px;">🧠 오늘의 두뇌 운동</div>
-      <div style="font-size:16px;color:rgba(255,255,255,.92);text-shadow:0 2px 8px rgba(0,0,0,.5);margin-bottom:26px;">두뇌 운동으로 치매 요괴를 물리쳐요!</div>
-      <button class="btn" id="goStart" style="background:#E8633F;font-size:24px;padding:22px;max-width:340px;box-shadow:0 8px 0 rgba(0,0,0,.25);">✨ [매일 머리 좋아지기]</button>
-      <button class="footer-link" id="splashAdmin" style="margin-top:18px;color:rgba(255,255,255,.82);">관리자 페이지</button>
+      <div style="font-size:16px;color:rgba(255,255,255,.92);text-shadow:0 2px 8px rgba(0,0,0,.5);margin-bottom:12px;">두뇌 운동으로 치매 요괴를 물리쳐요!</div>
+      <button class="footer-link" id="splashAdmin" style="margin-top:10px;color:rgba(255,255,255,.82);">관리자 페이지</button>
     </div>`);
   app.appendChild(v);
   v.querySelector('#goStart').addEventListener('click', ()=>renderHome(isNew));
