@@ -1893,16 +1893,27 @@ function playDecompose({lv=1}={}){
           <div style="font-family:'Jua';font-size:26px;margin-bottom:10px;">${title}</div>
           <div style="font-size:17px;color:var(--ink-soft);margin-bottom:24px;word-break:keep-all;">${desc}</div>
           
+          ${prob.type === 'addition' ? `
+          <div style="background:#FFFBF4; border:2px solid #EADBCA; border-radius:16px; padding:20px 16px 16px; margin-bottom:12px; position:relative; margin-top:20px;">
+            <div style="position:absolute; top:-14px; left:16px; background:#FFF0D0; border:1.5px solid #E8C488; color:#9B5E14; padding:4px 12px; border-radius:12px; font-family:'Jua'; font-size:16px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">가진 금화</div>
+            <div class="dec-area" id="itemsArea" style="min-height:auto; margin:0;">
+              ${Array(prob.tens).fill(0).map(()=>`<div class="bundle-10"></div>`).join('')}
+              ${Array(prob.ones).fill(0).map(()=>`<div class="piece-1"></div>`).join('')}
+            </div>
+          </div>
+          <div style="text-align:center;font-size:34px;color:var(--ok);margin:8px 0;font-weight:bold;">+</div>
+          <div style="background:#F2FDF7; border:2px solid #C3E6D6; border-radius:16px; padding:20px 16px 16px; position:relative; margin-top:16px;">
+            <div style="position:absolute; top:-14px; left:16px; background:#D1F0E1; border:1.5px solid #A8DCC4; color:#2E7D59; padding:4px 12px; border-radius:12px; font-family:'Jua'; font-size:16px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">더 받은 금화</div>
+            <div class="dec-area" style="min-height:auto; margin:0;" id="addArea">
+              ${Array(prob.addAmount).fill(0).map(()=>`<div class="piece-1 fade"></div>`).join('')}
+            </div>
+          </div>
+          ` : `
           <div class="dec-area" id="itemsArea">
             ${Array(prob.tens).fill(0).map(()=>`<div class="bundle-10"></div>`).join('')}
             ${Array(prob.ones).fill(0).map(()=>`<div class="piece-1"></div>`).join('')}
           </div>
-          ${prob.type === 'addition' ? `
-            <div style="text-align:center;font-size:30px;color:var(--ok);margin:10px 0;">+</div>
-            <div class="dec-area" style="min-height:auto;" id="addArea">
-              ${Array(prob.addAmount).fill(0).map(()=>`<div class="piece-1 fade"></div>`).join('')}
-            </div>
-          ` : ''}
+          `}
         </div>
       </div>`);
     app.appendChild(v);
