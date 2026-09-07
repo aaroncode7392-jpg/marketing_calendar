@@ -412,6 +412,9 @@
 let currentMember = null;   // {birthdate, joinedAt, lastLogin, streak, lastDay, bestTotal, level, cards:{id:count}}
 let cardIndex = [];          // [{id,name,mime,addedAt}]
 const ADMIN_PIN = '1128';
+// 회원(생년월일)별 통과 기준 점수 — 목록에 없는 회원은 DEFAULT_PASS_SCORE 적용
+const PASS_SCORE_BY_BIRTHDATE = { '610708': 70, '691105': 65 };
+const DEFAULT_PASS_SCORE = 65;
 
 // ---------- STORAGE LAYER (Claude 아티팩트 window.storage 우선, 안되면 localStorage로 자동 전환) ----------
 const hasCloudStorage = (typeof window!=='undefined') && window.storage && typeof window.storage.get==='function';
@@ -2082,7 +2085,6 @@ function showFinalResult(){
   const avg=d=>domainScores[d].length?Math.round(domainScores[d].reduce((a,b)=>a+b,0)/domainScores[d].length):0;
   const domains={
     speed:{label:'⚡ 처리속도',score:avg('speed')},
-    seq:{label:'🎵 작업기억',score:avg('seq')},
     math:{label:'🔢 계산력',score:avg('math')},
     memory:{label:'🃏 기억력',score:avg('memory')},
     typing:{label:'✍️ 집중력',score:avg('typing')},
@@ -2092,10 +2094,10 @@ function showFinalResult(){
   if(totalScore>(currentMember.bestTotal||0)){ currentMember.bestTotal=totalScore; }
   currentMember.scoreLog = pushCapped(currentMember.scoreLog, {
     ts:new Date().toISOString(), total:totalScore,
-    speed:domains.speed.score, seq:domains.seq.score, math:domains.math.score, memory:domains.memory.score, typing:domains.typing.score
+    speed:domains.speed.score, math:domains.math.score, memory:domains.memory.score, typing:domains.typing.score
   });
   saveMember();
-  const PASS_SCORE=65;
+  const PASS_SCORE=PASS_SCORE_BY_BIRTHDATE[currentMember.birthdate] ?? DEFAULT_PASS_SCORE;
   const passed=totalScore>=PASS_SCORE;
   const stars=totalScore>=80?3:totalScore>=60?2:1;
   const starStr='⭐'.repeat(stars)+'☆'.repeat(3-stars);
@@ -2131,17 +2133,16 @@ function showFinalResult(){
   v.querySelector('#retry').addEventListener('click',startSession);
   if(passed){
     v.querySelector('#home').addEventListener('click',()=>renderHome());
-    // 65점 이상 통과 시에만 3개 상자 선택 보너스 모달 팝업
+    // 통과 기준 점수 이상일 때만 3개 상자 선택 보너스 모달 팝업
     setTimeout(() => { showChestRewardModal(); }, 650);
   }
 }
 function getDiagnosis(total,domains){
   const entries=Object.entries(domains).sort((a,b)=>a[1].score-b[1].score);
   const weakest=entries[0], strongest=entries[entries.length-1];
-  const names={speed:'처리속도',seq:'작업기억',math:'계산력',memory:'기억력',typing:'집중력'};
+  const names={speed:'처리속도',math:'계산력',memory:'기억력',typing:'집중력'};
   const advice={
     speed:'순간 판단력과 처리속도를 높이는 훈련을 꾸준히 해보세요.',
-    seq:'순서를 기억하는 작업기억 훈련에 좀 더 집중해 보시면 도움이 될 거예요.',
     math:'매일 간단한 계산 연습을 하시면 계산력이 빠르게 향상됩니다.',
     memory:'그림이나 단어를 외우는 기억력 훈련을 더 해보시면 좋겠어요.',
     typing:'문장을 천천히 또박또박 따라 써보는 연습이 집중력에 도움이 됩니다.',
@@ -2209,6 +2210,17 @@ async function renderHome(isNew=false){
         </div>
       </div>
       <button class="btn btn-primary" id="startBtn" style="font-size:27px;padding:23px;margin-top:0;">시작하기</button>
+      <div class="hero" style="padding:16px 20px;">
+        <div style="font-family:'Jua';font-size:17px;margin-bottom:10px;">🎯 게임별로 연습하기</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+          <button class="btn btn-ghost practice-btn" data-type="speed" style="margin:0;font-size:13px;padding:12px 4px;line-height:1.5;">⚡<br>순간포착</button>
+          <button class="btn btn-ghost practice-btn" data-type="seq" style="margin:0;font-size:13px;padding:12px 4px;line-height:1.5;">🎵<br>순서기억</button>
+          <button class="btn btn-ghost practice-btn" data-type="math" style="margin:0;font-size:13px;padding:12px 4px;line-height:1.5;">🔢<br>빠른셈</button>
+          <button class="btn btn-ghost practice-btn" data-type="memory" style="margin:0;font-size:13px;padding:12px 4px;line-height:1.5;">🃏<br>짝맞추기</button>
+          <button class="btn btn-ghost practice-btn" data-type="mathhard" style="margin:0;font-size:13px;padding:12px 4px;line-height:1.5;">🧮<br>심화계산</button>
+          <button class="btn btn-ghost practice-btn" data-type="typing" style="margin:0;font-size:13px;padding:12px 4px;line-height:1.5;">✍️<br>명언쓰기</button>
+        </div>
+      </div>
       <button class="btn btn-ghost" id="myCardsBtn" style="font-size:18px;">📚 라이브러리</button>
       <div style="text-align:center;margin-top:18px;display:flex;justify-content:center;gap:16px;">
         <button class="footer-link" id="switchUser">다른 생년월일로 로그인</button>
@@ -2221,12 +2233,44 @@ async function renderHome(isNew=false){
   v.querySelector('#lvDown').addEventListener('click',()=>{setLevel(curLevel()-1);renderHome();});
   v.querySelector('#lvUp').addEventListener('click',()=>{setLevel(curLevel()+1);renderHome();});
   v.querySelector('#startBtn').addEventListener('click',startSession);
+  v.querySelectorAll('.practice-btn').forEach(b=>b.addEventListener('click',()=>playPractice(b.dataset.type)));
   v.querySelector('#myCardsBtn').addEventListener('click',renderMyCards);
   v.querySelector('#switchUser').addEventListener('click',()=>{ currentMember=null; renderLoginScreen(); });
   v.querySelector('#toAdmin').addEventListener('click',()=>renderAdminPinScreen());
 
   // 6시간 슬롯 기준 첫 접속 시 자동 팝업
   setTimeout(()=>{ showVerseCard(false); }, 350);
+}
+// ---------- 게임별 개별 연습 모드 (세션/점수 집계와 무관하게 한 판만 플레이) ----------
+function playPractice(type){
+  setGameBackground('assets/bg_landscape_'+(Math.floor(Math.random()*10)+1)+'.jpg');
+  const L=curLevel();
+  const onDone=(score)=>showPracticeResult(type,score);
+  if(type==='speed') playSpeed({lv:L, rounds:5, onDone});
+  else if(type==='seq') playSeq({lv:L, onDone});
+  else if(type==='math') playMath({lv:L, qs:6, onDone});
+  else if(type==='memory') playMemory({lv:L, onDone});
+  else if(type==='mathhard') playMathHard({qs:5, onDone});
+  else if(type==='typing') playTyping({qs:5, onDone});
+}
+function showPracticeResult(type,score){
+  const labels={speed:'⚡ 순간 포착',seq:'🎵 순서 기억',math:'🔢 빠른 셈',memory:'🃏 짝 맞추기',mathhard:'🧮 심화 계산',typing:'✍️ 명언 따라쓰기'};
+  const noScore=(type==='seq');
+  clear();
+  const v=el(`
+    <div class="fade">
+      <div class="panel" style="text-align:center;padding:30px 20px;">
+        <div style="font-family:'Jua';font-size:20px;color:var(--ink-soft);margin-bottom:6px;">${labels[type]} 연습 완료!</div>
+        ${noScore
+          ? `<div style="font-family:'Jua';font-size:40px;color:var(--ok);">통과! 🎉</div>`
+          : `<div style="font-family:'Jua';font-size:52px;color:${scoreColor(score)};">${score}점</div>`}
+        <button class="btn btn-primary" id="practiceAgain" style="margin-top:20px;font-size:20px;padding:16px;">다시 연습하기</button>
+        <div class="btn-row" style="margin-top:10px;"><button class="btn btn-ghost" id="practiceHome">홈으로</button></div>
+      </div>
+    </div>`);
+  app.appendChild(v);
+  v.querySelector('#practiceAgain').addEventListener('click',()=>playPractice(type));
+  v.querySelector('#practiceHome').addEventListener('click',()=>renderHome());
 }
 function showInfo(){
   const ov=el(`
