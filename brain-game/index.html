@@ -1990,9 +1990,22 @@ function playDecompose({lv=1}={}){
                }, 300);
             }
           } else if (prob.type === 'subtraction') {
-            showDecomposeModal(true, "정답입니다!", `주머니에서 빌려와서 <b>${prob.subAmount}개</b>를 뺄 수 있었어요!`, () => {
-              playDecompose({lv: level+1});
-            });
+            // 추가 연출: 뺄셈 시 금화가 날아가며 없어지는 효과
+            const allPieces = panel.querySelectorAll('.piece-1');
+            let removed = 0;
+            for(let i=allPieces.length-1; i>=0; i--) {
+              if (removed < prob.subAmount) {
+                allPieces[i].style.transition = 'transform 0.6s cubic-bezier(0.5, -0.5, 0.5, 1.5), opacity 0.6s';
+                allPieces[i].style.transform = 'translateY(-120px) scale(0)';
+                allPieces[i].style.opacity = '0';
+                removed++;
+              }
+            }
+            setTimeout(() => {
+              showDecomposeModal(true, "정답입니다!", `주머니에서 빌려와서 <b>${prob.subAmount}개</b>를 뺄 수 있었어요!`, () => {
+                playDecompose({lv: level+1});
+              });
+            }, 700);
           } else {
             showDecomposeModal(true, "정답입니다!", "주머니를 풀어도 <b>전체 개수는 그대로</b>라는 것을 확인했어요!", () => {
               playDecompose({lv: level+1});
