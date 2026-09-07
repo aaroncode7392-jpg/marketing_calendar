@@ -157,6 +157,12 @@
   .type-input:focus{outline:none;border-color:var(--speed);}
   .type-input.type-right{border-color:var(--ok);background:#E5F6F0;}
   .type-input.type-wrong{border-color:var(--warn);background:#FCE7E5;}
+  /* decompose (10 묶음 풀기) */
+  .dec-area { display:flex; flex-wrap:wrap; gap:16px; justify-content:center; min-height: 200px; align-items:center; margin:20px 0; }
+  .bundle-10 { position:relative; width:70px; height:100px; background:linear-gradient(135deg, #5B8DEF, #3867c4); border-radius:10px; border:2px solid #2e54a3; color:#fff; display:flex; align-items:center; justify-content:center; font-family:'Jua'; font-size:40px; text-shadow:0 2px 4px rgba(0,0,0,0.3); box-shadow:0 6px 0 #2e54a3, 0 10px 15px rgba(0,0,0,0.15); cursor:pointer; transition:transform 0.15s, box-shadow 0.15s; }
+  .bundle-10:active { transform:translateY(4px); box-shadow:0 2px 0 #2e54a3, 0 4px 8px rgba(0,0,0,0.1); }
+  .piece-wrap { display:grid; grid-template-columns:repeat(5, 1fr); gap:6px; animation:pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  .piece-1 { width:34px; height:34px; background:linear-gradient(135deg, #FFD54F, #F57F17); border-radius:50%; border:2px solid #F9A825; color:#fff; display:flex; align-items:center; justify-content:center; font-family:'Jua'; font-size:18px; text-shadow:0 1px 2px rgba(0,0,0,0.3); box-shadow:0 3px 0 #F9A825; }
   /* result */
   .stars{font-size:50px;letter-spacing:6px;margin:6px 0;}
   .domain-row{margin-bottom:14px;}
@@ -1796,6 +1802,151 @@ function playTyping({qs=5, onDone=null}={}){
 }
 
 // ==========================================================
+// GAME: 특별 훈련 (10 묶음 풀기 - 보존 개념 훈련)
+// ==========================================================
+function playDecompose({lv=1}={}){
+  let level = lv;
+  const levels = [
+    { tens: 1, ones: 0 }, // 10 -> 10 ones
+    { tens: 2, ones: 0 }, // 20 -> 10 + 10 ones
+    { tens: 3, ones: 2 }, // 32 -> 20 + 12 ones
+    { tens: 4, ones: 5 }  // 45 -> 30 + 15 ones
+  ];
+  
+  if(level > levels.length) {
+    clear();
+    const v = el(`
+      <div class="fade" style="text-align:center;padding:40px 20px;">
+        <div style="font-size:80px;">🎉</div>
+        <div style="font-family:'Jua';font-size:32px;margin:20px 0;">훈련 완료!</div>
+        <div style="font-size:18px;line-height:1.6;color:var(--ink-soft);margin-bottom:30px;">
+          모양은 달라도 전체 개수는 똑같다는 것,<br>이제 확실히 아시겠죠? 😊
+        </div>
+        <button class="btn btn-primary" id="goHome" style="font-size:24px;padding:18px;">홈으로 돌아가기</button>
+      </div>`);
+    app.appendChild(v);
+    v.querySelector('#goHome').addEventListener('click', renderHome);
+    confetti(4);
+    beep(784, 0.2);
+    return;
+  }
+
+  const prob = levels[level-1];
+  const total = prob.tens * 10 + prob.ones;
+  let isDecomposed = false;
+
+  function renderStage(){
+    clear();
+    const v = el(`
+      <div class="fade">
+        <div class="topbar">
+          <div class="brand" style="font-size:22px;">🧩 10 묶음 풀기 훈련</div>
+          <button class="iconbtn" id="quitDec" style="font-size:18px;">✕</button>
+        </div>
+        <div class="scoreline"><span class="pill">단계 ${level}/${levels.length}</span></div>
+        <div class="panel" style="padding:24px 14px;">
+          <div style="font-family:'Jua';font-size:26px;margin-bottom:10px;">여기 <span style="color:var(--speed);">${total}</span>가 있어요.</div>
+          <div style="font-size:17px;color:var(--ink-soft);margin-bottom:24px;">10짜리 묶음 하나를 터치해서 풀어볼까요?</div>
+          
+          <div class="dec-area" id="itemsArea">
+            ${Array(prob.tens).fill(0).map(()=>`<div class="bundle-10">10</div>`).join('')}
+            ${Array(prob.ones).fill(0).map(()=>`<div class="piece-1">1</div>`).join('')}
+          </div>
+        </div>
+      </div>`);
+    app.appendChild(v);
+    
+    v.querySelector('#quitDec').addEventListener('click', renderHome);
+    
+    const bundles = v.querySelectorAll('.bundle-10');
+    bundles.forEach(b => {
+      b.addEventListener('click', function onClick() {
+        if(isDecomposed) return;
+        isDecomposed = true;
+        juiceTap(this);
+        beep(587, 0.1);
+        
+        setTimeout(()=>{
+          this.style.transform = 'scale(0) rotate(180deg)';
+          this.style.opacity = '0';
+          setTimeout(() => {
+            this.remove();
+            const wrap = document.createElement('div');
+            wrap.className = 'piece-wrap';
+            for(let i=0; i<10; i++) wrap.innerHTML += `<div class="piece-1 fade" style="animation-delay:${i*40}ms;">1</div>`;
+            v.querySelector('#itemsArea').appendChild(wrap);
+            beep(660, 0.15);
+            askQuestion(v);
+          }, 300);
+        }, 300);
+      });
+    });
+  }
+
+  function askQuestion(v){
+    const panel = v.querySelector('.panel');
+    const qDiv = el(`
+      <div class="fade" style="margin-top:24px;border-top:2px dashed var(--line);padding-top:24px;">
+        <div style="font-family:'Jua';font-size:26px;margin-bottom:18px;color:var(--ink);line-height:1.4;">모양만 바뀌었어요!<br>그럼 지금은 모두 몇 개일까요?</div>
+        <div class="choices"></div>
+      </div>`);
+    
+    const choicesDiv = qDiv.querySelector('.choices');
+    let opts = [total, total - 10, total + 10].filter(n => n > 0);
+    if(opts.length < 3) opts.push(total + 20);
+    opts = shuffle(opts);
+    
+    opts.forEach(n => {
+      choicesDiv.innerHTML += `<button class="choice" data-v="${n}">${n}</button>`;
+    });
+    
+    panel.appendChild(qDiv);
+    
+    let answered = false;
+    choicesDiv.querySelectorAll('.choice').forEach(btn => {
+      btn.addEventListener('click', function() {
+        if(answered && this.classList.contains('right')) return;
+        const val = +this.dataset.v;
+        if(val === total){
+          answered = true;
+          this.classList.add('right');
+          juiceTap(this);
+          beep(784, 0.15);
+          celebrateAt(this, {count:10});
+          const m = el(`<div class="fx-text fade" style="margin-top:20px;font-family:'Jua';font-size:22px;color:var(--ok);">정답입니다! 전체 개수는 그대로예요 😊</div>`);
+          const existingM = panel.querySelector('.fx-text');
+          if(existingM) existingM.remove();
+          panel.appendChild(m);
+          setTimeout(() => playDecompose({lv: level+1}), 2000);
+        } else {
+          this.classList.add('wrongpick');
+          beep(220, 0.15);
+          const m = el(`<div class="fx-text fade" style="margin-top:20px;font-family:'Jua';font-size:18px;color:var(--warn);line-height:1.5;">없어진 게 아니에요!<br>방금 푼 낱개 10개를 포함해서 다시 세어볼까요?</div>`);
+          const existingM = panel.querySelector('.fx-text');
+          if(existingM) existingM.remove();
+          panel.appendChild(m);
+          
+          const newPieces = panel.querySelectorAll('.piece-wrap .piece-1');
+          newPieces.forEach((p, idx) => {
+            setTimeout(() => {
+              p.style.transform = 'scale(1.4)';
+              p.style.boxShadow = '0 0 12px rgba(255,168,90,0.9)';
+              beep(500 + idx*20, 0.05);
+              setTimeout(() => {
+                p.style.transform = 'none';
+                p.style.boxShadow = '0 3px 0 #F9A825';
+              }, 400);
+            }, idx * 350 + 200);
+          });
+        }
+      });
+    });
+  }
+
+  renderStage();
+}
+
+// ==========================================================
 // [CLAUDE / DEV GUIDE] 게임 완료 후 3개 선물 상자 선택 & 드롭 확률 시스템
 // - 확률 구조:
 //   * 꽝 (80%): "아쉽게도 아무것도 안나왔습니다" 화면 노출
@@ -2268,7 +2419,8 @@ async function renderHome(isNew=false){
         </div>
       </div>
       <button class="btn btn-primary" id="startBtn" style="font-size:27px;padding:23px;margin-top:0;">시작하기</button>
-      <div class="hero" style="padding:16px 20px;">
+      <button class="btn" id="decomposeBtn" style="font-size:24px;padding:18px;margin-top:12px;background:#5B8DEF;color:#FFF;border:2px solid #2e54a3;box-shadow:0 6px 0 #2e54a3;">🧩 특별 훈련: 10 묶음 풀기</button>
+      <div class="hero" style="padding:16px 20px;margin-top:16px;">
         <div style="font-family:'Jua';font-size:17px;margin-bottom:10px;">🎯 게임별로 연습하기</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
           <button class="btn btn-ghost practice-btn" data-type="speed" style="margin:0;font-size:13px;padding:12px 4px;line-height:1.5;">⚡<br>순간포착</button>
@@ -2291,6 +2443,7 @@ async function renderHome(isNew=false){
   v.querySelector('#lvDown').addEventListener('click',()=>{setLevel(curLevel()-1);renderHome();});
   v.querySelector('#lvUp').addEventListener('click',()=>{setLevel(curLevel()+1);renderHome();});
   v.querySelector('#startBtn').addEventListener('click',startSession);
+  v.querySelector('#decomposeBtn').addEventListener('click',()=>playDecompose({lv: 1}));
   v.querySelectorAll('.practice-btn').forEach(b=>b.addEventListener('click',()=>playPractice(b.dataset.type)));
   v.querySelector('#myCardsBtn').addEventListener('click',renderMyCards);
   v.querySelector('#switchUser').addEventListener('click',()=>{ currentMember=null; renderLoginScreen(); });
