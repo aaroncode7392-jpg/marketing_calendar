@@ -1812,23 +1812,16 @@ function playTyping({qs=5, onDone=null}={}){
 // ==========================================================
 function playDecompose({lv=1}={}){
   let level = lv;
-  const levels = [
-    { type: 'decompose', tens: 1, ones: 0, targetTotal: 10 },
-    { type: 'decompose', tens: 4, ones: 5, targetTotal: 45 },
-    { type: 'subtraction', tens: 3, ones: 2, subAmount: 7, targetTotal: 25 },
-    { type: 'subtraction', tens: 5, ones: 3, subAmount: 8, targetTotal: 45 },
-    { type: 'addition', tens: 1, ones: 8, addAmount: 5, targetTotal: 23 },
-    { type: 'addition', tens: 2, ones: 7, addAmount: 6, targetTotal: 33 }
-  ];
+  const maxLevels = 16;
   
-  if(level > levels.length) {
+  if(level > maxLevels) {
     clear();
     const v = el(`
       <div class="fade" style="text-align:center;padding:40px 20px;">
         <div style="font-size:80px;">🎉</div>
-        <div style="font-family:'Jua';font-size:32px;margin:20px 0;">훈련 완료!</div>
+        <div style="font-family:'Jua';font-size:32px;margin:20px 0;">완벽하게 수료하셨습니다!</div>
         <div style="font-size:18px;line-height:1.6;color:var(--ink-soft);margin-bottom:30px;">
-          앞자리가 바뀌어도, 모양만 변할 뿐이라는 것!<br>아주 잘 하셨습니다 😊
+          복잡한 덧셈과 뺄셈도 머릿속에서 거뜬히 그려내시는군요!<br>대단하십니다 😊
         </div>
         <button class="btn btn-primary" id="goHome" style="font-size:24px;padding:18px;">홈으로 돌아가기</button>
       </div>`);
@@ -1839,8 +1832,57 @@ function playDecompose({lv=1}={}){
     return;
   }
 
-  const prob = levels[level-1];
+  // 문제 생성
+  function rand(min, max) { return Math.floor(Math.random()*(max-min+1))+min; }
+  let type = ''; // 'subtraction' or 'addition'
+  let tA = 0, oA = 0, tB = 0, oB = 0;
   
+  let phase = ((level-1) % 8) + 1; // 1~8
+  const isAbstract = level > 8; // 숫자만 나오는 단계
+  
+  if (phase === 1 || phase === 2 || phase === 9 || phase === 10) {
+    // 2-digit - 1-digit (받아내림 필수)
+    type = 'subtraction';
+    tA = rand(2, 5);
+    oA = rand(1, 4);
+    tB = 0;
+    oB = rand(5, 9);
+    // Ensure oA < oB
+    if(oA >= oB) oB = oA + 1;
+  } else if (phase === 3 || phase === 4 || phase === 11 || phase === 12) {
+    // 2-digit - 2-digit (받아내림 필수)
+    type = 'subtraction';
+    tA = rand(4, 7);
+    oA = rand(1, 4);
+    tB = rand(1, 3);
+    oB = rand(5, 9);
+    if(oA >= oB) oB = oA + 1;
+  } else if (phase === 5 || phase === 6 || phase === 13 || phase === 14) {
+    // 2-digit + 1-digit (받아올림 필수)
+    type = 'addition';
+    tA = rand(1, 4);
+    oA = rand(5, 9);
+    tB = 0;
+    oB = rand(5, 9);
+    if(oA + oB < 10) oB = 10 - oA + rand(0, 2);
+  } else if (phase === 7 || phase === 8 || phase === 15 || phase === 16) {
+    // 2-digit + 2-digit (받아올림 필수)
+    type = 'addition';
+    tA = rand(1, 4);
+    oA = rand(5, 9);
+    tB = rand(1, 3);
+    oB = rand(5, 9);
+    if(oA + oB < 10) oB = 10 - oA + rand(0, 2);
+  }
+
+  const initialTotal = tA * 10 + oA;
+  const subAmount = tB * 10 + oB;
+  const addAmount = tB * 10 + oB;
+  let targetTotal = type === 'addition' ? initialTotal + addAmount : initialTotal - subAmount;
+
+  const prob = { type, tA, oA, tB, oB, initialTotal, subAmount, addAmount, targetTotal };
+  let isDecomposed = false;
+
   function showDecomposeModal(isCorrect, title, desc, onNext) {
     const ov = el(`
       <div class="overlay" style="z-index:9999;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);">
@@ -1865,54 +1907,60 @@ function playDecompose({lv=1}={}){
 
   function renderStage(){
     clear();
-    let isDecomposed = false;
-    let initialTotal = prob.tens * 10 + prob.ones;
-    
     let title = "";
     let desc = "";
     
-    if (prob.type === 'decompose') {
-      title = `여기 <span style="color:var(--speed);">${initialTotal}</span>가 있어요.`;
-      desc = "금화 주머니 하나를 터치해서 풀어볼까요?";
-    } else if (prob.type === 'subtraction') {
-      title = `<span style="color:var(--speed);">${initialTotal}</span>에서 <span style="color:var(--warn);">${prob.subAmount}개</span>를 빼야 해요.`;
-      desc = "낱개가 부족하네요. 금화 주머니 하나를 눌러서 풀어주세요!";
-    } else if (prob.type === 'addition') {
-      title = `<span style="color:var(--speed);">${initialTotal}</span>에 <span style="color:var(--ok);">${prob.addAmount}개</span>를 더 받았어요.`;
-      desc = "주머니와 낱개들을 합치면 모두 몇 개일까요?";
+    if (!isAbstract) {
+      if (type === 'subtraction') {
+        title = `<span style="color:var(--speed);">${initialTotal}</span>에서 <span style="color:var(--warn);">${subAmount}개</span>를 빼야 해요.`;
+        desc = "낱개가 부족하네요. 금화 주머니 하나를 눌러서 풀어주세요!";
+      } else {
+        title = `<span style="color:var(--speed);">${initialTotal}</span>에 <span style="color:var(--ok);">${addAmount}개</span>를 더 받았어요.`;
+        desc = "모두 합치면 몇 개일까요?";
+      }
+    } else {
+      title = "머릿속으로 주머니를 떠올리며 풀어보세요!";
+      desc = "수식을 보고 알맞은 정답을 선택해 주세요.";
     }
 
     const v = el(`
       <div class="fade">
         <div class="topbar">
-          <div class="brand" style="font-size:22px;">🧩 10 묶음 풀기 훈련</div>
+          <div class="brand" style="font-size:22px;">${isAbstract ? '📝 머릿속 계산 훈련' : '🧩 10 묶음 풀기 훈련'}</div>
           <button class="iconbtn" id="quitDec" style="font-size:18px;">✕</button>
         </div>
-        <div class="scoreline"><span class="pill">단계 ${level}/${levels.length}</span></div>
+        <div class="scoreline"><span class="pill">단계 ${level}/${maxLevels}</span></div>
         <div class="panel" style="padding:24px 14px;">
           <div style="font-family:'Jua';font-size:26px;margin-bottom:10px;">${title}</div>
-          <div style="font-size:17px;color:var(--ink-soft);margin-bottom:24px;word-break:keep-all;">${desc}</div>
+          <div style="font-size:17px;color:var(--ink-soft);margin-bottom:12px;word-break:keep-all;">${desc}</div>
           
-          ${prob.type === 'addition' ? `
-          <div style="background:#FFFBF4; border:2px solid #EADBCA; border-radius:16px; padding:20px 16px 16px; margin-bottom:12px; position:relative; margin-top:20px;">
-            <div style="position:absolute; top:-14px; left:16px; background:#FFF0D0; border:1.5px solid #E8C488; color:#9B5E14; padding:4px 12px; border-radius:12px; font-family:'Jua'; font-size:16px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">가진 금화</div>
-            <div class="dec-area" id="itemsArea" style="min-height:auto; margin:0;">
-              ${Array(prob.tens).fill(0).map(()=>`<div class="bundle-10"></div>`).join('')}
-              ${Array(prob.ones).fill(0).map(()=>`<div class="piece-1"></div>`).join('')}
+          ${isAbstract ? `
+            <div style="font-family:'Jua'; font-size:60px; text-align:center; padding:40px 0; color:var(--ink);">
+              ${initialTotal} ${type==='addition'?'+':'-'} ${type==='addition'?addAmount:subAmount} = ?
             </div>
-          </div>
-          <div style="text-align:center;font-size:34px;color:var(--ok);margin:8px 0;font-weight:bold;">+</div>
-          <div style="background:#F2FDF7; border:2px solid #C3E6D6; border-radius:16px; padding:20px 16px 16px; position:relative; margin-top:16px;">
-            <div style="position:absolute; top:-14px; left:16px; background:#D1F0E1; border:1.5px solid #A8DCC4; color:#2E7D59; padding:4px 12px; border-radius:12px; font-family:'Jua'; font-size:16px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">더 받은 금화</div>
-            <div class="dec-area" style="min-height:auto; margin:0;" id="addArea">
-              ${Array(prob.addAmount).fill(0).map(()=>`<div class="piece-1 fade"></div>`).join('')}
-            </div>
-          </div>
           ` : `
-          <div class="dec-area" id="itemsArea">
-            ${Array(prob.tens).fill(0).map(()=>`<div class="bundle-10"></div>`).join('')}
-            ${Array(prob.ones).fill(0).map(()=>`<div class="piece-1"></div>`).join('')}
-          </div>
+            ${type === 'addition' ? `
+            <div style="background:#FFFBF4; border:2px solid #EADBCA; border-radius:16px; padding:20px 16px 16px; margin-bottom:12px; position:relative; margin-top:20px;">
+              <div style="position:absolute; top:-14px; left:16px; background:#FFF0D0; border:1.5px solid #E8C488; color:#9B5E14; padding:4px 12px; border-radius:12px; font-family:'Jua'; font-size:16px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">가진 금화</div>
+              <div class="dec-area" id="itemsArea" style="min-height:auto; margin:0;">
+                ${Array(tA).fill(0).map(()=>`<div class="bundle-10"></div>`).join('')}
+                ${Array(oA).fill(0).map(()=>`<div class="piece-1"></div>`).join('')}
+              </div>
+            </div>
+            <div style="text-align:center;font-size:34px;color:var(--ok);margin:8px 0;font-weight:bold;">+</div>
+            <div style="background:#F2FDF7; border:2px solid #C3E6D6; border-radius:16px; padding:20px 16px 16px; position:relative; margin-top:16px;">
+              <div style="position:absolute; top:-14px; left:16px; background:#D1F0E1; border:1.5px solid #A8DCC4; color:#2E7D59; padding:4px 12px; border-radius:12px; font-family:'Jua'; font-size:16px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">더 받은 금화</div>
+              <div class="dec-area" style="min-height:auto; margin:0;" id="addArea">
+                ${Array(tB).fill(0).map(()=>`<div class="bundle-10"></div>`).join('')}
+                ${Array(oB).fill(0).map(()=>`<div class="piece-1 fade"></div>`).join('')}
+              </div>
+            </div>
+            ` : `
+            <div class="dec-area" id="itemsArea">
+              ${Array(tA).fill(0).map(()=>`<div class="bundle-10"></div>`).join('')}
+              ${Array(oA).fill(0).map(()=>`<div class="piece-1"></div>`).join('')}
+            </div>
+            `}
           `}
         </div>
       </div>`);
@@ -1920,47 +1968,47 @@ function playDecompose({lv=1}={}){
     
     v.querySelector('#quitDec').addEventListener('click', renderHome);
     
-    if (prob.type === 'decompose' || prob.type === 'subtraction') {
-      const bundles = v.querySelectorAll('#itemsArea .bundle-10');
-      if (bundles.length > 0) {
-        bundles[0].classList.add('bundle-shake');
-        bundles[0].innerHTML = '<div class="bundle-hint fade">👇 눌러서 풀어주세요</div>';
-      }
-      bundles.forEach(b => {
-        b.addEventListener('click', function onClick() {
-          if(isDecomposed) return;
-          isDecomposed = true;
-          this.classList.remove('bundle-shake');
-          const hint = this.querySelector('.bundle-hint');
-          if (hint) hint.remove();
-          juiceTap(this);
-          beep(587, 0.1);
-          
-          setTimeout(()=>{
-            this.style.transform = 'scale(0) rotate(180deg)';
-            this.style.opacity = '0';
-            setTimeout(() => {
-              this.remove();
-              const wrap = document.createElement('div');
-              wrap.className = 'piece-wrap';
-              for(let i=0; i<10; i++) wrap.innerHTML += `<div class="piece-1 fade" style="animation-delay:${i*40}ms;"></div>`;
-              v.querySelector('#itemsArea').appendChild(wrap);
-              beep(660, 0.15);
-              
-              if (prob.type === 'decompose') {
-                askQuestion(v, "모양만 바뀌었어요!<br>그럼 지금은 모두 몇 개일까요?");
-              } else if (prob.type === 'subtraction') {
-                askQuestion(v, `주머니를 풀었어요!<br>이제 <b>${prob.subAmount}개</b>를 빼면 남은 금화는 몇 개일까요?`);
-              }
+    if (!isAbstract) {
+      if (type === 'subtraction') {
+        const bundles = v.querySelectorAll('#itemsArea .bundle-10');
+        if (bundles.length > 0) {
+          bundles[0].classList.add('bundle-shake');
+          bundles[0].innerHTML = '<div class="bundle-hint fade">👇 눌러서 풀어주세요</div>';
+        }
+        bundles.forEach(b => {
+          b.addEventListener('click', function onClick() {
+            if(isDecomposed) return;
+            isDecomposed = true;
+            this.classList.remove('bundle-shake');
+            const hint = this.querySelector('.bundle-hint');
+            if (hint) hint.remove();
+            juiceTap(this);
+            beep(587, 0.1);
+            
+            setTimeout(()=>{
+              this.style.transform = 'scale(0) rotate(180deg)';
+              this.style.opacity = '0';
+              setTimeout(() => {
+                this.remove();
+                const wrap = document.createElement('div');
+                wrap.className = 'piece-wrap';
+                for(let i=0; i<10; i++) wrap.innerHTML += `<div class="piece-1 fade" style="animation-delay:${i*40}ms;"></div>`;
+                v.querySelector('#itemsArea').appendChild(wrap);
+                beep(660, 0.15);
+                askQuestion(v, `주머니를 풀었어요!<br>이제 <b>${subAmount}개</b>를 빼면 남은 금화는 몇 개일까요?`);
+              }, 300);
             }, 300);
-          }, 300);
+          });
         });
-      });
-    } else if (prob.type === 'addition') {
-      // 덧셈의 경우 묶음을 풀 필요 없이 바로 정답 맞히기
+      } else if (type === 'addition') {
+        setTimeout(() => {
+          askQuestion(v, "모두 합치면 몇 개일까요?");
+        }, 800);
+      }
+    } else {
       setTimeout(() => {
-        askQuestion(v, "모두 합치면 몇 개일까요?");
-      }, 800);
+        askQuestion(v, "정답은 무엇일까요?");
+      }, 500);
     }
   }
 
@@ -1973,9 +2021,13 @@ function playDecompose({lv=1}={}){
       </div>`);
     
     const choicesDiv = qDiv.querySelector('.choices');
-    let target = prob.targetTotal;
-    let opts = [target, target - 10, target + 10].filter(n => n > 0);
-    if(opts.length < 3) opts.push(target + 20);
+    let target = targetTotal;
+    let opts = [target];
+    while(opts.length < 4) {
+      // 오답 생성 로직 (10의 자리 헷갈리게 하거나 1의 자리 헷갈리게)
+      let wrong = target + (rand(1,2)*10 * (Math.random()>0.5?1:-1)) + rand(-2,2);
+      if(wrong > 0 && !opts.includes(wrong)) opts.push(wrong);
+    }
     opts = shuffle(opts);
     
     opts.forEach(n => {
@@ -1994,67 +2046,67 @@ function playDecompose({lv=1}={}){
           this.classList.add('right');
           juiceTap(this);
           
-          if (prob.type === 'addition') {
-            showDecomposeModal(true, "정답입니다!", "낱개 10개가 꽉 차서 <b>금화 주머니 1개</b>로 받아올림 되었어요!", () => {
-              playDecompose({lv: level+1});
-            });
-            // 추가 연출: 낱개들을 묶음으로 합치는 효과를 배경으로 보여줌
-            const allPieces = panel.querySelectorAll('.piece-1');
-            if(allPieces.length >= 10) {
-               for(let i=0; i<10; i++) {
-                 allPieces[i].style.transform = 'scale(0)';
-                 allPieces[i].style.opacity = '0';
-               }
-               setTimeout(() => {
-                 const newBundle = el(`<div class="bundle-10 fade" style="box-shadow: 0 0 30px rgba(255,213,79,1);"></div>`);
-                 panel.querySelector('#itemsArea').appendChild(newBundle);
-                 beep(880, 0.2);
-               }, 300);
-            }
-          } else if (prob.type === 'subtraction') {
-            // 추가 연출: 뺄셈 시 금화가 날아가며 없어지는 효과
-            const allPieces = panel.querySelectorAll('.piece-1');
-            let removed = 0;
-            for(let i=allPieces.length-1; i>=0; i--) {
-              if (removed < prob.subAmount) {
-                allPieces[i].style.transition = 'transform 0.6s cubic-bezier(0.5, -0.5, 0.5, 1.5), opacity 0.6s';
-                allPieces[i].style.transform = 'translateY(-120px) scale(0)';
-                allPieces[i].style.opacity = '0';
-                removed++;
-              }
-            }
-            setTimeout(() => {
-              showDecomposeModal(true, "정답입니다!", `주머니에서 빌려와서 <b>${prob.subAmount}개</b>를 뺄 수 있었어요!`, () => {
+          if (!isAbstract) {
+            if (type === 'addition') {
+              showDecomposeModal(true, "정답입니다!", "낱개 10개가 꽉 차서 <b>금화 주머니 1개</b>로 받아올림 되었어요!", () => {
                 playDecompose({lv: level+1});
               });
-            }, 700);
+              const allPieces = panel.querySelectorAll('.piece-1');
+              if(allPieces.length >= 10) {
+                 for(let i=0; i<10; i++) {
+                   allPieces[i].style.transform = 'scale(0)';
+                   allPieces[i].style.opacity = '0';
+                 }
+                 setTimeout(() => {
+                   const newBundle = el(`<div class="bundle-10 fade" style="box-shadow: 0 0 30px rgba(255,213,79,1);"></div>`);
+                   panel.querySelector('#itemsArea').appendChild(newBundle);
+                   beep(880, 0.2);
+                 }, 300);
+              }
+            } else if (type === 'subtraction') {
+              const allPieces = panel.querySelectorAll('#itemsArea .piece-1');
+              const allBundles = panel.querySelectorAll('#itemsArea .bundle-10');
+              let removedOnes = 0;
+              let removedTens = 0;
+              
+              for(let i=allPieces.length-1; i>=0; i--) {
+                if (removedOnes < oB) {
+                  allPieces[i].style.transition = 'transform 0.6s cubic-bezier(0.5, -0.5, 0.5, 1.5), opacity 0.6s';
+                  allPieces[i].style.transform = 'translateY(-120px) scale(0)';
+                  allPieces[i].style.opacity = '0';
+                  removedOnes++;
+                }
+              }
+              for(let i=allBundles.length-1; i>=0; i--) {
+                if (removedTens < tB) {
+                  allBundles[i].style.transition = 'transform 0.6s cubic-bezier(0.5, -0.5, 0.5, 1.5), opacity 0.6s';
+                  allBundles[i].style.transform = 'translateY(-120px) scale(0)';
+                  allBundles[i].style.opacity = '0';
+                  removedTens++;
+                }
+              }
+              setTimeout(() => {
+                showDecomposeModal(true, "정답입니다!", `주머니에서 빌려와서 <b>${subAmount}개</b>를 무사히 뺐어요!`, () => {
+                  playDecompose({lv: level+1});
+                });
+              }, 700);
+            }
           } else {
-            showDecomposeModal(true, "정답입니다!", "주머니를 풀어도 <b>전체 개수는 그대로</b>라는 것을 확인했어요!", () => {
+            showDecomposeModal(true, "정답입니다!", "머릿속으로도 완벽하게 계산해 내셨네요!", () => {
               playDecompose({lv: level+1});
             });
           }
         } else {
           this.classList.add('wrongpick');
           
-          if (prob.type === 'addition') {
-            showDecomposeModal(false, "아쉽습니다!", "금화 주머니 1개는 10을 뜻하고, 낱개 금화는 1을 뜻해요. 차근차근 더해보세요.", null);
-          } else if (prob.type === 'subtraction') {
-            showDecomposeModal(false, "아쉽습니다!", "주머니 하나를 풀어서 낱개 10개가 생겼죠? 거기서 천천히 다시 빼보세요.", null);
+          if (!isAbstract) {
+            if (type === 'addition') {
+              showDecomposeModal(false, "아쉽습니다!", "금화 주머니 1개는 10을 뜻하고, 낱개 금화는 1을 뜻해요. 차근차근 더해보세요.", null);
+            } else if (type === 'subtraction') {
+              showDecomposeModal(false, "아쉽습니다!", "주머니 하나를 풀어서 낱개 10개가 생겼죠? 거기서 천천히 다시 빼보세요.", null);
+            }
           } else {
-            showDecomposeModal(false, "아쉽습니다!", "없어진 게 아니에요! 주머니를 푼 낱개 10개를 포함해서 다시 세어볼까요?", null);
-            const newPieces = panel.querySelectorAll('.piece-wrap .piece-1');
-            newPieces.forEach((p, idx) => {
-              setTimeout(() => {
-                if(!p) return;
-                p.style.transform = 'scale(1.4)';
-                p.style.boxShadow = '0 0 12px rgba(255,168,90,0.9)';
-                beep(500 + idx*20, 0.05);
-                setTimeout(() => {
-                  p.style.transform = 'none';
-                  p.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
-                }, 400);
-              }, idx * 350 + 200);
-            });
+            showDecomposeModal(false, "아쉽습니다!", `천천히 다시 계산해보세요.<br>${type==='addition' ? '받아올림' : '받아내림'}을 잊지 않으셨나요?`, null);
           }
           
           setTimeout(() => this.classList.remove('wrongpick'), 800);
