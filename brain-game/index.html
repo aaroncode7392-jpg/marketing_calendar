@@ -160,11 +160,11 @@
   /* decompose (10 묶음 풀기) */
   .dec-area { display:flex; flex-wrap:wrap; gap:16px; justify-content:center; min-height: 200px; align-items:center; margin:20px 0; }
   .bundle-10 { position:relative; width:85px; height:110px; background:url('assets/pouch.jpg') center/cover no-repeat; border-radius:12px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:transform 0.15s, filter 0.15s; box-shadow:0 8px 16px rgba(0,0,0,0.2); }
-  .bundle-10::after { content:'10'; position:absolute; bottom:10px; right:10px; background:#fff; border:2px solid var(--ink); color:var(--ink); font-family:'Jua'; font-size:24px; padding:2px 8px; border-radius:12px; box-shadow:0 2px 4px rgba(0,0,0,0.2); }
+  .bundle-10::after { content:'10'; position:absolute; bottom:-10px; right:-10px; background:#D45C89; border:3px solid #fff; color:#fff; font-family:'Jua'; font-size:32px; padding:4px 10px; border-radius:16px; box-shadow:0 4px 10px rgba(0,0,0,0.3); z-index:2; }
   .bundle-10:active { transform:translateY(4px); filter:brightness(0.9); }
   .piece-wrap { display:grid; grid-template-columns:repeat(5, 1fr); gap:6px; animation:pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
   .piece-1 { width:44px; height:44px; background:url('assets/coin.jpg') center/cover no-repeat; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 8px rgba(0,0,0,0.15); position:relative; }
-  .piece-1::after { content:'1'; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-family:'Jua'; font-size:20px; color:#a67300; text-shadow:0 1px 0 rgba(255,255,255,0.5); }
+  .piece-1::after { content:'1'; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-family:'Jua'; font-size:26px; color:#fff; text-shadow:-1px -1px 0 rgba(0,0,0,0.8), 1px -1px 0 rgba(0,0,0,0.8), -1px 1px 0 rgba(0,0,0,0.8), 1px 1px 0 rgba(0,0,0,0.8), 0 3px 6px rgba(0,0,0,0.6); }
   /* result */
   .stars{font-size:50px;letter-spacing:6px;margin:6px 0;}
   .domain-row{margin-bottom:14px;}
