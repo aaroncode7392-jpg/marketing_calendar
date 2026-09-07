@@ -139,6 +139,8 @@
   .pad.p1.on{box-shadow:0 6px 0 rgba(0,0,0,.12),0 0 26px 8px rgba(91,185,140,.6);}
   .pad.p2.on{box-shadow:0 6px 0 rgba(0,0,0,.12),0 0 26px 8px rgba(91,141,239,.6);}
   .pad.p3.on{box-shadow:0 6px 0 rgba(0,0,0,.12),0 0 26px 8px rgba(234,194,61,.6);}
+  .pad.pad-icon{background:#fff;border:3px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:46px;}
+  .pad.pad-icon:not(.on){opacity:.92;}
   /* math */
   .qbox{font-family:'Jua';font-size:60px;margin:6px 0;}
   .timerbar{height:14px;background:#EFE2CC;border-radius:999px;overflow:hidden;margin:4px 0 16px;}
@@ -836,6 +838,19 @@ function markPlayedToday(){
 
 // ---------- HELPERS ----------
 const EMOJIS=['🐱','🐶','🌸','🍎','🌞','🐰','🦋','🐢','🍊','⭐','🌷','🐤','🍉','🐠','🌻','🐻'];
+// ---------- 순서 기억(사물/동물 버전)용 아이콘 풀 ----------
+const SEQ_OBJECTS=[
+  '🍎','🍌','🍇','🍉','🍒','🍓','🍑','🍍','🥝','🥥','🍅','🥕','🌽','🥔','🍆','🥦','🥒','🌶️','🧄','🧅',
+  '🍞','🥐','🧀','🥚','🍳','🥞','🧈','🍔','🌮','🌯','🍕','🍜','🍲','🍱','🍙','🍘','🍥','🍡','🍰','🎂',
+  '☕','🍵','🧃','🥤','🍺','🍷','🍶','🔑','🔒','📱','💻','⌚','📷','🔦','🕯️','🧯','🪑','🛋️','🚪','🪟',
+  '🛏️','🪞','🧴','🧻','🧹','🧺','🪣','🔨','🪛','🔧','🪚','🧲','🧵','🪡','🧶','✂️','📌','📎','📏','📐',
+  '🖊️','✏️','📖','📚','📦','🎁','🎸','🎹','🥁','🎺','🎻','⚽','🏀','⚾','🎾','🏐','🚗','✈️','🚀','⛵',
+];
+const SEQ_ANIMALS=[
+  '🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🐔','🐧','🐦','🐤','🦆',
+  '🦉','🦇','🐺','🐗','🐴','🦄','🐝','🦋','🐌','🐞','🐢','🐍','🦎','🐙','🦑','🦀','🐡','🐠','🐟','🐬',
+  '🐳','🐋','🦈','🐊','🦓','🐘','🦛','🐪','🐫','🦒','🐃','🐂','🐄','🐖','🐑','🐐','🦌','🐕','🐩','🐈',
+];
 const PRAISE=['잘하셨어요!','좋아요!','훌륭해요!','정확해요!','멋져요!'];
 const SOFT=['괜찮아요, 다시 해봐요','천천히 하셔도 돼요','거의 다 왔어요'];
 // ---------- 명언 따라쓰기 스테이지용 짧은 문구 (전부 10자 이내로 검증됨) ----------
@@ -1206,12 +1221,12 @@ function buildStages(L){
   const L2=Math.min(10,L+1);
   return [
     {type:'speed', label:'⚡ 순간 포착', domain:'speed', lv:L},
-    {type:'seq',   label:'🎵 순서 기억', domain:'seq',   lv:L},
+    {type:'seq',   label:'🎵 순서 기억 (색깔)', domain:'seq',   lv:L, mode:'color'},
     {type:'math',  label:'🔢 빠른 셈',   domain:'math',  lv:L},
     {type:'memory',label:'🃏 짝 맞추기', domain:'memory',lv:L},
     {type:'speed', label:'⚡ 순간 포착', domain:'speed', lv:L2},
     {type:'math',  label:'🔢 빠른 셈',   domain:'math',  lv:L2},
-    {type:'seq',   label:'🎵 순서 기억', domain:'seq',   lv:L2},
+    {type:'seq',   label:'🍎 순서 기억 (사물)', domain:'seq',   lv:L2, mode:'object'},
     {type:'memory',label:'🃏 짝 맞추기', domain:'memory',lv:L2},
     {type:'mathhard', label:'🧮 심화 계산',   domain:'math',   lv:L2},
     {type:'typing',    label:'✍️ 명언 따라쓰기', domain:'typing', lv:L2},
@@ -1270,7 +1285,7 @@ function showTransition(prevStage, prevScore, isFirst){
 function runGame(stage, onDone){
   if(stage.type==='speed') playSpeed({lv:stage.lv, rounds:5, onDone});
   else if(stage.type==='memory') playMemory({lv:stage.lv, onDone});
-  else if(stage.type==='seq') playSeq({lv:stage.lv, onDone});
+  else if(stage.type==='seq') playSeq({lv:stage.lv, mode:stage.mode||'color', onDone});
   else if(stage.type==='math') playMath({lv:stage.lv, qs:6, onDone});
   else if(stage.type==='mathhard') playMathHard({qs:5, onDone});
   else if(stage.type==='typing') playTyping({qs:5, onDone});
@@ -1520,13 +1535,15 @@ function showRetryNotice(onClose){
   ov.addEventListener('click',close);
   setTimeout(close,1600);
 }
-function playSeq({lv, onDone=null}={}){
+function playSeq({lv, mode='color', onDone=null}={}){
   // 점수 집계에는 포함되지 않는 스테이지 — 맞출 때까지 몇 번이든 다시 보여주고, 최대 6개까지만 외우면 통과.
+  // mode: 'color'(기본, 색깔) | 'object'(사물) | 'animal'(동물)
   const L=lv||curLevel();
   const startLen=seqStart(L);
   const flashMs=seqFlashMs(L);
   const maxLen=6; // 난이도와 상관없이 최대 6개까지만 외우면 되도록 상한 고정
   const freqs=[330,392,494,587];
+  const icons = mode==='object' ? shuffle(SEQ_OBJECTS).slice(0,4) : mode==='animal' ? shuffle(SEQ_ANIMALS).slice(0,4) : null;
   let seq=[],level=startLen-1,lock=true;
   for(let i=0;i<startLen-1;i++) seq.push(rnd(4));
   clear();
@@ -1535,8 +1552,8 @@ function playSeq({lv, onDone=null}={}){
       ${stageBar()}
       <div class="scoreline"><span class="pill" id="lv">${startLen}단계</span><span class="pill" id="st">잘 보세요</span></div>
       <div class="padwrap">
-        <div class="pad p0" data-p="0"></div><div class="pad p1" data-p="1"></div>
-        <div class="pad p2" data-p="2"></div><div class="pad p3" data-p="3"></div>
+        <div class="pad p0${icons?' pad-icon':''}" data-p="0">${icons?icons[0]:''}</div><div class="pad p1${icons?' pad-icon':''}" data-p="1">${icons?icons[1]:''}</div>
+        <div class="pad p2${icons?' pad-icon':''}" data-p="2">${icons?icons[2]:''}</div><div class="pad p3${icons?' pad-icon':''}" data-p="3">${icons?icons[3]:''}</div>
       </div>
     </div>`);
   app.appendChild(v);
@@ -2266,7 +2283,7 @@ function playPractice(type){
   const L=curLevel();
   const onDone=(score)=>showPracticeResult(type,score);
   if(type==='speed') playSpeed({lv:L, rounds:5, onDone});
-  else if(type==='seq') playSeq({lv:L, onDone});
+  else if(type==='seq') playSeq({lv:L, mode:pick(['color','object','animal']), onDone});
   else if(type==='math') playMath({lv:L, qs:6, onDone});
   else if(type==='memory') playMemory({lv:L, onDone});
   else if(type==='mathhard') playMathHard({qs:5, onDone});
