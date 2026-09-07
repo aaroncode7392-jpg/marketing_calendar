@@ -159,10 +159,12 @@
   .type-input.type-wrong{border-color:var(--warn);background:#FCE7E5;}
   /* decompose (10 묶음 풀기) */
   .dec-area { display:flex; flex-wrap:wrap; gap:16px; justify-content:center; min-height: 200px; align-items:center; margin:20px 0; }
-  .bundle-10 { position:relative; width:70px; height:100px; background:linear-gradient(135deg, #5B8DEF, #3867c4); border-radius:10px; border:2px solid #2e54a3; color:#fff; display:flex; align-items:center; justify-content:center; font-family:'Jua'; font-size:40px; text-shadow:0 2px 4px rgba(0,0,0,0.3); box-shadow:0 6px 0 #2e54a3, 0 10px 15px rgba(0,0,0,0.15); cursor:pointer; transition:transform 0.15s, box-shadow 0.15s; }
-  .bundle-10:active { transform:translateY(4px); box-shadow:0 2px 0 #2e54a3, 0 4px 8px rgba(0,0,0,0.1); }
+  .bundle-10 { position:relative; width:85px; height:110px; background:url('assets/pouch.jpg') center/cover no-repeat; border-radius:12px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:transform 0.15s, filter 0.15s; box-shadow:0 8px 16px rgba(0,0,0,0.2); }
+  .bundle-10::after { content:'10'; position:absolute; bottom:10px; right:10px; background:#fff; border:2px solid var(--ink); color:var(--ink); font-family:'Jua'; font-size:24px; padding:2px 8px; border-radius:12px; box-shadow:0 2px 4px rgba(0,0,0,0.2); }
+  .bundle-10:active { transform:translateY(4px); filter:brightness(0.9); }
   .piece-wrap { display:grid; grid-template-columns:repeat(5, 1fr); gap:6px; animation:pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
-  .piece-1 { width:34px; height:34px; background:linear-gradient(135deg, #FFD54F, #F57F17); border-radius:50%; border:2px solid #F9A825; color:#fff; display:flex; align-items:center; justify-content:center; font-family:'Jua'; font-size:18px; text-shadow:0 1px 2px rgba(0,0,0,0.3); box-shadow:0 3px 0 #F9A825; }
+  .piece-1 { width:44px; height:44px; background:url('assets/coin.jpg') center/cover no-repeat; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 8px rgba(0,0,0,0.15); position:relative; }
+  .piece-1::after { content:'1'; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-family:'Jua'; font-size:20px; color:#a67300; text-shadow:0 1px 0 rgba(255,255,255,0.5); }
   /* result */
   .stars{font-size:50px;letter-spacing:6px;margin:6px 0;}
   .domain-row{margin-bottom:14px;}
@@ -1807,10 +1809,12 @@ function playTyping({qs=5, onDone=null}={}){
 function playDecompose({lv=1}={}){
   let level = lv;
   const levels = [
-    { tens: 1, ones: 0 }, // 10 -> 10 ones
-    { tens: 2, ones: 0 }, // 20 -> 10 + 10 ones
-    { tens: 3, ones: 2 }, // 32 -> 20 + 12 ones
-    { tens: 4, ones: 5 }  // 45 -> 30 + 15 ones
+    { type: 'decompose', tens: 1, ones: 0, targetTotal: 10 },
+    { type: 'decompose', tens: 4, ones: 5, targetTotal: 45 },
+    { type: 'subtraction', tens: 3, ones: 2, subAmount: 7, targetTotal: 25 },
+    { type: 'subtraction', tens: 5, ones: 3, subAmount: 8, targetTotal: 45 },
+    { type: 'addition', tens: 1, ones: 8, addAmount: 5, targetTotal: 23 },
+    { type: 'addition', tens: 2, ones: 7, addAmount: 6, targetTotal: 33 }
   ];
   
   if(level > levels.length) {
@@ -1820,7 +1824,7 @@ function playDecompose({lv=1}={}){
         <div style="font-size:80px;">🎉</div>
         <div style="font-family:'Jua';font-size:32px;margin:20px 0;">훈련 완료!</div>
         <div style="font-size:18px;line-height:1.6;color:var(--ink-soft);margin-bottom:30px;">
-          모양은 달라도 전체 개수는 똑같다는 것,<br>이제 확실히 아시겠죠? 😊
+          앞자리가 바뀌어도, 모양만 변할 뿐이라는 것!<br>아주 잘 하셨습니다 😊
         </div>
         <button class="btn btn-primary" id="goHome" style="font-size:24px;padding:18px;">홈으로 돌아가기</button>
       </div>`);
@@ -1832,11 +1836,48 @@ function playDecompose({lv=1}={}){
   }
 
   const prob = levels[level-1];
-  const total = prob.tens * 10 + prob.ones;
-  let isDecomposed = false;
+  
+  function showDecomposeModal(isCorrect, title, desc, onNext) {
+    const ov = el(`
+      <div class="overlay" style="z-index:9999;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);">
+        <div class="modal fade" style="text-align:center;padding:40px 20px;width:90%;max-width:400px;">
+          <div style="font-size:70px;margin-bottom:10px;">${isCorrect ? '⭕' : '❌'}</div>
+          <div style="font-family:'Jua';font-size:36px;color:${isCorrect?'var(--ok)':'var(--warn)'};margin-bottom:16px;">
+            ${title}
+          </div>
+          <div style="font-size:22px;color:var(--ink);line-height:1.5;margin-bottom:30px;word-break:keep-all;">
+            ${desc}
+          </div>
+          <button class="btn btn-primary" id="modalNextBtn" style="font-size:24px;padding:16px 32px;width:100%;">${isCorrect ? '다음으로' : '다시 해보기'}</button>
+        </div>
+      </div>`);
+    document.body.appendChild(ov);
+    if(isCorrect) { beep(784, 0.15); celebrateAt(ov.querySelector('.modal'), {count:15}); } else { beep(220, 0.15); }
+    ov.querySelector('#modalNextBtn').addEventListener('click', () => {
+      ov.remove();
+      if(onNext) onNext();
+    });
+  }
 
   function renderStage(){
     clear();
+    let isDecomposed = false;
+    let initialTotal = prob.tens * 10 + prob.ones;
+    
+    let title = "";
+    let desc = "";
+    
+    if (prob.type === 'decompose') {
+      title = `여기 <span style="color:var(--speed);">${initialTotal}</span>가 있어요.`;
+      desc = "금화 주머니 하나를 터치해서 풀어볼까요?";
+    } else if (prob.type === 'subtraction') {
+      title = `<span style="color:var(--speed);">${initialTotal}</span>에서 <span style="color:var(--warn);">${prob.subAmount}개</span>를 빼야 해요.`;
+      desc = "낱개가 부족하네요. 금화 주머니 하나를 눌러서 풀어주세요!";
+    } else if (prob.type === 'addition') {
+      title = `<span style="color:var(--speed);">${initialTotal}</span>에 <span style="color:var(--ok);">${prob.addAmount}개</span>를 더 받았어요.`;
+      desc = "주머니와 낱개들을 합치면 모두 몇 개일까요?";
+    }
+
     const v = el(`
       <div class="fade">
         <div class="topbar">
@@ -1845,55 +1886,74 @@ function playDecompose({lv=1}={}){
         </div>
         <div class="scoreline"><span class="pill">단계 ${level}/${levels.length}</span></div>
         <div class="panel" style="padding:24px 14px;">
-          <div style="font-family:'Jua';font-size:26px;margin-bottom:10px;">여기 <span style="color:var(--speed);">${total}</span>가 있어요.</div>
-          <div style="font-size:17px;color:var(--ink-soft);margin-bottom:24px;">10짜리 묶음 하나를 터치해서 풀어볼까요?</div>
+          <div style="font-family:'Jua';font-size:26px;margin-bottom:10px;">${title}</div>
+          <div style="font-size:17px;color:var(--ink-soft);margin-bottom:24px;word-break:keep-all;">${desc}</div>
           
           <div class="dec-area" id="itemsArea">
-            ${Array(prob.tens).fill(0).map(()=>`<div class="bundle-10">10</div>`).join('')}
-            ${Array(prob.ones).fill(0).map(()=>`<div class="piece-1">1</div>`).join('')}
+            ${Array(prob.tens).fill(0).map(()=>`<div class="bundle-10"></div>`).join('')}
+            ${Array(prob.ones).fill(0).map(()=>`<div class="piece-1"></div>`).join('')}
           </div>
+          ${prob.type === 'addition' ? `
+            <div style="text-align:center;font-size:30px;color:var(--ok);margin:10px 0;">+</div>
+            <div class="dec-area" style="min-height:auto;" id="addArea">
+              ${Array(prob.addAmount).fill(0).map(()=>`<div class="piece-1 fade"></div>`).join('')}
+            </div>
+          ` : ''}
         </div>
       </div>`);
     app.appendChild(v);
     
     v.querySelector('#quitDec').addEventListener('click', renderHome);
     
-    const bundles = v.querySelectorAll('.bundle-10');
-    bundles.forEach(b => {
-      b.addEventListener('click', function onClick() {
-        if(isDecomposed) return;
-        isDecomposed = true;
-        juiceTap(this);
-        beep(587, 0.1);
-        
-        setTimeout(()=>{
-          this.style.transform = 'scale(0) rotate(180deg)';
-          this.style.opacity = '0';
-          setTimeout(() => {
-            this.remove();
-            const wrap = document.createElement('div');
-            wrap.className = 'piece-wrap';
-            for(let i=0; i<10; i++) wrap.innerHTML += `<div class="piece-1 fade" style="animation-delay:${i*40}ms;">1</div>`;
-            v.querySelector('#itemsArea').appendChild(wrap);
-            beep(660, 0.15);
-            askQuestion(v);
+    if (prob.type === 'decompose' || prob.type === 'subtraction') {
+      const bundles = v.querySelectorAll('#itemsArea .bundle-10');
+      bundles.forEach(b => {
+        b.addEventListener('click', function onClick() {
+          if(isDecomposed) return;
+          isDecomposed = true;
+          juiceTap(this);
+          beep(587, 0.1);
+          
+          setTimeout(()=>{
+            this.style.transform = 'scale(0) rotate(180deg)';
+            this.style.opacity = '0';
+            setTimeout(() => {
+              this.remove();
+              const wrap = document.createElement('div');
+              wrap.className = 'piece-wrap';
+              for(let i=0; i<10; i++) wrap.innerHTML += `<div class="piece-1 fade" style="animation-delay:${i*40}ms;"></div>`;
+              v.querySelector('#itemsArea').appendChild(wrap);
+              beep(660, 0.15);
+              
+              if (prob.type === 'decompose') {
+                askQuestion(v, "모양만 바뀌었어요!<br>그럼 지금은 모두 몇 개일까요?");
+              } else if (prob.type === 'subtraction') {
+                askQuestion(v, `주머니를 풀었어요!<br>이제 <b>${prob.subAmount}개</b>를 빼면 남은 금화는 몇 개일까요?`);
+              }
+            }, 300);
           }, 300);
-        }, 300);
+        });
       });
-    });
+    } else if (prob.type === 'addition') {
+      // 덧셈의 경우 묶음을 풀 필요 없이 바로 정답 맞히기
+      setTimeout(() => {
+        askQuestion(v, "모두 합치면 몇 개일까요?");
+      }, 800);
+    }
   }
 
-  function askQuestion(v){
+  function askQuestion(v, qText){
     const panel = v.querySelector('.panel');
     const qDiv = el(`
-      <div class="fade" style="margin-top:24px;border-top:2px dashed var(--line);padding-top:24px;">
-        <div style="font-family:'Jua';font-size:26px;margin-bottom:18px;color:var(--ink);line-height:1.4;">모양만 바뀌었어요!<br>그럼 지금은 모두 몇 개일까요?</div>
+      <div class="fade" id="qSection" style="margin-top:24px;border-top:2px dashed var(--line);padding-top:24px;">
+        <div style="font-family:'Jua';font-size:24px;margin-bottom:18px;color:var(--ink);line-height:1.4;">${qText}</div>
         <div class="choices"></div>
       </div>`);
     
     const choicesDiv = qDiv.querySelector('.choices');
-    let opts = [total, total - 10, total + 10].filter(n => n > 0);
-    if(opts.length < 3) opts.push(total + 20);
+    let target = prob.targetTotal;
+    let opts = [target, target - 10, target + 10].filter(n => n > 0);
+    if(opts.length < 3) opts.push(target + 20);
     opts = shuffle(opts);
     
     opts.forEach(n => {
@@ -1905,39 +1965,64 @@ function playDecompose({lv=1}={}){
     let answered = false;
     choicesDiv.querySelectorAll('.choice').forEach(btn => {
       btn.addEventListener('click', function() {
-        if(answered && this.classList.contains('right')) return;
+        if(answered) return;
         const val = +this.dataset.v;
-        if(val === total){
+        if(val === target){
           answered = true;
           this.classList.add('right');
           juiceTap(this);
-          beep(784, 0.15);
-          celebrateAt(this, {count:10});
-          const m = el(`<div class="fx-text fade" style="margin-top:20px;font-family:'Jua';font-size:22px;color:var(--ok);">정답입니다! 전체 개수는 그대로예요 😊</div>`);
-          const existingM = panel.querySelector('.fx-text');
-          if(existingM) existingM.remove();
-          panel.appendChild(m);
-          setTimeout(() => playDecompose({lv: level+1}), 2000);
+          
+          if (prob.type === 'addition') {
+            showDecomposeModal(true, "정답입니다!", "낱개 10개가 꽉 차서 <b>금화 주머니 1개</b>로 받아올림 되었어요!", () => {
+              playDecompose({lv: level+1});
+            });
+            // 추가 연출: 낱개들을 묶음으로 합치는 효과를 배경으로 보여줌
+            const allPieces = panel.querySelectorAll('.piece-1');
+            if(allPieces.length >= 10) {
+               for(let i=0; i<10; i++) {
+                 allPieces[i].style.transform = 'scale(0)';
+                 allPieces[i].style.opacity = '0';
+               }
+               setTimeout(() => {
+                 const newBundle = el(`<div class="bundle-10 fade" style="box-shadow: 0 0 30px rgba(255,213,79,1);"></div>`);
+                 panel.querySelector('#itemsArea').appendChild(newBundle);
+                 beep(880, 0.2);
+               }, 300);
+            }
+          } else if (prob.type === 'subtraction') {
+            showDecomposeModal(true, "정답입니다!", `주머니에서 빌려와서 <b>${prob.subAmount}개</b>를 뺄 수 있었어요!`, () => {
+              playDecompose({lv: level+1});
+            });
+          } else {
+            showDecomposeModal(true, "정답입니다!", "주머니를 풀어도 <b>전체 개수는 그대로</b>라는 것을 확인했어요!", () => {
+              playDecompose({lv: level+1});
+            });
+          }
         } else {
           this.classList.add('wrongpick');
-          beep(220, 0.15);
-          const m = el(`<div class="fx-text fade" style="margin-top:20px;font-family:'Jua';font-size:18px;color:var(--warn);line-height:1.5;">없어진 게 아니에요!<br>방금 푼 낱개 10개를 포함해서 다시 세어볼까요?</div>`);
-          const existingM = panel.querySelector('.fx-text');
-          if(existingM) existingM.remove();
-          panel.appendChild(m);
           
-          const newPieces = panel.querySelectorAll('.piece-wrap .piece-1');
-          newPieces.forEach((p, idx) => {
-            setTimeout(() => {
-              p.style.transform = 'scale(1.4)';
-              p.style.boxShadow = '0 0 12px rgba(255,168,90,0.9)';
-              beep(500 + idx*20, 0.05);
+          if (prob.type === 'addition') {
+            showDecomposeModal(false, "아쉽습니다!", "금화 주머니 1개는 10을 뜻하고, 낱개 금화는 1을 뜻해요. 차근차근 더해보세요.", null);
+          } else if (prob.type === 'subtraction') {
+            showDecomposeModal(false, "아쉽습니다!", "주머니 하나를 풀어서 낱개 10개가 생겼죠? 거기서 천천히 다시 빼보세요.", null);
+          } else {
+            showDecomposeModal(false, "아쉽습니다!", "없어진 게 아니에요! 주머니를 푼 낱개 10개를 포함해서 다시 세어볼까요?", null);
+            const newPieces = panel.querySelectorAll('.piece-wrap .piece-1');
+            newPieces.forEach((p, idx) => {
               setTimeout(() => {
-                p.style.transform = 'none';
-                p.style.boxShadow = '0 3px 0 #F9A825';
-              }, 400);
-            }, idx * 350 + 200);
-          });
+                if(!p) return;
+                p.style.transform = 'scale(1.4)';
+                p.style.boxShadow = '0 0 12px rgba(255,168,90,0.9)';
+                beep(500 + idx*20, 0.05);
+                setTimeout(() => {
+                  p.style.transform = 'none';
+                  p.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
+                }, 400);
+              }, idx * 350 + 200);
+            });
+          }
+          
+          setTimeout(() => this.classList.remove('wrongpick'), 800);
         }
       });
     });
