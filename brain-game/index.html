@@ -89,7 +89,11 @@
   .btn-small{font-size:16px;padding:12px;margin-top:8px;}
   /* scoreline */
   .scoreline{display:flex;justify-content:space-between;align-items:center;font-family:'Jua';font-size:20px;margin-bottom:14px;padding:0 2px;}
-  .game-guide{margin-top:18px;padding:16px 20px;background:#FFF;border:3px solid var(--line);border-radius:20px;text-align:center;font-family:'Jua';font-size:28px;color:var(--ink);box-shadow:0 6px 12px rgba(0,0,0,0.08);line-height:1.4;}
+  .guide-wrap { display:flex; align-items:center; gap:14px; margin-top:18px; }
+  .guide-dog { width:70px; height:70px; border-radius:50%; background:#FFF url('assets/guide_dog.jpg') center/cover no-repeat; border:3px solid #EADBCA; flex-shrink:0; box-shadow:0 4px 10px rgba(0,0,0,0.08); }
+  .game-guide { position:relative; flex-grow:1; background:#FFF; border:3px solid #EADBCA; border-radius:20px; padding:14px 18px; text-align:center; font-family:'Jua'; font-size:24px; color:var(--ink); box-shadow:0 6px 12px rgba(0,0,0,0.06); line-height:1.4; margin:0; word-break:keep-all; }
+  .game-guide::before { content:''; position:absolute; top:50%; left:-12px; transform:translateY(-50%); border-width:10px 12px 10px 0; border-style:solid; border-color:transparent #EADBCA transparent transparent; }
+  .game-guide::after { content:''; position:absolute; top:50%; left:-8px; transform:translateY(-50%); border-width:8px 10px 8px 0; border-style:solid; border-color:transparent #FFF transparent transparent; }
   .pill{background:var(--paper);border:none;box-shadow:0 4px 10px rgba(0,0,0,.06);border-radius:999px;padding:8px 18px;}
   /* stage top bar */
   .stage-bar{border-radius:18px;padding:11px 18px;display:flex;justify-content:space-between;align-items:center;font-family:'Jua';font-size:18px;color:#fff;margin-bottom:14px;}
@@ -1327,7 +1331,7 @@ function playSpeed({lv, rounds=5, onDone=null}={}){
         ${stageBar()}
         <div class="scoreline"><span class="pill">⚡ ${round}/${totalRounds}</span></div>
         <div class="panel" id="stage">${inner}</div>
-        <div class="game-guide" id="sc">맞춘 칸 ${totalScore}</div>
+        <div class="guide-wrap"><div class="guide-dog"></div><div class="game-guide" id="sc">맞춘 칸 ${totalScore}</div></div>
       </div>`);
     app.appendChild(v);
     return v.querySelector('#stage');
@@ -1458,7 +1462,7 @@ function playMemory({lv, onDone=null}={}){
         <span class="pill" id="mv">뒤집기 0</span>
       </div>
       <div class="memgrid" style="grid-template-columns:repeat(${cols},${cw});">${cards}</div>
-      <div class="game-guide" id="stMsg" style="color:var(--memory);">🎴 카드 분배 중...</div>
+      <div class="guide-wrap"><div class="guide-dog"></div><div class="game-guide" id="stMsg" style="color:var(--memory);">🎴 카드 분배 중...</div></div>
     </div>`);
   app.appendChild(v);
 
@@ -1569,7 +1573,7 @@ function playSeq({lv, mode='color', onDone=null}={}){
         <div class="pad p0${icons?' pad-icon':''}" data-p="0">${icons?icons[0]:'빨강'}</div><div class="pad p1${icons?' pad-icon':''}" data-p="1">${icons?icons[1]:'초록'}</div>
         <div class="pad p2${icons?' pad-icon':''}" data-p="2">${icons?icons[2]:'파랑'}</div><div class="pad p3${icons?' pad-icon':''}" data-p="3">${icons?icons[3]:'노랑'}</div>
       </div>
-      <div class="game-guide" id="st">잘 보세요</div>
+      <div class="guide-wrap"><div class="guide-dog"></div><div class="game-guide" id="st">잘 보세요</div></div>
     </div>`);
   app.appendChild(v);
   const pads=[...v.querySelectorAll('.pad')];
@@ -1667,7 +1671,7 @@ function playMath({lv, qs=10, onDone=null}={}){
           <div class="timerbar"><div class="timerfill" id="tf"></div></div>
           <div class="choices">${p.opts.map(o=>`<button class="choice" data-v="${o}">${o}</button>`).join('')}</div>
         </div>
-        <div class="game-guide">맞춘 개수 ${score}</div>
+        <div class="guide-wrap"><div class="guide-dog"></div><div class="game-guide">맞춘 개수 ${score}</div></div>
       </div>`);
     app.appendChild(v);
     const tf=v.querySelector('#tf');
@@ -1720,7 +1724,7 @@ function playMathHard({qs=5, onDone=null}={}){
           <div class="qbox">${p.text} = ?</div>
           <div class="choices">${p.opts.map(o=>`<button class="choice" data-v="${o}">${o}</button>`).join('')}</div>
         </div>
-        <div class="game-guide">맞춘 개수 ${score}</div>
+        <div class="guide-wrap"><div class="guide-dog"></div><div class="game-guide">맞춘 개수 ${score}</div></div>
       </div>`);
     app.appendChild(v);
     let answered=false;
@@ -1764,7 +1768,7 @@ function playTyping({qs=5, onDone=null}={}){
           <div id="typeHint" style="min-height:20px;font-size:14px;color:var(--warn);margin-top:8px;"></div>
           <button class="btn btn-primary" id="typeSubmit" style="margin-top:4px;font-size:20px;padding:16px;">확인</button>
         </div>
-        <div class="game-guide" id="sc">맞춘 개수 ${score}</div>
+        <div class="guide-wrap"><div class="guide-dog"></div><div class="game-guide" id="sc">맞춘 개수 ${score}</div></div>
       </div>`);
     app.appendChild(v);
     const input=v.querySelector('#typeInput');
@@ -1931,8 +1935,13 @@ function playDecompose({lv=1}={}){
         </div>
         <div class="scoreline"><span class="pill">단계 ${level}/${maxLevels}</span></div>
         <div class="panel" style="padding:24px 14px;">
-          <div style="font-family:'Jua';font-size:26px;margin-bottom:10px;">${title}</div>
-          <div style="font-size:17px;color:var(--ink-soft);margin-bottom:12px;word-break:keep-all;">${desc}</div>
+          <div class="guide-wrap" style="margin-bottom:20px; margin-top:0;">
+            <div class="guide-dog"></div>
+            <div class="game-guide" style="font-size:22px; text-align:left; padding:16px;">
+              <div style="margin-bottom:6px;">${title}</div>
+              <div style="font-size:17px;color:var(--ink-soft);font-family:'Gowun Dodum';font-weight:bold;">${desc}</div>
+            </div>
+          </div>
           
           ${isAbstract ? `
             <div style="font-family:'Jua'; font-size:60px; text-align:center; padding:40px 0; color:var(--ink);">
