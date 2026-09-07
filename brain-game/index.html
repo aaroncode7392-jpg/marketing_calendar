@@ -1519,28 +1519,28 @@ function playMemory({lv, onDone=null}={}){
 // ==========================================================
 // GAME 3: 순서 기억
 // ==========================================================
-// 순서를 틀렸을 때 다시 보여주기 전에 뜨는, 경고보다는 응원에 가까운 안내 팝업
+// 순서를 틀렸을 때 다시 보여주기 전에 뜨는 안내 팝업
 function showRetryNotice(onClose){
   const ov=el(`
     <div class="overlay" style="z-index:70;">
       <div class="modal fade" style="text-align:center;background:linear-gradient(180deg,#FFFBF0,#FFF2D8);border:2px solid #F2D9A6;">
         <div style="font-size:46px;margin-bottom:6px;">🌟</div>
-        <div style="font-family:'Jua';font-size:22px;color:var(--ink);margin-bottom:8px;">다시 보여드릴게요!</div>
-        <div style="font-size:16px;color:var(--ink-soft);line-height:1.6;">누르지 말고<br>순서를 잘 확인해보세요 😊</div>
+        <div style="font-family:'Jua';font-size:24px;color:var(--ink);margin-bottom:8px;line-height:1.4;">틀리셨으니 천천히<br>다시 한번 봐보세요!</div>
+        <div style="font-size:16px;color:var(--ink-soft);line-height:1.6;">순서를 잘 확인해보세요 😊</div>
       </div>
     </div>`);
   document.body.appendChild(ov);
   let closed=false;
   const close=()=>{ if(closed) return; closed=true; ov.remove(); if(onClose) onClose(); };
   ov.addEventListener('click',close);
-  setTimeout(close,1600);
+  setTimeout(close, 2000); // 팝업 띄우는 시간 약간 늘림 (글씨가 많아졌으므로)
 }
 function playSeq({lv, mode='color', onDone=null}={}){
   // 점수 집계에는 포함되지 않는 스테이지 — 맞출 때까지 몇 번이든 다시 보여주고, 최대 6개까지만 외우면 통과.
   // mode: 'color'(기본, 색깔) | 'object'(사물) | 'animal'(동물)
   const L=lv||curLevel();
   const startLen=seqStart(L);
-  const flashMs=seqFlashMs(L);
+  const flashMs=seqFlashMs(L) * 2; // 속도 절반으로 늦춤
   const maxLen=6; // 난이도와 상관없이 최대 6개까지만 외우면 되도록 상한 고정
   const freqs=[330,392,494,587];
   const icons = mode==='object' ? shuffle(SEQ_OBJECTS).slice(0,4) : mode==='animal' ? shuffle(SEQ_ANIMALS).slice(0,4) : null;
@@ -1561,8 +1561,24 @@ function playSeq({lv, mode='color', onDone=null}={}){
   const padwrap=v.querySelector('.padwrap');
   const lvEl=v.querySelector('#lv'),stEl=v.querySelector('#st');
   let input=[];
+  let waitNoticeActive=false;
   pads.forEach(p=>p.addEventListener('click',()=>{
-    if(lock) return;
+    if(lock){
+      if(!waitNoticeActive){
+        waitNoticeActive=true;
+        const w=el(`
+          <div class="overlay" style="z-index:80;background:rgba(0,0,0,0.2);">
+            <div class="modal fade" style="text-align:center;padding:20px;border:3px solid var(--warn);">
+              <div style="font-size:36px;margin-bottom:6px;">✋</div>
+              <div style="font-family:'Jua';font-size:22px;color:var(--warn);line-height:1.4;">알려주고 있을 때는<br>누르지 마세요!</div>
+            </div>
+          </div>`);
+        document.body.appendChild(w);
+        beep(220,0.1);
+        setTimeout(()=>{ if(w.parentNode) w.remove(); waitNoticeActive=false; }, 1200);
+      }
+      return;
+    }
     const i=+p.dataset.p; flashPad(i); juiceTap(p); input.push(i);
     const idx=input.length-1;
     if(input[idx]!==seq[idx]) return onMistake();
@@ -1573,7 +1589,7 @@ function playSeq({lv, mode='color', onDone=null}={}){
       setTimeout(nextLevel,850);
     }
   }));
-  function flashPad(i,dur=320){ pads[i].classList.add('on'); beep(freqs[i]); setTimeout(()=>pads[i].classList.remove('on'),dur); }
+  function flashPad(i,dur=Math.max(320, flashMs-150)){ pads[i].classList.add('on'); beep(freqs[i]); setTimeout(()=>pads[i].classList.remove('on'),dur); }
   function playbackSeq(turnText='따라 누르세요'){
     lock=true;
     let k=0;
