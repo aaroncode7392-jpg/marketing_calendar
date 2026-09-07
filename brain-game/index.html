@@ -89,6 +89,7 @@
   .btn-small{font-size:16px;padding:12px;margin-top:8px;}
   /* scoreline */
   .scoreline{display:flex;justify-content:space-between;align-items:center;font-family:'Jua';font-size:20px;margin-bottom:14px;padding:0 2px;}
+  .game-guide{margin-top:18px;padding:16px 20px;background:#FFF;border:3px solid var(--line);border-radius:20px;text-align:center;font-family:'Jua';font-size:28px;color:var(--ink);box-shadow:0 6px 12px rgba(0,0,0,0.08);line-height:1.4;}
   .pill{background:var(--paper);border:none;box-shadow:0 4px 10px rgba(0,0,0,.06);border-radius:999px;padding:8px 18px;}
   /* stage top bar */
   .stage-bar{border-radius:18px;padding:11px 18px;display:flex;justify-content:space-between;align-items:center;font-family:'Jua';font-size:18px;color:#fff;margin-bottom:14px;}
@@ -1312,8 +1313,9 @@ function playSpeed({lv, rounds=5, onDone=null}={}){
     const v=el(`
       <div class="fade">
         ${stageBar()}
-        <div class="scoreline"><span class="pill">⚡ ${round}/${totalRounds}</span><span class="pill" id="sc">맞춘 칸 ${totalScore}</span></div>
+        <div class="scoreline"><span class="pill">⚡ ${round}/${totalRounds}</span></div>
         <div class="panel" id="stage">${inner}</div>
+        <div class="game-guide" id="sc">맞춘 칸 ${totalScore}</div>
       </div>`);
     app.appendChild(v);
     return v.querySelector('#stage');
@@ -1441,10 +1443,10 @@ function playMemory({lv, onDone=null}={}){
       ${stageBar()}
       <div class="scoreline">
         <span class="pill">짝 ${pairs}쌍</span>
-        <span class="pill" id="stMsg" style="color:var(--memory);">🎴 카드 분배 중...</span>
         <span class="pill" id="mv">뒤집기 0</span>
       </div>
       <div class="memgrid" style="grid-template-columns:repeat(${cols},${cw});">${cards}</div>
+      <div class="game-guide" id="stMsg" style="color:var(--memory);">🎴 카드 분배 중...</div>
     </div>`);
   app.appendChild(v);
 
@@ -1550,11 +1552,12 @@ function playSeq({lv, mode='color', onDone=null}={}){
   const v=el(`
     <div class="fade">
       ${stageBar()}
-      <div class="scoreline"><span class="pill" id="lv">${startLen}단계</span><span class="pill" id="st">잘 보세요</span></div>
+      <div class="scoreline"><span class="pill" id="lv">${startLen}단계</span></div>
       <div class="padwrap">
         <div class="pad p0${icons?' pad-icon':''}" data-p="0">${icons?icons[0]:'빨강'}</div><div class="pad p1${icons?' pad-icon':''}" data-p="1">${icons?icons[1]:'초록'}</div>
         <div class="pad p2${icons?' pad-icon':''}" data-p="2">${icons?icons[2]:'파랑'}</div><div class="pad p3${icons?' pad-icon':''}" data-p="3">${icons?icons[3]:'노랑'}</div>
       </div>
+      <div class="game-guide" id="st">잘 보세요</div>
     </div>`);
   app.appendChild(v);
   const pads=[...v.querySelectorAll('.pad')];
@@ -1646,12 +1649,13 @@ function playMath({lv, qs=10, onDone=null}={}){
     const v=el(`
       <div class="fade">
         ${stageBar()}
-        <div class="scoreline"><span class="pill">🔢 ${q}/${total}</span><span class="pill">맞춘 개수 ${score}</span></div>
+        <div class="scoreline"><span class="pill">🔢 ${q}/${total}</span></div>
         <div class="panel">
           <div class="qbox">${p.text} = ?</div>
           <div class="timerbar"><div class="timerfill" id="tf"></div></div>
           <div class="choices">${p.opts.map(o=>`<button class="choice" data-v="${o}">${o}</button>`).join('')}</div>
         </div>
+        <div class="game-guide">맞춘 개수 ${score}</div>
       </div>`);
     app.appendChild(v);
     const tf=v.querySelector('#tf');
@@ -1698,12 +1702,13 @@ function playMathHard({qs=5, onDone=null}={}){
     const v=el(`
       <div class="fade">
         ${stageBar()}
-        <div class="scoreline"><span class="pill">🧮 ${q}/${total}</span><span class="pill">맞춘 개수 ${score}</span></div>
+        <div class="scoreline"><span class="pill">🧮 ${q}/${total}</span></div>
         <div class="panel">
           <div style="font-size:13px;color:var(--ink-soft);margin-bottom:6px;">천천히 계산해보세요 (시간 제한 없어요)</div>
           <div class="qbox">${p.text} = ?</div>
           <div class="choices">${p.opts.map(o=>`<button class="choice" data-v="${o}">${o}</button>`).join('')}</div>
         </div>
+        <div class="game-guide">맞춘 개수 ${score}</div>
       </div>`);
     app.appendChild(v);
     let answered=false;
@@ -1739,7 +1744,7 @@ function playTyping({qs=5, onDone=null}={}){
     const v=el(`
       <div class="fade">
         ${stageBar()}
-        <div class="scoreline"><span class="pill">✍️ ${q}/${total}</span><span class="pill">맞춘 개수 ${score}</span></div>
+        <div class="scoreline"><span class="pill">✍️ ${q}/${total}</span></div>
         <div class="panel">
           <div style="font-size:13px;color:var(--ink-soft);margin-bottom:6px;">아래 문장을 그대로 따라 써보세요 (시간 제한 없어요)</div>
           <div class="type-quote">${target}</div>
@@ -1747,6 +1752,7 @@ function playTyping({qs=5, onDone=null}={}){
           <div id="typeHint" style="min-height:20px;font-size:14px;color:var(--warn);margin-top:8px;"></div>
           <button class="btn btn-primary" id="typeSubmit" style="margin-top:4px;font-size:20px;padding:16px;">확인</button>
         </div>
+        <div class="game-guide" id="sc">맞춘 개수 ${score}</div>
       </div>`);
     app.appendChild(v);
     const input=v.querySelector('#typeInput');
