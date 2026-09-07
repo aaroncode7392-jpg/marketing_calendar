@@ -2174,12 +2174,15 @@ async function renderHome(isNew=false){
   const lastDigit = parseInt(currentMember.birthdate.slice(-1)) || 0;
   let themeStyle = '';
   if (lastDigit % 4 === 1) { // Blue theme
-    themeStyle = '<style>body{background-image:radial-gradient(circle at 20% 0%,#F0F8FF 0%,#E6F4FF 60%);} .level-hero{background:#FFF;border-color:#BBDDF4;} .streak{background:#E6F4FF !important;border-color:#BBDDF4 !important;color:#2C73B4 !important;}</style>';
+    themeStyle = '<style>.hero{background:#FFF;border-color:#BBDDF4;} .streak{background:#E6F4FF !important;border-color:#BBDDF4 !important;color:#2C73B4 !important;}</style>';
   } else if (lastDigit % 4 === 2) { // Green theme
-    themeStyle = '<style>body{background-image:radial-gradient(circle at 20% 0%,#F2FCEF 0%,#E9F7E5 60%);} .level-hero{background:#FFF;border-color:#C6E8C0;} .streak{background:#E9F7E5 !important;border-color:#C6E8C0 !important;color:#388E3C !important;}</style>';
+    themeStyle = '<style>.hero{background:#FFF;border-color:#C6E8C0;} .streak{background:#E9F7E5 !important;border-color:#C6E8C0 !important;color:#388E3C !important;}</style>';
   } else if (lastDigit % 4 === 3) { // Purple theme
-    themeStyle = '<style>body{background-image:radial-gradient(circle at 20% 0%,#FAF5FF 0%,#F3E8FF 60%);} .level-hero{background:#FFF;border-color:#E6D6FA;} .streak{background:#F3E8FF !important;border-color:#E6D6FA !important;color:#8E24AA !important;}</style>';
+    themeStyle = '<style>.hero{background:#FFF;border-color:#E6D6FA;} .streak{background:#F3E8FF !important;border-color:#E6D6FA !important;color:#8E24AA !important;}</style>';
   }
+
+  // 홈 화면에서도 게임과 동일한 배경 적용
+  setGameBackground('assets/bg_landscape_'+(Math.floor(Math.random()*10)+1)+'.jpg');
 
   const v=el(`
     <div class="fade">
@@ -2191,12 +2194,12 @@ async function renderHome(isNew=false){
           <button class="iconbtn" id="infoBtn" title="도움말">ℹ️</button>
         </div>
       </div>
-      <div class="hero" style="background:transparent; border:none; box-shadow:none; padding:10px 4px 20px;">
+      <div class="hero">
         <p class="hello">${greet} 😊</p>
         <p class="sub">다양한 두뇌 운동을 10스테이지로<br>연속해서 해봐요.</p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;">${streakHtml}${bestHtml}${cardHtml}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">${streakHtml}${bestHtml}${cardHtml}</div>
       </div>
-      <div class="hero level-hero" style="padding:16px 20px;">
+      <div class="hero" style="padding:16px 20px;">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
           <div>
             <div style="font-family:'Jua';font-size:20px;">난이도 ${'⭐'.repeat(Math.min(5,Math.ceil(curLevel()/2)))}</div>
