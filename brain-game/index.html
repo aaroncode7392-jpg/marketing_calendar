@@ -1681,24 +1681,42 @@ function playMath({lv, qs=10, onDone=null}={}){
         <div class="panel">
           <div class="qbox">${p.text} = ?</div>
           <div class="timerbar"><div class="timerfill" id="tf"></div></div>
-          <div class="choices">${p.opts.map(o=>`<button class="choice" data-v="${o}">${o}</button>`).join('')}</div>
+          <div style="margin-top:20px; display:flex; gap:10px;">
+            <input type="number" pattern="[0-9]*" class="type-input" id="ansInput" placeholder="정답" style="font-size:30px; padding:14px; flex-grow:1;">
+            <button class="btn btn-primary" id="submitBtn" style="font-size:24px; padding:14px 24px; flex-shrink:0;">확인</button>
+          </div>
         </div>
         <div class="guide-wrap"><div class="guide-dog"></div><div class="game-guide">맞춘 개수 ${score}</div></div>
       </div>`);
     app.appendChild(v);
     const tf=v.querySelector('#tf');
+    const inp = v.querySelector('#ansInput');
+    const submitBtn = v.querySelector('#submitBtn');
+    
+    // 모바일 등에서 자동 포커스
+    setTimeout(() => inp.focus(), 100);
+    
     let answered=false,t=100;
-    timer=setInterval(()=>{t-=1.1;tf.style.width=Math.max(0,t)+'%';if(t<=0){clearInterval(timer);if(!answered)timeUp(p,v);}},100);
-    v.querySelectorAll('.choice').forEach(btn=>{
-      btn.addEventListener('click',()=>{
-        if(answered) return; answered=true; clearInterval(timer);
-        const val=+btn.dataset.v;
-        if(val===p.ans){btn.classList.add('right');juiceTap(btn);celebrateAt(btn,{count:9});beep(660);score++;if(level<10)level++;msg(v,pick(PRAISE),true);}
-        else{btn.classList.add('wrongpick');beep(220,0.12);const r=v.querySelector(`.choice[data-v="${p.ans}"]`);if(r)r.classList.add('right');if(level>1)level--;msg(v,'정답은 '+p.ans+'이에요',false);}
-      });
-    });
+    // 타이머 속도 조절: 입력 방식이므로 기존(약 9초)보다 시간 좀 더 주기 (약 15초)
+    timer=setInterval(()=>{t-=0.66;tf.style.width=Math.max(0,t)+'%';if(t<=0){clearInterval(timer);if(!answered)timeUp(p,v,inp);}},100);
+    
+    function checkAnswer() {
+      if(answered) return; 
+      const val = parseInt(inp.value, 10);
+      if(isNaN(val)) return; // 빈칸일 때 확인 누르면 무시
+      
+      answered=true; clearInterval(timer);
+      if(val===p.ans){
+        inp.classList.add('type-right');juiceTap(inp);celebrateAt(inp,{count:9});beep(660);score++;if(level<10)level++;msg(v,pick(PRAISE),true);
+      } else {
+        inp.classList.add('type-wrong');beep(220,0.12);if(level>1)level--;msg(v,'정답은 '+p.ans+'이에요',false);
+      }
+    }
+    
+    submitBtn.addEventListener('click', checkAnswer);
+    inp.addEventListener('keyup', (e) => { if(e.key==='Enter') checkAnswer(); });
   }
-  function timeUp(p,v){const r=v.querySelector(`.choice[data-v="${p.ans}"]`);if(r)r.classList.add('right');if(level>1)level--;msg(v,'정답은 '+p.ans+'이에요',false);}
+  function timeUp(p,v,inp){if(level>1)level--;inp.classList.add('type-wrong');inp.value=p.ans;msg(v,'정답은 '+p.ans+'이에요',false);}
   function msg(v,text,good){
     const m=el(`<div class="fx-text" style="margin-top:14px;font-family:'Jua';font-size:22px;color:${good?'var(--ok)':'var(--warn)'}">${text}</div>`);
     v.querySelector('.panel').appendChild(m); setTimeout(next,good?750:1100);
