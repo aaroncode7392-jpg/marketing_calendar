@@ -1334,7 +1334,7 @@ function playSpeed({lv, rounds=5, onDone=null}={}){
         ${stageBar()}
         <div class="scoreline"><span class="pill">⚡ ${round}/${totalRounds}</span></div>
         <div class="panel" id="stage">${inner}</div>
-        <div class="guide-wrap"><div class="guide-dog"></div><div class="game-guide" id="sc">맞춘 칸 ${totalScore}</div></div>
+        <div class="guide-wrap">${getGuideDogHtml()}<div class="game-guide" id="sc">맞춘 칸 ${totalScore}</div></div>
       </div>`);
     app.appendChild(v);
     return v.querySelector('#stage');
@@ -1465,7 +1465,7 @@ function playMemory({lv, onDone=null}={}){
         <span class="pill" id="mv">뒤집기 0</span>
       </div>
       <div class="memgrid" style="grid-template-columns:repeat(${cols},${cw});">${cards}</div>
-      <div class="guide-wrap"><div class="guide-dog"></div><div class="game-guide" id="stMsg" style="color:var(--memory);">🎴 카드 분배 중...</div></div>
+      <div class="guide-wrap">${getGuideDogHtml()}<div class="game-guide" id="stMsg" style="color:var(--memory);">🎴 카드 분배 중...</div></div>
     </div>`);
   app.appendChild(v);
 
@@ -1578,7 +1578,7 @@ function playSeq({lv, mode='color', onDone=null}={}){
         <div class="pad p2${icons?' pad-icon':''}" data-p="2">${icons?icons[2]:'파랑'}</div><div class="pad p3${icons?' pad-icon':''}" data-p="3">${icons?icons[3]:'노랑'}</div>
       </div>
       <div id="seqHint" style="min-height:26px;text-align:center;font-family:'Jua';font-size:19px;color:var(--ink-soft);margin-top:8px;letter-spacing:2px;"></div>
-      <div class="guide-wrap"><div class="guide-dog"></div><div class="game-guide" id="st">잘 보세요</div></div>
+      <div class="guide-wrap">${getGuideDogHtml()}<div class="game-guide" id="st">잘 보세요</div></div>
     </div>`);
   app.appendChild(v);
   const pads=[...v.querySelectorAll('.pad')];
@@ -1686,7 +1686,7 @@ function playMath({lv, qs=10, onDone=null}={}){
             <button class="btn btn-primary" id="submitBtn" style="font-size:24px; padding:14px 24px; flex-shrink:0;">확인</button>
           </div>
         </div>
-        <div class="guide-wrap"><div class="guide-dog"></div><div class="game-guide">맞춘 개수 ${score}</div></div>
+        <div class="guide-wrap">${getGuideDogHtml()}<div class="game-guide">맞춘 개수 ${score}</div></div>
       </div>`);
     app.appendChild(v);
     const tf=v.querySelector('#tf');
@@ -1754,7 +1754,7 @@ function playMathHard({qs=5, onDone=null}={}){
           <div class="qbox">${p.text} = ?</div>
           <div class="choices">${p.opts.map(o=>`<button class="choice" data-v="${o}">${o}</button>`).join('')}</div>
         </div>
-        <div class="guide-wrap"><div class="guide-dog"></div><div class="game-guide">맞춘 개수 ${score}</div></div>
+        <div class="guide-wrap">${getGuideDogHtml()}<div class="game-guide">맞춘 개수 ${score}</div></div>
       </div>`);
     app.appendChild(v);
     let answered=false;
@@ -1798,7 +1798,7 @@ function playTyping({qs=5, onDone=null}={}){
           <div id="typeHint" style="min-height:20px;font-size:14px;color:var(--warn);margin-top:8px;"></div>
           <button class="btn btn-primary" id="typeSubmit" style="margin-top:4px;font-size:20px;padding:16px;">확인</button>
         </div>
-        <div class="guide-wrap"><div class="guide-dog"></div><div class="game-guide" id="sc">맞춘 개수 ${score}</div></div>
+        <div class="guide-wrap">${getGuideDogHtml()}<div class="game-guide" id="sc">맞춘 개수 ${score}</div></div>
       </div>`);
     app.appendChild(v);
     const input=v.querySelector('#typeInput');
@@ -1931,7 +1931,7 @@ function playDecompose({lv=1}={}){
       <div class="overlay" style="z-index:9999;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);">
         <div class="modal fade" style="text-align:center;padding:40px 20px;width:90%;max-width:400px;">
           <div style="margin-bottom:16px;">
-            <img src="assets/${isCorrect ? 'guide_dog_happy.jpg' : 'guide_dog_encourage.jpg'}" style="width:140px; height:140px; border-radius:50%; border:4px solid ${isCorrect ? 'var(--ok)' : 'var(--warn)'}; box-shadow:0 6px 16px rgba(0,0,0,0.15); object-fit:cover; background:#FFF;">
+            <img src="${getAvatarImg(isCorrect ? "happy" : "encourage")}" style="width:140px; height:140px; border-radius:50%; border:4px solid ${isCorrect ? 'var(--ok)' : 'var(--warn)'}; box-shadow:0 6px 16px rgba(0,0,0,0.15); object-fit:cover; background:#FFF;">
           </div>
           <div style="font-family:'Jua';font-size:36px;color:${isCorrect?'var(--ok)':'var(--warn)'};margin-bottom:16px;">
             ${title}
@@ -1983,7 +1983,7 @@ function playDecompose({lv=1}={}){
         <div class="scoreline"><span class="pill">단계 ${level}/${maxLevels}</span></div>
         <div class="panel" style="padding:24px 14px;">
           <div class="guide-wrap" style="margin-bottom:20px; margin-top:0;">
-            <div class="guide-dog"></div>
+            ${getGuideDogHtml()}
             <div class="game-guide" style="font-size:22px; text-align:left; padding:16px;">
               <div style="margin-bottom:6px;">${title}</div>
               <div style="font-size:17px;color:var(--ink-soft);font-family:'Gowun Dodum';font-weight:bold;">${desc}</div>
