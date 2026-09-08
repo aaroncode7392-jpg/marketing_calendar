@@ -1565,7 +1565,8 @@ function playSeq({lv, mode='color', onDone=null}={}){
   const maxLen=6; // 난이도와 상관없이 최대 6개까지만 외우면 되도록 상한 고정
   const freqs=[330,392,494,587];
   const icons = mode==='object' ? shuffle(SEQ_OBJECTS).slice(0,4) : mode==='animal' ? shuffle(SEQ_ANIMALS).slice(0,4) : null;
-  let seq=[],level=startLen-1,lock=true;
+  const COLOR_NAMES=['빨강','초록','파랑','노랑'];
+  let seq=[],level=startLen-1,lock=true,roundCount=0;
   for(let i=0;i<startLen-1;i++) seq.push(rnd(4));
   clear();
   const v=el(`
@@ -1576,12 +1577,13 @@ function playSeq({lv, mode='color', onDone=null}={}){
         <div class="pad p0${icons?' pad-icon':''}" data-p="0">${icons?icons[0]:'빨강'}</div><div class="pad p1${icons?' pad-icon':''}" data-p="1">${icons?icons[1]:'초록'}</div>
         <div class="pad p2${icons?' pad-icon':''}" data-p="2">${icons?icons[2]:'파랑'}</div><div class="pad p3${icons?' pad-icon':''}" data-p="3">${icons?icons[3]:'노랑'}</div>
       </div>
+      <div id="seqHint" style="min-height:26px;text-align:center;font-family:'Jua';font-size:19px;color:var(--ink-soft);margin-top:8px;letter-spacing:2px;"></div>
       <div class="guide-wrap"><div class="guide-dog"></div><div class="game-guide" id="st">잘 보세요</div></div>
     </div>`);
   app.appendChild(v);
   const pads=[...v.querySelectorAll('.pad')];
   const padwrap=v.querySelector('.padwrap');
-  const lvEl=v.querySelector('#lv'),stEl=v.querySelector('#st');
+  const lvEl=v.querySelector('#lv'),stEl=v.querySelector('#st'),hintEl=v.querySelector('#seqHint');
   let input=[];
   let waitNoticeActive=false;
   pads.forEach(p=>p.addEventListener('click',()=>{
@@ -1614,15 +1616,22 @@ function playSeq({lv, mode='color', onDone=null}={}){
   function flashPad(i,dur=Math.max(320, flashMs-150)){ pads[i].classList.add('on'); beep(freqs[i]); setTimeout(()=>pads[i].classList.remove('on'),dur); }
   function playbackSeq(turnText='따라 누르세요'){
     lock=true;
+    const showHint = mode==='color' && roundCount<=2;
+    const hintWords=[];
+    if(showHint) hintEl.textContent='';
     let k=0;
     const t=setInterval(()=>{
-      if(k<seq.length){flashPad(seq[k]);k++;}
-      else{clearInterval(t);lock=false;stEl.textContent=turnText;}
+      if(k<seq.length){
+        flashPad(seq[k]);
+        if(showHint){ hintWords.push(COLOR_NAMES[seq[k]]); hintEl.textContent=hintWords.join(' '); }
+        k++;
+      }
+      else{clearInterval(t);lock=false;stEl.textContent=turnText;if(showHint)hintEl.textContent='';}
     },flashMs);
   }
   function nextLevel(){
     level++; lvEl.textContent=level+'단계'; stEl.textContent='잘 보세요';
-    seq.push(rnd(4)); input=[];
+    seq.push(rnd(4)); input=[]; roundCount++;
     playbackSeq();
   }
   function onMistake(){
