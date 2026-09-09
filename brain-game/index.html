@@ -1672,7 +1672,6 @@ function playSeq({lv, mode='color', onDone=null}={}){
 // ==========================================================
 function playMath({lv, qs=10, onDone=null}={}){
   let q=0,score=0,level=lv||curLevel(); const total=qs;
-  let timer=null;
   function makeProblem(){
     const big=level<=2?9:Math.min(99,level*9);
     const pool=['+']; if(level>=2) pool.push('−'); if(level>=7) pool.push('×');
@@ -1681,10 +1680,7 @@ function playMath({lv, qs=10, onDone=null}={}){
     if(op==='×'){a=rnd(8)+2;b=rnd(8)+2;ans=a*b;}
     else if(op==='−'){a=rnd(big)+2;b=rnd(a-1)+1;ans=a-b;}
     else{a=rnd(big)+1;b=rnd(big)+1;ans=a+b;}
-    const opts=new Set([ans]); let guard=0;
-    while(opts.size<4&&guard++<60){const d=ans+(rnd(11)-5);if(d>=0&&d!==ans)opts.add(d);}
-    while(opts.size<4){opts.add(ans+opts.size+1);}
-    return{text:`${a} ${op} ${b}`,ans,opts:shuffle([...opts])};
+    return{text:`${a} ${op} ${b}`,ans};
   }
   function next(){
     if(q>=total){ const finalScore=Math.round(score/total*100); return onDone?onDone(finalScore):null; }
@@ -1697,46 +1693,61 @@ function playMath({lv, qs=10, onDone=null}={}){
         <div class="scoreline"><span class="pill">🔢 ${q}/${total}</span></div>
         <div class="panel">
           <div class="qbox">${p.text} = ?</div>
-          <div class="timerbar"><div class="timerfill" id="tf"></div></div>
-          <div style="margin-top:20px; display:flex; gap:10px;">
-            <input type="number" pattern="[0-9]*" class="type-input" id="ansInput" placeholder="정답" style="font-size:30px; padding:14px; flex-grow:1;">
-            <button class="btn btn-primary" id="submitBtn" style="font-size:24px; padding:14px 24px; flex-shrink:0;">확인</button>
+          <div class="npdigits" id="npdigits" style="min-height:50px; margin: 16px 0; display:flex; justify-content:center; gap:4px; font-size:36px; font-family:'Jua'; color:var(--ink);"></div>
+          <div class="numpad">
+            ${[1,2,3,4,5,6,7,8,9].map(n=>`<button class="npkey" data-k="${n}">${n}</button>`).join('')}
+            <button class="npkey npkey-clear" data-k="clear">지우기</button>
+            <button class="npkey" data-k="0">0</button>
+            <button class="npkey npkey-back" data-k="back">⌫</button>
           </div>
+          <button class="btn btn-primary" id="submitBtn" style="font-size:24px; padding:14px 24px; margin-top:16px; width:100%;">확인</button>
         </div>
         <div class="guide-wrap">${getGuideDogHtml()}<div class="game-guide">맞춘 개수 ${score}</div></div>
       </div>`);
     app.appendChild(v);
-    const tf=v.querySelector('#tf');
-    const inp = v.querySelector('#ansInput');
-    const submitBtn = v.querySelector('#submitBtn');
     
-    // 모바일 등에서 자동 포커스
-    setTimeout(() => inp.focus(), 100);
-    
-    let answered=false,t=100;
-    // 타이머 속도 조절: 입력 방식이므로 기존(약 9초)보다 시간 좀 더 주기 (약 15초)
-    timer=setInterval(()=>{t-=0.66;tf.style.width=Math.max(0,t)+'%';if(t<=0){clearInterval(timer);if(!answered)timeUp(p,v,inp);}},100);
-    
-    function checkAnswer() {
-      if(answered) return; 
-      const val = parseInt(inp.value, 10);
-      if(isNaN(val)) return; // 빈칸일 때 확인 누르면 무시
-      
-      answered=true; clearInterval(timer);
-      if(val===p.ans){
-        inp.classList.add('type-right');juiceTap(inp);celebrateAt(inp,{count:9});beep(660);score++;if(level<10)level++;msg(v,pick(PRAISE),true);
-      } else {
-        inp.classList.add('type-wrong');beep(220,0.12);if(level>1)level--;msg(v,'정답은 '+p.ans+'이에요',false);
+    let digits='';
+    const digitsEl=v.querySelector('#npdigits');
+    function updateDigits(){
+      let html='';
+      for(let i=0;i<digits.length;i++){
+        html+=`<span class="np-digit${i===digits.length-1?' just-typed':''}">${digits[i]}</span>`;
       }
+      digitsEl.innerHTML=html;
     }
     
-    submitBtn.addEventListener('click', checkAnswer);
-    inp.addEventListener('keyup', (e) => { if(e.key==='Enter') checkAnswer(); });
-  }
-  function timeUp(p,v,inp){if(level>1)level--;inp.classList.add('type-wrong');inp.value=p.ans;msg(v,'정답은 '+p.ans+'이에요',false);}
-  function msg(v,text,good){
-    const m=el(`<div class="fx-text" style="margin-top:14px;font-family:'Jua';font-size:22px;color:${good?'var(--ok)':'var(--warn)'}">${text}</div>`);
-    v.querySelector('.panel').appendChild(m); setTimeout(next,good?750:1100);
+    v.querySelectorAll('.npkey').forEach(k=>{
+      k.addEventListener('click',(e)=>{
+        e.preventDefault();
+        const key=k.dataset.k;
+        if(key==='clear'){ digits=''; beep(220,0.06); }
+        else if(key==='back'){ digits=digits.slice(0,-1); beep(220,0.06); }
+        else if(digits.length<4){ digits+=key; beep(440,0.05); }
+        updateDigits();
+      });
+    });
+
+    let answered=false;
+    function checkAnswer() {
+      if(answered) return; 
+      const val = parseInt(digits, 10);
+      if(isNaN(val)) return; // 빈칸일 때 무시
+      
+      if(val===p.ans){
+        answered=true;
+        digitsEl.classList.add('type-right');juiceTap(digitsEl);celebrateAt(digitsEl,{count:9});beep(660);score++;if(level<10)level++;
+        const m=el(`<div class="fx-text" style="margin-top:14px;font-family:'Jua';font-size:22px;color:var(--ok)">${pick(PRAISE)}</div>`);
+        v.querySelector('.panel').appendChild(m); setTimeout(next, 900);
+      } else {
+        digitsEl.classList.add('type-wrong');beep(220,0.12);
+        const m=el(`<div class="fx-text err-msg" style="margin-top:14px;font-family:'Jua';font-size:18px;color:var(--warn)">다시 생각해보세요!</div>`);
+        const existingErr = v.querySelector('.err-msg');
+        if(existingErr) existingErr.remove();
+        v.querySelector('.panel').appendChild(m);
+        setTimeout(()=>{ digitsEl.classList.remove('type-wrong'); digits=''; updateDigits(); }, 600);
+      }
+    }
+    v.querySelector('#submitBtn').addEventListener('click', checkAnswer);
   }
   next();
 }
