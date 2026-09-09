@@ -873,6 +873,23 @@ const SEQ_ANIMALS=[
 ];
 const PRAISE=['잘하셨어요!','좋아요!','훌륭해요!','정확해요!','멋져요!'];
 const SOFT=['괜찮아요, 다시 해봐요','천천히 하셔도 돼요','거의 다 왔어요'];
+
+let _secToggle = false;
+function getAvatarImg(type) {
+  if (currentMember && currentMember.birthdate === '610708') {
+    return _secToggle ? 'assets/female_sec.jpg' : 'assets/male_sec.jpg';
+  }
+  return type === "happy" ? 'assets/guide_dog_happy.jpg' : 
+         type === "encourage" ? 'assets/guide_dog_encourage.jpg' : 
+         'assets/guide_dog.jpg';
+}
+
+function getGuideDogHtml() {
+  if (currentMember && currentMember.birthdate === '610708') {
+    _secToggle = !_secToggle;
+  }
+  return `<div class="guide-dog" style="background-image: url('${getAvatarImg()}'); width: 80px; height: 80px; background-size: cover; background-position: center; border-radius: 50%; border: 3px solid #FFF; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-right: 12px; flex-shrink: 0;"></div>`;
+}
 // ---------- 명언 따라쓰기 스테이지용 짧은 문구 (전부 10자 이내로 검증됨) ----------
 const QUOTES=[
 "시작이 반이다","티끌 모아 태산","고생 끝에 낙","세월이 약이다","꿈은 이루어진다","급할수록 돌아가라",
