@@ -216,6 +216,33 @@
     z-index: 50;
   }
 
+  
+  /* Typing Boss */
+  .typing-boss-wrap { text-align: center; margin-top: -10px; margin-bottom: 10px; height: 110px; position: relative; display: flex; justify-content: center; align-items: center; }
+  .typing-boss { width: 110px; height: 110px; background: url('assets/slime_monster.jpg') center/cover no-repeat; mix-blend-mode: multiply; filter: contrast(1.1); transition: transform 0.2s; }
+  .typing-boss.hit { animation: bossHit 0.3s ease-out; filter: brightness(0.6) sepia(1) hue-rotate(-50deg) saturate(5) drop-shadow(0 0 10px red); }
+  @keyframes bossHit {
+    0% { transform: scale(1) translateX(0); }
+    25% { transform: scale(0.9) translateX(-10px) rotate(-5deg); }
+    50% { transform: scale(1.1) translateX(10px) rotate(5deg); }
+    75% { transform: scale(0.95) translateX(-5px) rotate(-2deg); }
+    100% { transform: scale(1) translateX(0); }
+  }
+  .magic-missile { position: fixed; z-index: 100; font-family: 'Jua'; font-size: 24px; color: var(--ink); pointer-events: none; }
+  .magic-missile.energy { color: transparent !important; background: #60A5FA; width: 14px; height: 14px; border-radius: 50%; box-shadow: 0 0 16px 6px rgba(96, 165, 250, 0.8), 0 0 24px 10px rgba(96, 165, 250, 0.4); filter: brightness(1.5); }
+  
+  .cutscene-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #FFF; font-family: 'Jua'; text-align: center; }
+  .cutscene-img { width: 90%; max-width: 440px; border-radius: 16px; box-shadow: 0 10px 40px rgba(255,255,255,0.1); margin-bottom: 30px; object-fit: cover; aspect-ratio: 4/3; border: 4px solid #FFF; }
+  .cutscene-shake { animation: eqShake 0.1s infinite; }
+  @keyframes eqShake {
+    0% { transform: translate(0, 0); }
+    25% { transform: translate(6px, -6px) rotate(1deg); }
+    50% { transform: translate(-6px, 6px) rotate(-1deg); }
+    75% { transform: translate(6px, 6px) rotate(2deg); }
+    100% { transform: translate(-6px, -6px) rotate(-2deg); }
+  }
+  .cutscene-dialogue { font-size: 34px; min-height: 48px; text-shadow: 0 4px 12px rgba(0,0,0,1); animation: textPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
   /* modal */
   .overlay{position:fixed;inset:0;background:rgba(58,46,40,.5);display:flex;align-items:center;justify-content:center;padding:20px;z-index:60;}
   .modal{background:var(--paper);border-radius:26px;max-width:480px;width:100%;padding:26px 24px;box-shadow:var(--shadow);max-height:84vh;overflow:auto;}
@@ -2033,8 +2060,7 @@ function playMathHard({qs=5, onDone=null}={}){ setRandomBackground();
 // ==========================================================
 // GAME 5: 명언 따라쓰기 (10자 이내 문장을 그대로 타이핑 — 시간 제한 없음)
 // ==========================================================
-function playTyping({qs=5, onDone=null}={}){
-  // 틀리면 입력칸 아래에 무엇이 다른지 알려주고, 정답을 맞힐 때까지 다음으로 넘어가지 않음.
+function playTyping({qs=5, onDone=null}={}){ setRandomBackground();
   let q=0,score=0; const total=qs;
   let startTime = Date.now();
   const pool=shuffle(QUOTES).slice(0,total);
@@ -2045,12 +2071,15 @@ function playTyping({qs=5, onDone=null}={}){
     let missedOnce=false;
     clear();
     const v=el(`
-      <div class="fade">
+      <div class="fade" style="position:relative;">
         ${stageBar()}
         <div class="scoreline"><span class="pill">✍️ ${q}/${total}</span></div>
-        <div class="panel">
+        <div class="panel" style="position:relative;">
+          <div class="typing-boss-wrap">
+             <div class="typing-boss" id="bossSlime"></div>
+          </div>
           <div style="font-size:13px;color:var(--ink-soft);margin-bottom:6px;">아래 문장을 그대로 따라 써보세요 (시간 제한 없어요)</div>
-          <div class="type-quote">${target}</div>
+          <div class="type-quote" id="quoteText">${target}</div>
           <input type="text" id="typeInput" class="type-input" placeholder="여기에 따라 써보세요" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
           <div id="typeHint" style="min-height:20px;font-size:14px;color:var(--warn);margin-top:8px;"></div>
           <button class="btn btn-primary" id="typeSubmit" style="margin-top:4px;font-size:20px;padding:16px;">확인</button>
@@ -2060,7 +2089,10 @@ function playTyping({qs=5, onDone=null}={}){
     app.appendChild(v);
     const input=v.querySelector('#typeInput');
     const hint=v.querySelector('#typeHint');
+    const boss=v.querySelector('#bossSlime');
+    const quoteEl=v.querySelector('#quoteText');
     input.focus();
+    
     function diffHint(val){
       if(val.length===0) return '문장을 입력해주세요';
       if(val.length<target.length) return `${val.length+1}번째 글자부터 다시 확인해보세요 (글자 수가 모자라요)`;
@@ -2070,18 +2102,119 @@ function playTyping({qs=5, onDone=null}={}){
       }
       return '';
     }
+    
+    function playCutscene(cb) {
+      const cv = el(`
+        <div class="cutscene-overlay">
+          <img src="assets/mutul_attack.jpg" class="cutscene-img cutscene-shake" id="csImg">
+          <div class="cutscene-dialogue" id="csText">머털아 가자!</div>
+        </div>
+      `);
+      document.body.appendChild(cv);
+      beep(440, 0.2);
+      
+      setTimeout(() => {
+        const csText = cv.querySelector('#csText');
+        if(csText) {
+          csText.textContent = "예, 사부님!";
+          csText.style.animation = 'none';
+          void csText.offsetWidth; // trigger reflow
+          csText.style.animation = 'textPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
+          beep(660, 0.2);
+        }
+      }, 1500);
+      
+      setTimeout(() => {
+        cv.style.transition = 'opacity 0.5s';
+        cv.style.opacity = '0';
+        setTimeout(() => { cv.remove(); cb(); }, 500);
+      }, 3000);
+    }
+    
+    function doItanoCircus() {
+      const chars = target.split('');
+      const rect = quoteEl.getBoundingClientRect();
+      quoteEl.style.opacity = '0'; // hide original text
+      
+      let hits = 0;
+      let nonSpaceChars = chars.filter(c => c !== ' ').length;
+      if (nonSpaceChars === 0) nonSpaceChars = 1;
+      
+      chars.forEach((ch, idx) => {
+        if(ch === ' ') return; // skip spaces
+        const m = el(`<div class="magic-missile">${ch}</div>`);
+        document.body.appendChild(m);
+        const startX = rect.left + 15 + (idx * Math.min(20, rect.width/chars.length));
+        const startY = rect.top + rect.height/2;
+        m.style.left = startX + 'px';
+        m.style.top = startY + 'px';
+        
+        const bossRect = boss.getBoundingClientRect();
+        const destX = bossRect.left + bossRect.width/2 - 10;
+        const destY = bossRect.top + bossRect.height/2 - 10;
+        
+        const cp1x = startX + (Math.random() > 0.5 ? 1 : -1) * (50 + Math.random()*200);
+        const cp1y = startY - 50 - Math.random()*150;
+        const cp2x = destX + (Math.random() > 0.5 ? 1 : -1) * (50 + Math.random()*200);
+        const cp2y = destY - 100 - Math.random()*150;
+        
+        let tStart = null;
+        const duration = 700 + Math.random()*500;
+        const delay = idx * 60;
+        let energyTransformed = false;
+        
+        setTimeout(() => {
+          beep(700 + Math.random()*300, 0.05);
+          function anim(t) {
+            if(!tStart) tStart = t;
+            let p = (t - tStart) / duration;
+            if(p > 1) p = 1;
+            
+            const ix = Math.pow(1-p, 3)*startX + 3*Math.pow(1-p, 2)*p*cp1x + 3*(1-p)*Math.pow(p, 2)*cp2x + Math.pow(p, 3)*destX;
+            const iy = Math.pow(1-p, 3)*startY + 3*Math.pow(1-p, 2)*p*cp1y + 3*(1-p)*Math.pow(p, 2)*cp2y + Math.pow(p, 3)*destY;
+            
+            m.style.left = ix + 'px';
+            m.style.top = iy + 'px';
+            
+            if(p > 0.3 && !energyTransformed) {
+              energyTransformed = true;
+              m.classList.add('energy');
+            }
+            
+            if(p < 1) {
+              requestAnimationFrame(anim);
+            } else {
+              m.remove();
+              boss.classList.remove('hit');
+              void boss.offsetWidth;
+              boss.classList.add('hit');
+              celebrateAt(boss, {count: 5, parts: ['💥','✨']});
+              beep(220 + Math.random()*100, 0.1);
+              hits++;
+              if(hits === nonSpaceChars) {
+                setTimeout(() => { msg(v, pick(PRAISE)); }, 300);
+              }
+            }
+          }
+          requestAnimationFrame(anim);
+        }, delay);
+      });
+    }
+
     function submit(){
-      const val=input.value.trim().replace(/\s+/g,' ');
+      const val=input.value.trim().replace(/s+/g,' ');
       if(val===target){
         input.classList.remove('type-wrong'); input.classList.add('type-right');
         input.disabled=true;
-        const quoteEl = v.querySelector('.type-quote');
-        quoteEl.classList.add('fly-away-magic');
-        celebrateAt(quoteEl, {count: 15, parts: ['✨', '🌟', '💫']});
-        juiceTap(input); celebrateAt(input,{count:9}); beep(660);
+        juiceTap(input);
         if(!missedOnce) score++;
         hint.textContent='';
-        msg(v,pick(PRAISE));
+        
+        if (q === 1) {
+          playCutscene(doItanoCircus);
+        } else {
+          doItanoCircus();
+        }
       } else {
         missedOnce=true;
         juiceTap(input);
@@ -2096,13 +2229,11 @@ function playTyping({qs=5, onDone=null}={}){
   }
   function msg(v,text){
     const m=el(`<div class="fx-text" style="margin-top:14px;font-family:'Jua';font-size:20px;color:var(--ok)">${text}</div>`);
-    v.querySelector('.panel').appendChild(m); setTimeout(next,900);
+    v.querySelector('.panel').appendChild(m); setTimeout(next, 1000);
   }
   next();
 }
 
-// ==========================================================
-// GAME: 특별 훈련 (10 묶음 풀기 - 보존 개념 훈련)
 // ==========================================================
 function playDecompose({lv=1}={}){ setRandomBackground();
   let level = lv;
