@@ -963,6 +963,13 @@ function getGuideDogHtml() {
   return `<div class="guide-dog" style="background-image: url('${getAvatarImg()}'); width: ${size}; height: ${size}; background-size: cover; background-position: top center; border-radius: 50%; border: 3px solid #FFF; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-right: 12px; flex-shrink: 0;"></div>`;
 }
 // ---------- 명언 따라쓰기 스테이지용 짧은 문구 (전부 10자 이내로 검증됨) ----------
+
+const LONG_QUOTES = [
+  "가장 어두운 밤이 지나야 비로소 가장 눈부신 아침이 찾아온다.",
+  "포기하고 싶은 그 순간이 바로 성공으로 가는 마지막 고비입니다.",
+  "작은 빗방울이 모여 마침내 거대한 바다를 이루고 기적을 만든다."
+];
+
 const QUOTES=[
 "시작이 반이다","티끌 모아 태산","고생 끝에 낙","세월이 약이다","꿈은 이루어진다","급할수록 돌아가라",
 "몸이 재산이다","웃으면 복이 와요","시간은 금이다","배움엔 끝이 없다","웃음이 보약이다","건강이 최고다",
@@ -2174,7 +2181,8 @@ function playMathHard({qs=5, onDone=null}={}){ setRandomBackground();
 function playTyping({qs=5, onDone=null}={}){ setRandomBackground();
   let q=0,score=0; const total=qs;
   let startTime = Date.now();
-  const pool=shuffle(QUOTES).slice(0,total);
+  const pool=shuffle(QUOTES).slice(0,total-1);
+  pool.push(shuffle(LONG_QUOTES)[0]);
   function next(){
     if(q>=total){ const finalScore=Math.round(score/total*100); const duration=Math.round((Date.now()-startTime)/1000); return onDone?onDone(finalScore, duration):null; }
     const target=pool[q];
@@ -2214,11 +2222,16 @@ function playTyping({qs=5, onDone=null}={}){ setRandomBackground();
       return '';
     }
     
-    function playCutscene(cb) {
+    function playCutscene(cb, type) {
+      const isLast = type === 'last';
+      const imgSrc = isLast ? 'assets/mutul_myosun.jpg' : 'assets/mutul_attack.jpg';
+      const diag1 = isLast ? '묘선아!' : '머털아 가자!';
+      const diag2 = isLast ? '머털아!' : '예, 사부님!';
+      
       const cv = el(`
         <div class="cutscene-overlay">
-          <img src="assets/mutul_myosun.jpg" class="cutscene-img cutscene-shake" id="csImg">
-          <div class="cutscene-dialogue" id="csText">묘선아!</div>
+          <img src="${imgSrc}" class="cutscene-img cutscene-shake" id="csImg">
+          <div class="cutscene-dialogue" id="csText">${diag1}</div>
         </div>
       `);
       document.body.appendChild(cv);
@@ -2227,7 +2240,7 @@ function playTyping({qs=5, onDone=null}={}){ setRandomBackground();
       setTimeout(() => {
         const csText = cv.querySelector('#csText');
         if(csText) {
-          csText.textContent = "머털아!";
+          csText.textContent = diag2;
           csText.style.animation = 'none';
           void csText.offsetWidth; // trigger reflow
           csText.style.animation = 'textPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
@@ -2313,7 +2326,7 @@ function playTyping({qs=5, onDone=null}={}){ setRandomBackground();
     }
 
     function submit(){
-      const val=input.value.trim().replace(/s+/g,' ');
+      const val=input.value.trim().replace(/\s+/g,' ');
       if(val===target){
         input.classList.remove('type-wrong'); input.classList.add('type-right');
         input.disabled=true;
@@ -2322,7 +2335,9 @@ function playTyping({qs=5, onDone=null}={}){ setRandomBackground();
         hint.textContent='';
         
         if (q === 1) {
-          playCutscene(doItanoCircus);
+          playCutscene(doItanoCircus, 'first');
+        } else if (q === total) {
+          playCutscene(doItanoCircus, 'last');
         } else {
           doItanoCircus();
         }
