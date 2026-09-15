@@ -1830,6 +1830,8 @@ function playMemory({lv, onDone=null}={}){ setRandomBackground();
     card.addEventListener('click',()=>{
       if(lock||card.classList.contains('flipped')||card.classList.contains('matched')) return;
       card.classList.add('flipped'); juiceTap(card);
+      celebrateAt(card, {count: 12, parts: ['✨', '💫', '🌟', '🌸', '🪄']});
+      beep(700 + Math.random()*200, 0.08);
       if(!first){first=card;return;}
       moves++; mv.textContent='뒤집기 '+moves;
       if(first.dataset.f===card.dataset.f){
