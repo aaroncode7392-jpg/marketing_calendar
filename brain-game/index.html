@@ -554,6 +554,16 @@
   87.5% { transform: translateX(-20px) scaleX(-1) translateY(-15px); }
   100% { transform: translateX(-40px) scaleX(-1) translateY(0); }
 }
+
+@keyframes puppyBounce {
+  0%, 100% { margin-top: 0; }
+  25% { margin-top: -20px; }
+  50% { margin-top: 0; }
+  75% { margin-top: -20px; }
+}
+.puppy-bounce {
+  animation: puppyBounce 1s ease-in-out;
+}
 </style>
 </head>
 <body>
@@ -1464,7 +1474,7 @@ function showTransition(prevStage, prevScore, isFirst){
         </div>
         
         <div style="position:relative; width: 300px; height: 300px; margin: 0 auto;">
-          <img id="malaImg" src="assets/mala_wait_food.png" style="width: 100%; height: 100%; object-fit: contain; animation: puppyRun 1.5s infinite linear;">
+          <img id="malaImg" src="assets/mala_wait_food.png" style="width: 100%; height: 100%; object-fit: contain; transition: transform 0.5s ease-in-out;">
           <div id="bowlOverlay" style="position:absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 140px; height: ${bowlHeight}px; background: ${overlayColor}; border-radius: 50% 50% 10px 10px; transition: height 1s; opacity: ${isWater ? '0.9' : '1'}; pointer-events: none; mix-blend-mode: ${isWater ? 'multiply' : 'normal'}; overflow: hidden;">
              ${pelletsHtml}
           </div>
@@ -1478,13 +1488,52 @@ function showTransition(prevStage, prevScore, isFirst){
     app.appendChild(v);
 
     const btn = v.querySelector('#malaNextBtn');
+    const malaImg = v.querySelector('#malaImg');
+    
+    // 강아지 AI 상태 머신 로직
+    let puppyAiTimer = null;
+    let currentPuppyX = 0;
+    
+    function startPuppyAI() {
+       puppyAiTimer = setInterval(() => {
+          if (!malaImg || !document.body.contains(malaImg)) {
+             clearInterval(puppyAiTimer);
+             return;
+          }
+          const r = Math.random();
+          if (r < 0.4) {
+             // WANDER (좌우로 뛰기)
+             const dir = Math.random() < 0.5 ? -1 : 1;
+             currentPuppyX = dir * (40 + Math.random() * 70);
+             malaImg.style.transform = `translateX(${currentPuppyX}px) scaleX(${dir})`;
+             malaImg.src = 'assets/mala_wait_food.png';
+             malaImg.classList.remove('puppy-bounce');
+             void malaImg.offsetWidth; // trigger reflow
+             malaImg.classList.add('puppy-bounce');
+          } else if (r < 0.6) {
+             // SNIFF (밥그릇 냄새 맡기)
+             currentPuppyX = 0;
+             malaImg.style.transform = `translateX(0px) scaleX(1)`;
+             malaImg.src = 'assets/mala_eat_1.png';
+          } else {
+             // IDLE (가만히 두리번)
+             malaImg.style.transform = `translateX(${currentPuppyX}px) scaleX(${Math.random() < 0.5 ? 1 : -1})`;
+             malaImg.src = 'assets/mala_wait_food.png';
+          }
+       }, 1500);
+    }
+    
+    // 특수 클리어 이벤트(5단계, 10단계)가 아니면 AI 시작
+    if (!(idx === 5 && !isFirst) && idx !== 10) {
+       startPuppyAI();
+    }
     
     // 특수 이벤트 처리: 5스테이지 클리어(밥 다먹음), 10스테이지 클리어(물 다마심)
     if (idx === 5 && !isFirst) {
       if(btn) btn.style.display = 'none'; // 자동 진행이므로 숨김
       const malaImg = v.querySelector('#malaImg');
       const bowl = v.querySelector('#bowlOverlay');
-      if (malaImg) malaImg.style.animation = 'none'; // 밥 먹을 땐 정지
+      
       let t = 0;
       const eatAnim = setInterval(() => {
         malaImg.src = t % 2 === 0 ? 'assets/mala_eat_1.png' : 'assets/mala_wait_food.png';
