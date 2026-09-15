@@ -243,6 +243,10 @@
   }
   .cutscene-dialogue { font-size: 34px; min-height: 48px; text-shadow: 0 4px 12px rgba(0,0,0,1); animation: textPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
 
+  
+  .typing-boss.mushroom { background-image: url('assets/mushroom_monster.jpg') !important; }
+  .typing-boss.mushroom.hit { background-image: url('assets/mushroom_monster_hurt.jpg') !important; }
+
   /* modal */
   .overlay{position:fixed;inset:0;background:rgba(58,46,40,.5);display:flex;align-items:center;justify-content:center;padding:20px;z-index:60;}
   .modal{background:var(--paper);border-radius:26px;max-width:480px;width:100%;padding:26px 24px;box-shadow:var(--shadow);max-height:84vh;overflow:auto;}
@@ -2374,7 +2378,7 @@ function playDecompose({lv=1}={}){ setRandomBackground();
         <div class="scoreline"><span class="pill">단계 ${level}/${maxLevels}</span></div>
         <div class="panel" style="padding:24px 14px; position:relative;">
           <div class="typing-boss-wrap" style="height:90px; margin-top:-10px; margin-bottom:15px;">
-             <div class="typing-boss" id="bossSlimeDecomp"></div>
+             <div class="typing-boss mushroom" id="bossSlimeDecomp"></div>
           </div>
           <div class="guide-wrap" style="margin-bottom:20px; margin-top:0;">
             ${getGuideDogHtml()}
