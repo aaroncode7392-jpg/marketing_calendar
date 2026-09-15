@@ -251,6 +251,19 @@
   .typing-boss.pig { background-image: url('assets/pig_monster.png') !important; }
   .typing-boss.pig.hit { background-image: url('assets/pig_monster_hurt.png') !important; }
 
+  
+  /* Boss HP System */
+  .boss-hp-wrap { width: 100px; height: 16px; background: #333; border: 2px solid #FFF; border-radius: 8px; margin: -10px auto 10px auto; position: relative; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+  .boss-hp-bar { height: 100%; background: #EF4444; width: 100%; transition: width 0.4s ease-out; }
+  .boss-hp-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #FFF; text-shadow: 1px 1px 0 #000; font-family: 'Jua'; z-index: 10; pointer-events: none; }
+  .boss-die { animation: poofDie 0.8s forwards; }
+  @keyframes poofDie {
+    0% { transform: scale(1); filter: brightness(1); opacity: 1; }
+    30% { transform: scale(1.3); filter: brightness(2); opacity: 1; }
+    50% { transform: scale(1.4); filter: brightness(3); opacity: 0.8; }
+    100% { transform: scale(0) rotate(180deg); filter: brightness(0); opacity: 0; }
+  }
+
   /* modal */
   .overlay{position:fixed;inset:0;background:rgba(58,46,40,.5);display:flex;align-items:center;justify-content:center;padding:20px;z-index:60;}
   .modal{background:var(--paper);border-radius:26px;max-width:480px;width:100%;padding:26px 24px;box-shadow:var(--shadow);max-height:84vh;overflow:auto;}
@@ -1486,6 +1499,7 @@ function playSpeed({lv, rounds=5, onDone=null}={}){ setRandomBackground();
   const totalRounds=rounds;
   const maxScore=totalRounds*findCount;
   const emojiFs=size===3?'38px':'30px';
+  let hp = 100; const dmgPerMissile = 100 / (maxScore * 3);
 
   function frame(inner){
     clear();
@@ -1494,7 +1508,8 @@ function playSpeed({lv, rounds=5, onDone=null}={}){ setRandomBackground();
         ${stageBar()}
         <div class="scoreline"><span class="pill">⚡ ${round}/${totalRounds}</span></div>
         <div class="panel" style="position:relative;">
-          <div class="typing-boss-wrap" style="height:90px; margin-top:-10px; margin-bottom:5px;">
+          <div class="typing-boss-wrap" style="height:110px; margin-top:-10px; margin-bottom:5px;">
+             <div class="boss-hp-wrap"><div class="boss-hp-bar" id="bossHpBarPig" style="width:${hp}%"></div><div class="boss-hp-text" id="bossHpTextPig">${Math.round(hp)} / 100</div></div>
              <div class="typing-boss pig" id="bossPigSpeed"></div>
           </div>
           <div id="stage">${inner}</div>
@@ -1641,7 +1656,17 @@ function playSpeed({lv, rounds=5, onDone=null}={}){ setRandomBackground();
                   celebrateAt(boss, {count: 5, parts: ['💥','✨']});
                   beep(220 + Math.random()*100, 0.1);
                   totalHits++;
-                  if(totalHits === expectedHits) setTimeout(callback, 300);
+                  
+                  hp = Math.max(0, hp - dmgPerMissile);
+                  const bar = document.querySelector('#bossHpBarPig');
+                  const txt = document.querySelector('#bossHpTextPig');
+                  if(bar) bar.style.width = hp + '%';
+                  if(txt) txt.textContent = Math.round(hp) + ' / 100';
+                  
+                  if(totalHits === expectedHits) {
+                     if(Math.round(hp) <= 0 && boss) boss.classList.add('boss-die');
+                     setTimeout(callback, 300);
+                  }
                 }
               }
               requestAnimationFrame(anim);
@@ -2182,6 +2207,7 @@ function playMathHard({qs=5, onDone=null}={}){ setRandomBackground();
 // ==========================================================
 function playTyping({qs=5, onDone=null}={}){ setRandomBackground();
   let q=0,score=0; const total=qs;
+  let hp=100; const dmgPerQ = 100/total;
   let startTime = Date.now();
   const pool=shuffle(QUOTES).slice(0,total-1);
   pool.push(shuffle(LONG_QUOTES)[0]);
@@ -2197,6 +2223,7 @@ function playTyping({qs=5, onDone=null}={}){ setRandomBackground();
         <div class="scoreline"><span class="pill">✍️ ${q}/${total}</span></div>
         <div class="panel" style="position:relative;">
           <div class="typing-boss-wrap">
+             <div class="boss-hp-wrap"><div class="boss-hp-bar" id="bossHpBarSlime" style="width:${hp}%"></div><div class="boss-hp-text" id="bossHpTextSlime">${Math.round(hp)} / 100</div></div>
              <div class="typing-boss" id="bossSlime"></div>
           </div>
           <div style="font-size:13px;color:var(--ink-soft);margin-bottom:6px;">아래 문장을 그대로 따라 써보세요 (시간 제한 없어요)</div>
@@ -2317,7 +2344,15 @@ function playTyping({qs=5, onDone=null}={}){ setRandomBackground();
               celebrateAt(boss, {count: 5, parts: ['💥','✨']});
               beep(220 + Math.random()*100, 0.1);
               hits++;
+              hp = Math.max(0, hp - (dmgPerQ/nonSpaceChars));
+              const bar = v.querySelector('#bossHpBarSlime');
+              const txt = v.querySelector('#bossHpTextSlime');
+              if(bar) bar.style.width = hp + '%';
+              if(txt) txt.textContent = Math.round(hp) + ' / 100';
+
               if(hits === nonSpaceChars) {
+                hp = Math.round(hp);
+                if(hp <= 0 && boss) boss.classList.add('boss-die');
                 setTimeout(() => { msg(v, pick(PRAISE)); }, 300);
               }
             }
@@ -2702,7 +2737,21 @@ function playDecompose({lv=1}={}){ setRandomBackground();
                     celebrateAt(boss, {count: 6, parts: ['💥','✨']});
                     beep(220 + Math.random()*100, 0.1);
                     hits++;
-                    if(hits === chars.length) setTimeout(callback, 300);
+                    
+                    currentHp = Math.max(0, currentHp - (20 / chars.length));
+                    const bar = document.querySelector('#bossHpBarDecomp');
+                    const txt = document.querySelector('#bossHpTextDecomp');
+                    if(bar) bar.style.width = currentHp + '%';
+                    if(txt) txt.textContent = Math.round(currentHp) + ' / 100';
+                    
+                    if(hits === chars.length) {
+                       if(Math.round(currentHp) <= 0 && boss) {
+                          boss.classList.add('boss-die');
+                          setTimeout(() => callback(true), 600); // 600ms for poof animation
+                       } else {
+                          setTimeout(() => callback(false), 300);
+                       }
+                    }
                   }
                 }
                 requestAnimationFrame(anim);
@@ -2735,54 +2784,56 @@ function playDecompose({lv=1}={}){ setRandomBackground();
             }, 2000);
           }
           
-          function proceedLogic() {
+          function handleDecompNext(isDead) {
+            if(isDead) currentHp = 100; // Reset for next level
+            
             if (!isAbstract) {
-            if (type === 'addition') {
-              showDecomposeModal(true, "정답입니다!", "낱개 10개가 꽉 차서 <b>금화 주머니 1개</b>로 받아올림 되었어요!", () => {
-                playDecompose({lv: level+1});
-              });
-              const allPieces = panel.querySelectorAll('.piece-1');
-              if(allPieces.length >= 10) {
-                 for(let i=0; i<10; i++) {
-                   allPieces[i].style.transform = 'scale(0)';
-                   allPieces[i].style.opacity = '0';
-                 }
-                 setTimeout(() => {
-                   const newBundle = el(`<div class="bundle-10 fade" style="box-shadow: 0 0 30px rgba(255,213,79,1);"></div>`);
-                   panel.querySelector('#itemsArea').appendChild(newBundle);
-                   beep(880, 0.2);
-                 }, 300);
-              }
-            } else if (type === 'subtraction') {
-              const threatened = panel.querySelectorAll('.threatened');
-              threatened.forEach(el => {
-                el.classList.add('fly-away');
-              });
-              setTimeout(() => {
-                showDecomposeModal(true, "정답입니다!", `흔들리던 <b>${subAmount}개</b>를 슉! 무사히 뺐어요!`, () => {
-                  playDecompose({lv: level+1});
+              if (type === 'addition') {
+                showDecomposeModal(true, "정답입니다!", "낱개 10개가 꽉 차서 <b>금화 주머니 1개</b>로 받아올림 되었어요!", () => {
+                  playDecompose({lv: level+1, bossHp: currentHp});
                 });
-              }, 700);
-            } else if (type === 'read' || type === 'concept') {
-              showDecomposeModal(true, "정답입니다!", `<b>${initialTotal}</b>은 주머니 ${tA}개와 낱개 ${oA}개로 이루어져 있다는 걸 완벽히 이해하셨네요!`, () => {
-                playDecompose({lv: level+1});
+                const allPieces = panel.querySelectorAll('.piece-1');
+                if(allPieces.length >= 10) {
+                   for(let i=0; i<10; i++) {
+                     allPieces[i].style.transform = 'scale(0)';
+                     allPieces[i].style.opacity = '0';
+                   }
+                   setTimeout(() => {
+                     const newBundle = el(`<div class="bundle-10 fade" style="box-shadow: 0 0 30px rgba(255,213,79,1);"></div>`);
+                     panel.querySelector('#itemsArea').appendChild(newBundle);
+                     beep(880, 0.2);
+                   }, 300);
+                }
+              } else if (type === 'subtraction') {
+                const threatened = panel.querySelectorAll('.threatened');
+                threatened.forEach(el => {
+                  el.classList.add('fly-away');
+                });
+                setTimeout(() => {
+                  showDecomposeModal(true, "정답입니다!", `흔들리던 <b>${subAmount}개</b>를 슉! 무사히 뺐어요!`, () => {
+                    playDecompose({lv: level+1, bossHp: currentHp});
+                  });
+                }, 700);
+              } else if (type === 'read' || type === 'concept') {
+                showDecomposeModal(true, "정답입니다!", `<b>${initialTotal}</b>은 주머니 ${tA}개와 낱개 ${oA}개로 이루어져 있다는 걸 완벽히 이해하셨네요!`, () => {
+                  playDecompose({lv: level+1, bossHp: currentHp});
+                });
+              }
+            } else {
+              showDecomposeModal(true, "정답입니다!", "금화 없이도 머릿속으로 완벽하게 계산해 내셨네요!", () => {
+                playDecompose({lv: level+1, bossHp: currentHp});
               });
             }
-          } else {
-            showDecomposeModal(true, "정답입니다!", "금화 없이도 머릿속으로 완벽하게 계산해 내셨네요!", () => {
-              playDecompose({lv: level+1});
-            });
           }
-        }
-        
-        if (Math.random() < 0.5) {
-           playEpicCutscene(() => runDecompAttack(proceedLogic));
+          
+          if (Math.random() < 0.5) {
+             playEpicCutscene(() => runDecompAttack(handleDecompNext));
+          } else {
+             runDecompAttack(handleDecompNext);
+          }
+          
         } else {
-           runDecompAttack(proceedLogic);
-        }
-        
-      } else {
-        this.classList.add('wrongpick');
+          this.classList.add('wrongpick');
           
           if (!isAbstract) {
             if (type === 'addition') {
