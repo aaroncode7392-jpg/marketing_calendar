@@ -138,6 +138,7 @@
   .pad{display:flex;align-items:center;justify-content:center;font-family:'Jua';font-size:38px;color:rgba(255,255,255,0.9);text-shadow:0 2px 4px rgba(0,0,0,0.25);aspect-ratio:1/1;border-radius:24px;cursor:pointer;border:4px solid rgba(0,0,0,.08);opacity:.5;filter:saturate(1) brightness(1);transition:opacity .12s,transform .16s cubic-bezier(.34,1.56,.64,1),filter .16s;box-shadow:0 6px 0 rgba(0,0,0,.12);}
   .pad:active{transform:translateY(3px);}
   .pad.on{opacity:1;transform:scale(1.16);filter:saturate(1.75) brightness(1.15);}
+.pad.press{opacity:1;transform:scale(1.16);filter:saturate(2) brightness(0.85);box-shadow:0 0 15px rgba(255,255,255,0.8);}
   .pad.p0{background:#E8635B;}.pad.p1{background:#5BB98C;}
   .pad.p2{background:#5B8DEF;}.pad.p3{background:#EAC23D;}
   .pad.p0.on{box-shadow:0 6px 0 rgba(0,0,0,.12),0 0 26px 8px rgba(232,99,91,.6);}
@@ -2211,6 +2212,8 @@ function showRetryNotice(onClose){
 
 function playSeq({lv, mode='color', onDone=null}={}){ setRandomBackground();
   // 점수 집계에는 포함되지 않는 스테이지 — 맞출 때까지 몇 번이든 다시 보여주고, 최대 6개까지만 외우면 통과.
+  let hp = 100;
+  const isSpecialUser = loginUser === '691105';
   // mode: 'color'(기본, 색깔) | 'object'(사물) | 'animal'(동물)
   const L=lv||curLevel();
   const startLen=seqStart(L);
@@ -2226,6 +2229,12 @@ function playSeq({lv, mode='color', onDone=null}={}){ setRandomBackground();
     <div class="fade">
       ${stageBar()}
       <div class="scoreline"><span class="pill" id="lv">${startLen}단계</span></div>
+      ${!isSpecialUser ? `
+      <div class="typing-boss-wrap" style="height:110px; margin-top:-10px; margin-bottom:5px;">
+         <div class="boss-hp-wrap"><div class="boss-hp-bar" id="bossHpBarSeq" style="width:100%"></div><div class="boss-hp-text" id="bossHpTextSeq">100 / 100</div></div>
+         <div class="typing-boss pig" id="bossSeq"></div>
+      </div>
+      ` : ''}
       <div class="padwrap">
         <div class="pad p0${icons?' pad-icon':''}" data-p="0">${icons?icons[0]:'빨강'}</div><div class="pad p1${icons?' pad-icon':''}" data-p="1">${icons?icons[1]:'초록'}</div>
         <div class="pad p2${icons?' pad-icon':''}" data-p="2">${icons?icons[2]:'파랑'}</div><div class="pad p3${icons?' pad-icon':''}" data-p="3">${icons?icons[3]:'노랑'}</div>
@@ -2256,13 +2265,61 @@ function playSeq({lv, mode='color', onDone=null}={}){ setRandomBackground();
       }
       return;
     }
-    const i=+p.dataset.p; input.push(i); const idx=input.length-1; if(input[idx]===seq[idx]){ shatterPad(p); beep(660, 0.1); } else { flashPad(i); juiceTap(p); return onMistake(); }
+    const i=+p.dataset.p; input.push(i); const idx=input.length-1; 
+    
+    // Press effect
+    p.classList.add('press');
+    setTimeout(() => p.classList.remove('press'), 200);
+    
+    if(input[idx]===seq[idx]){ shatterPad(p); beep(660, 0.1); } else { flashPad(i); juiceTap(p); return onMistake(); }
     if(input.length===seq.length){
       lock=true; stEl.textContent='좋아요! 😊';
       pads.forEach(p=>shatterPad(p));
       celebrateAt(padwrap,{count:12});
-      if(level>=maxLen) return finish();
-      setTimeout(nextLevel,850);
+      
+      if (!isSpecialUser) {
+        const boss = document.querySelector('#bossSeq');
+        if (boss) {
+           const totalRounds = maxLen - startLen + 1;
+           const dmgPerRound = 100 / totalRounds;
+           const m = el(`<div class="magic-missile">${icons?icons[0]:'💥'}</div>`);
+           document.body.appendChild(m);
+           const pRect = padwrap.getBoundingClientRect();
+           const bRect = boss.getBoundingClientRect();
+           m.style.left = (pRect.left + pRect.width/2) + 'px';
+           m.style.top = (pRect.top + pRect.height/2) + 'px';
+           
+           setTimeout(() => {
+              m.style.left = (bRect.left + bRect.width/2 - 10) + 'px';
+              m.style.top = (bRect.top + bRect.height/2 - 10) + 'px';
+           }, 50);
+           
+           setTimeout(() => {
+              m.remove();
+              boss.classList.remove('hit'); void boss.offsetWidth; boss.classList.add('hit');
+              celebrateAt(boss, {count:8, parts:['💥','✨']});
+              beep(220, 0.1);
+              hp = Math.max(0, hp - dmgPerRound);
+              const bar = document.querySelector('#bossHpBarSeq');
+              const txt = document.querySelector('#bossHpTextSeq');
+              if(bar) bar.style.width = hp + '%';
+              if(txt) txt.textContent = Math.round(hp) + ' / 100';
+              
+              if(level>=maxLen) {
+                 if(Math.round(hp)<=0) boss.classList.add('boss-die');
+                 setTimeout(() => finish(), 1000);
+              } else {
+                 setTimeout(nextLevel, 850);
+              }
+           }, 600);
+        } else {
+           if(level>=maxLen) return finish();
+           setTimeout(nextLevel, 850);
+        }
+      } else {
+        if(level>=maxLen) return finish();
+        setTimeout(nextLevel,850);
+      }
     }
   }));
   function flashPad(i,dur=Math.max(320, flashMs-150)){ pads[i].classList.add('on'); beep(freqs[i]); setTimeout(()=>pads[i].classList.remove('on'),dur); }
