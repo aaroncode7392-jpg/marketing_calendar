@@ -203,6 +203,19 @@
   
   .cell.shattered { background: transparent !important; border-color: transparent !important; box-shadow: none !important; color: transparent !important; }
 
+  
+  @keyframes numberExplodeFly {
+    0% { transform: scale(1) rotate(0); opacity: 1; filter: blur(0); }
+    15% { transform: scale(1.4) rotate(-6deg); filter: blur(0); text-shadow: 0 0 20px rgba(255,215,0,0.8); color: #F59E0B; }
+    100% { transform: translateY(-250px) scale(0.2) rotate(30deg); opacity: 0; filter: blur(6px); }
+  }
+  .number-explode-fly {
+    animation: numberExplodeFly 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
+    pointer-events: none;
+    position: relative;
+    z-index: 50;
+  }
+
   /* modal */
   .overlay{position:fixed;inset:0;background:rgba(58,46,40,.5);display:flex;align-items:center;justify-content:center;padding:20px;z-index:60;}
   .modal{background:var(--paper);border-radius:26px;max-width:480px;width:100%;padding:26px 24px;box-shadow:var(--shadow);max-height:84vh;overflow:auto;}
@@ -1935,7 +1948,13 @@ function playMath({lv, qs=10, onDone=null}={}){ setRandomBackground();
       
       if(val===p.ans){
         answered=true;
-        digitsEl.classList.add('type-right');juiceTap(digitsEl);celebrateAt(digitsEl,{count:9});beep(660);score++;if(level<10)level++;
+        digitsEl.classList.add('type-right');
+        const qbox = v.querySelector('.qbox');
+        qbox.classList.add('number-explode-fly');
+        digitsEl.classList.add('number-explode-fly');
+        celebrateAt(qbox, {count: 25, parts: ['✨','💥','⭐','🎉','🎊','🔥']});
+        celebrateAt(digitsEl, {count: 25, parts: ['✨','💥','⭐','🎉','🎊','🔥']});
+        beep(660);score++;if(level<10)level++;
         const m=el(`<div class="fx-text" style="margin-top:14px;font-family:'Jua';font-size:22px;color:var(--ok)">${pick(PRAISE)}</div>`);
         v.querySelector('.panel').appendChild(m); setTimeout(next, 900);
       } else {
@@ -1991,7 +2010,15 @@ function playMathHard({qs=5, onDone=null}={}){ setRandomBackground();
       btn.addEventListener('click',()=>{
         if(answered) return; answered=true;
         const val=+btn.dataset.v;
-        if(val===p.ans){btn.classList.add('right');juiceTap(btn);celebrateAt(btn,{count:9});beep(660);score++;msg(v,pick(PRAISE),true);}
+        if(val===p.ans){
+          btn.classList.add('right');
+          const qbox = v.querySelector('.qbox');
+          qbox.classList.add('number-explode-fly');
+          btn.classList.add('number-explode-fly');
+          celebrateAt(qbox, {count: 25, parts: ['✨','💥','⭐','🎉','🎊','🔥']});
+          celebrateAt(btn, {count: 25, parts: ['✨','💥','⭐','🎉','🎊','🔥']});
+          beep(660);score++;msg(v,pick(PRAISE),true);
+        }
         else{btn.classList.add('wrongpick');beep(220,0.12);const r=v.querySelector(`.choice[data-v="${p.ans}"]`);if(r)r.classList.add('right');msg(v,'정답은 '+p.ans+'이에요',false);}
       });
     });
