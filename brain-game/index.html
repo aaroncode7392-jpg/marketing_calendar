@@ -271,6 +271,15 @@
     100% { transform: translateX(100vw) scale(0.5) scaleX(-1); opacity: 0; }
   }
 
+  
+  .typing-boss.bat {
+    width: 100px; height: 100px;
+    background: url('assets/bat_monster.png') center/contain no-repeat;
+  }
+  .typing-boss.bat.hit {
+    background: url('assets/bat_monster_hurt.png') center/contain no-repeat;
+  }
+
   /* modal */
   .overlay{position:fixed;inset:0;background:rgba(58,46,40,.5);display:flex;align-items:center;justify-content:center;padding:20px;z-index:60;}
   .modal{background:var(--paper);border-radius:26px;max-width:480px;width:100%;padding:26px 24px;box-shadow:var(--shadow);max-height:84vh;overflow:auto;}
@@ -1840,6 +1849,7 @@ function playSpeed({lv, rounds=5, onDone=null}={}){ setRandomBackground();
 
 function playMemory({lv, onDone=null}={}){ setRandomBackground();
   const pairs=memPairs(lv||curLevel());
+  let hp = 100; const dmgPerQ = 100/pairs;
   const faces=shuffle(EMOJIS).slice(0,pairs);
   const deck=shuffle([...faces,...faces]);
   let first=null,lock=true,moves=0,matched=0;
@@ -1856,6 +1866,10 @@ function playMemory({lv, onDone=null}={}){ setRandomBackground();
       <div class="scoreline">
         <span class="pill">짝 ${pairs}쌍</span>
         <span class="pill" id="mv">뒤집기 0</span>
+      </div>
+      <div class="typing-boss-wrap" style="height:110px; margin-top:-10px; margin-bottom:5px;">
+         <div class="boss-hp-wrap"><div class="boss-hp-bar" id="bossHpBarMem" style="width:${hp}%"></div><div class="boss-hp-text" id="bossHpTextMem">${Math.round(hp)} / 100</div></div>
+         <div class="typing-boss bat" id="bossMem"></div>
       </div>
       <div class="memgrid" style="grid-template-columns:repeat(${cols},${cw});">${cards}</div>
       <div class="guide-wrap">${getGuideDogHtml()}<div class="game-guide" id="stMsg" style="color:var(--memory);">🎴 카드 분배 중...</div></div>
@@ -1912,11 +1926,109 @@ function playMemory({lv, onDone=null}={}){ setRandomBackground();
       if(!first){first=card;return;}
       moves++; mv.textContent='뒤집기 '+moves;
       if(first.dataset.f===card.dataset.f){
+        const a=first, b=card;
         first.classList.add('matched');card.classList.add('matched');
         beep(660);matched++;
         shatterCard(first); shatterCard(card);
         first=null;
-        if(matched===pairs) finish();
+        
+        const boss = document.querySelector('#bossMem');
+        function runMemAttack(callback) {
+           if(!boss) { callback(); return; }
+           const rect1 = a.getBoundingClientRect();
+           const rect2 = b.getBoundingClientRect();
+           const bossRect = boss.getBoundingClientRect();
+           const destX = bossRect.left + bossRect.width/2 - 10;
+           const destY = bossRect.top + bossRect.height/2 - 10;
+           
+           let hits = 0;
+           [rect1, rect2].forEach((rect, idx) => {
+              const startX = rect.left + rect.width/2;
+              const startY = rect.top + rect.height/2;
+              const m = el(`<div class="magic-missile">${a.dataset.f}</div>`);
+              document.body.appendChild(m);
+              m.style.left = startX + 'px'; m.style.top = startY + 'px';
+              
+              const cp1x = startX + (Math.random() > 0.5 ? 1 : -1) * (50 + Math.random()*200);
+              const cp1y = startY - 50 - Math.random()*200;
+              const cp2x = destX + (Math.random() > 0.5 ? 1 : -1) * (50 + Math.random()*200);
+              const cp2y = destY - 100 - Math.random()*150;
+              
+              let tStart = null;
+              const duration = 600 + Math.random()*300;
+              const delay = idx * 250;
+              let energyTransformed = false;
+              
+              setTimeout(() => {
+                beep(700, 0.05);
+                function anim(t) {
+                  if(!tStart) tStart = t;
+                  let pt = (t - tStart) / duration;
+                  if(pt > 1) pt = 1;
+                  
+                  const ix = Math.pow(1-pt, 3)*startX + 3*Math.pow(1-pt, 2)*pt*cp1x + 3*(1-pt)*Math.pow(pt, 2)*cp2x + Math.pow(pt, 3)*destX;
+                  const iy = Math.pow(1-pt, 3)*startY + 3*Math.pow(1-pt, 2)*pt*cp1y + 3*(1-pt)*Math.pow(pt, 2)*cp2y + Math.pow(pt, 3)*destY;
+                  m.style.left = ix + 'px'; m.style.top = iy + 'px';
+                  
+                  if(pt > 0.3 && !energyTransformed) {
+                    energyTransformed = true; m.classList.add('energy');
+                  }
+                  
+                  if(pt < 1) { requestAnimationFrame(anim); }
+                  else {
+                    m.remove();
+                    boss.classList.remove('hit'); void boss.offsetWidth; boss.classList.add('hit');
+                    if(matched === pairs) celebrateAt(boss, {count: 15, parts: ['💥','✨','🌟','🔥']});
+                    else celebrateAt(boss, {count: 6, parts: ['💥','✨']});
+                    beep(220, 0.1);
+                    hits++;
+                    hp = Math.max(0, hp - (dmgPerQ / 2));
+                    const bar = document.querySelector('#bossHpBarMem');
+                    const txt = document.querySelector('#bossHpTextMem');
+                    if(bar) bar.style.width = hp + '%';
+                    if(txt) txt.textContent = Math.round(hp) + ' / 100';
+                    
+                    if(hits === 2) {
+                       if(Math.round(hp) <= 0 && boss) boss.classList.add('boss-die');
+                       setTimeout(callback, 300);
+                    }
+                  }
+                }
+                requestAnimationFrame(anim);
+              }, delay);
+           });
+        }
+        
+        function playMemoryFinishCutscene(cb) {
+           const imgSrc = 'assets/mutul_memory_finish.jpg';
+           const cv = el(`<div class="cutscene-overlay">
+               <img src="${imgSrc}" class="cutscene-img cutscene-shake" id="csImg">
+               <div class="cutscene-dialogue" id="csText">꺽꿀아, 머털아 공격이다</div>
+             </div>`);
+           document.body.appendChild(cv);
+           beep(440, 0.2);
+           setTimeout(() => {
+             const csText = cv.querySelector('#csText');
+             if(csText) {
+               csText.textContent = "가랏!!!";
+               csText.style.animation = 'none'; void csText.offsetWidth;
+               csText.style.animation = 'textPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
+               beep(660, 0.4);
+             }
+           }, 1000);
+           setTimeout(() => {
+             cv.style.transition = 'opacity 0.4s'; cv.style.opacity = '0';
+             setTimeout(() => { cv.remove(); cb(); }, 400);
+           }, 2000);
+        }
+        
+        if (matched === pairs) {
+           playMemoryFinishCutscene(() => {
+              runMemAttack(() => finish());
+           });
+        } else {
+           runMemAttack(() => {});
+        }
       } else {
         lock=true; beep(220,0.12);
         const a=first,b=card;
