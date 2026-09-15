@@ -1777,7 +1777,8 @@ function playSpeed({lv, rounds=5, onDone=null}={}){ setRandomBackground();
       }
       
       function playFinishCutscene(cb) {
-        const isSpecial = loginUser === '691105';
+        if (loginUser === '691105') { cb(); return; }
+        const isSpecial = false;
         const imgSrc = isSpecial ? 'assets/mutul_speed_finish.jpg' : 'assets/mutul_speed_finish_new.jpg';
         const initialText = isSpecial ? "받아라! 무수한 바늘 공격!!" : "머리카락 공격!";
         const cv = el(`<div class="cutscene-overlay">
@@ -1815,6 +1816,7 @@ function playSpeed({lv, rounds=5, onDone=null}={}){ setRandomBackground();
       }
       
       function playEpicCutscene(cb) {
+           if (loginUser === '691105') { cb(); return; }
         const imgSrc = 'assets/mutul_think.jpg';
         const dialogue = "음... 어디 보자...";
         const cv = el(`<div class="cutscene-overlay">
@@ -2092,6 +2094,7 @@ function playMemory({lv, onDone=null}={}){ setRandomBackground();
         }
         
         function playMemoryFinishCutscene(cb) {
+           if (loginUser === '691105') { cb(); return; }
            const imgSrc = 'assets/mutul_memory_finish.jpg';
            const cv = el(`<div class="cutscene-overlay">
                <img src="${imgSrc}" class="cutscene-img cutscene-shake" id="csImg">
@@ -2529,6 +2532,7 @@ function playMath({lv, qs=10, onDone=null}={}){ setRandomBackground();
         }
         
         function playMathFinishCutscene(cb) {
+           if (loginUser === '691105') { cb(); return; }
            const imgSrc = 'assets/mutul_math_finish.jpg';
            const cv = el(`<div class="cutscene-overlay">
                <img src="${imgSrc}" class="cutscene-img cutscene-shake" id="csImg">
@@ -2711,6 +2715,7 @@ function playMathHard({qs=5, onDone=null}={}){ setRandomBackground();
           }
           
           function playMathHardFinishCutscene(cb) {
+           if (loginUser === '691105') { cb(); return; }
             const imgSrc = 'assets/mutul_math_hard_finish.jpg';
             const cv = el(`<div class="cutscene-overlay">
                 <img src="${imgSrc}" class="cutscene-img cutscene-shake" id="csImg">
@@ -2806,6 +2811,7 @@ function playTyping({qs=5, onDone=null}={}){ setRandomBackground();
     }
     
     function playCutscene(cb, type) {
+      if (loginUser === '691105') { cb(); return; }
       const isLast = type === 'last';
       const imgSrc = isLast ? 'assets/mutul_typing_finish.jpg' : 'assets/mutul_attack.jpg';
       const diag1 = isLast ? '묘산아!' : '머털아 가자!';
