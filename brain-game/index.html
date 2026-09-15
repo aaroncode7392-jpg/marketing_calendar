@@ -520,6 +520,20 @@
   .member-row:last-child{border-bottom:none;}
   .section-title{font-family:'Jua';font-size:19px;margin:0 0 12px;text-align:left;}
   .admin-panel{background:var(--paper);border:none;border-radius:16px;padding:20px;box-shadow:0 8px 24px rgba(0,0,0,.08);margin-bottom:16px;text-align:left;}
+.telekinesis-ring {
+  position: absolute;
+  width: 100px; height: 100px;
+  border-radius: 50%;
+  border: 4px solid #b366ff;
+  box-shadow: 0 0 15px #b366ff, inset 0 0 15px #b366ff;
+  pointer-events: none;
+  z-index: 100;
+  animation: tkRing 0.6s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
+}
+@keyframes tkRing {
+  0% { transform: scale(0.3); opacity: 1; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
 </style>
 </head>
 <body>
@@ -1715,7 +1729,9 @@ function playSpeed({lv, rounds=5, onDone=null}={}){ setRandomBackground();
         correctCells.forEach((c, cellIdx) => {
           const rect = c.getBoundingClientRect();
           for(let i=0; i<3; i++) {
-            const m = el(`<div class="magic-missile" style="font-size:22px;">⚡</div>`);
+            const isSpike = Math.random() > 0.3;
+            const m = el(`<div class="magic-missile" style="font-size:26px;">${isSpike ? '🗡️' : '💥'}</div>`);
+            if(isSpike) m.style.filter = 'sepia(1) hue-rotate(320deg) saturate(3) brightness(0.6)'; // make it brownish/reddish like spikes
             document.body.appendChild(m);
             const startX = rect.left + rect.width/2;
             const startY = rect.top + rect.height/2;
@@ -1745,6 +1761,11 @@ function playSpeed({lv, rounds=5, onDone=null}={}){ setRandomBackground();
                 const ix = Math.pow(1-p, 3)*startX + 3*Math.pow(1-p, 2)*p*cp1x + 3*(1-p)*Math.pow(p, 2)*cp2x + Math.pow(p, 3)*destX;
                 const iy = Math.pow(1-p, 3)*startY + 3*Math.pow(1-p, 2)*p*cp1y + 3*(1-p)*Math.pow(p, 2)*cp2y + Math.pow(p, 3)*destY;
                 m.style.left = ix + 'px'; m.style.top = iy + 'px';
+                if(isSpike) {
+                  const dx = destX - ix; const dy = destY - iy;
+                  const ang = Math.atan2(dy, dx) * 180 / Math.PI;
+                  m.style.transform = `rotate(${ang+45}deg)`; // +45 because dagger emoji points diagonally
+                }
                 
                 if(p > 0.3 && !energyTransformed) {
                   energyTransformed = true; m.classList.add('energy');
@@ -1776,21 +1797,22 @@ function playSpeed({lv, rounds=5, onDone=null}={}){ setRandomBackground();
         });
       }
       
-      function playFinishCutscene(cb) {
+      function playFirstCutscene(cb) {
         if (currentMember?.birthdate === '691105') { cb(); return; }
-        const isSpecial = false;
-        const imgSrc = isSpecial ? 'assets/mutul_speed_finish.jpg' : 'assets/mutul_speed_finish_new.jpg';
-        const initialText = isSpecial ? "받아라! 무수한 바늘 공격!!" : "머리카락 공격!";
+        const imgSrc = 'assets/mutul_speed_first.jpg';
+        const d1 = pick(["어디보자.. 기억났다!", "정확히 봤지롱!", "내 두뇌를 무시하지 마!"]);
+        const d2 = pick(["머리카락 공격!", "가시 공격!!", "받아라 얍!!"]);
+        
         const cv = el(`<div class="cutscene-overlay">
-            <img src="${imgSrc}" class="cutscene-img cutscene-shake" id="csImg" style="animation-duration: 0.1s;">
-            <div class="cutscene-dialogue" id="csText">${initialText}</div>
+            <img src="${imgSrc}" class="cutscene-img cutscene-shake" id="csImg">
+            <div class="cutscene-dialogue" id="csText">${d1}</div>
           </div>`);
         document.body.appendChild(cv);
         beep(440, 0.2);
         setTimeout(() => {
           const csText = cv.querySelector('#csText');
           if(csText) {
-            csText.textContent = "타다다다다다다다!!!!";
+            csText.textContent = d2;
             csText.style.animation = 'none'; void csText.offsetWidth;
             csText.style.animation = 'textPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
             beep(660, 0.4);
@@ -1800,44 +1822,6 @@ function playSpeed({lv, rounds=5, onDone=null}={}){ setRandomBackground();
           cv.style.transition = 'opacity 0.4s'; cv.style.opacity = '0';
           setTimeout(() => { cv.remove(); cb(); }, 400);
         }, 2200);
-      }
-      
-      function playFleeCutscene(cb) {
-        const cv = el(`<div class="cutscene-overlay">
-            <img src="assets/pig_monster_bandaged.png" class="cutscene-img" style="animation: fleeRight 2.5s forwards;" id="csImg">
-            <div class="cutscene-dialogue" id="csText" style="font-size: 20px; line-height: 1.4;">허허 마무리가 부족했군<br>문제를 조금 틀리다니 난 도망간다</div>
-          </div>`);
-        document.body.appendChild(cv);
-        beep(330, 0.3);
-        setTimeout(() => {
-          cv.style.transition = 'opacity 0.4s'; cv.style.opacity = '0';
-          setTimeout(() => { cv.remove(); cb(); }, 400);
-        }, 2800);
-      }
-      
-      function playEpicCutscene(cb) {
-           if (currentMember?.birthdate === '691105') { cb(); return; }
-        const imgSrc = 'assets/mutul_think.jpg';
-        const dialogue = "음... 어디 보자...";
-        const cv = el(`<div class="cutscene-overlay">
-            <img src="${imgSrc}" class="cutscene-img cutscene-shake" id="csImg">
-            <div class="cutscene-dialogue" id="csText">${dialogue}</div>
-          </div>`);
-        document.body.appendChild(cv);
-        beep(440, 0.2);
-        setTimeout(() => {
-          const csText = cv.querySelector('#csText');
-          if(csText) {
-            csText.textContent = "전부 다 기억났다!!";
-            csText.style.animation = 'none'; void csText.offsetWidth;
-            csText.style.animation = 'textPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
-            beep(660, 0.2);
-          }
-        }, 1000);
-        setTimeout(() => {
-          cv.style.transition = 'opacity 0.4s'; cv.style.opacity = '0';
-          setTimeout(() => { cv.remove(); cb(); }, 400);
-        }, 2000);
       }
       
       function proceedLogic() {
@@ -1852,9 +1836,7 @@ function playSpeed({lv, rounds=5, onDone=null}={}){ setRandomBackground();
         if(allRight) confetti(2);
         
         if (round === totalRounds && Math.round(hp) > 0) {
-           playFleeCutscene(() => {
-              feedback(allRight?`${pick(PRAISE)} (${findCount}/${findCount})`:`${roundScore}개 맞았어요!`, allRight);
-           });
+           feedback(allRight?`${pick(PRAISE)} (${findCount}/${findCount})`:`${roundScore}개 맞았어요!`, allRight);
            return;
         }
         
@@ -2279,10 +2261,9 @@ function playSeq({lv, mode='color', onDone=null}={}){ setRandomBackground();
     p.classList.add('press');
     setTimeout(() => p.classList.remove('press'), 200);
     
-    if(input[idx]===seq[idx]){ shatterPad(p); beep(660, 0.1); } else { flashPad(i); juiceTap(p); return onMistake(); }
+    if(input[idx]===seq[idx]){ beep(660, 0.1); } else { flashPad(i); juiceTap(p); return onMistake(); }
     if(input.length===seq.length){
       lock=true; stEl.textContent='좋아요! 😊';
-      pads.forEach(p=>shatterPad(p));
       celebrateAt(padwrap,{count:12});
       
       if (!isSpecialUser) {
@@ -2421,7 +2402,7 @@ function playMath({lv, qs=10, onDone=null}={}){ setRandomBackground();
             <button class="npkey" data-k="0">0</button>
             <button class="npkey npkey-back" data-k="back">⌫</button>
           </div>
-          <button class="btn btn-primary" id="submitBtn" style="font-size:24px; padding:14px 24px; margin-top:16px; width:100%;">확인</button>
+          <button class="btn btn-primary" id="submitBtn" style="font-size:24px; padding:14px 24px; margin-top:16px; width:100%; background:var(--warn); color:#fff;">공격 💥</button>
         </div>
         <div class="guide-wrap">${getGuideDogHtml()}<div class="game-guide">맞춘 개수 ${score}</div></div>
       </div>`);
@@ -2463,10 +2444,9 @@ function playMath({lv, qs=10, onDone=null}={}){ setRandomBackground();
         function runMathAttack(callback) {
            if(!boss) { callback(); return; }
            let chars = String(p.ans).split('');
-           if (q === total) {
-              const base = chars.slice(); chars = [];
-              for(let i=0; i<15; i++) chars.push(...base);
-           }
+           const base = chars.slice(); chars = [];
+           const repeatCount = (q === total) ? 30 : 5;
+           for(let i=0; i<repeatCount; i++) chars.push(...base);
            const rect = digitsEl.getBoundingClientRect();
            const startX = rect.left + rect.width/2;
            const startY = rect.top + rect.height/2;
@@ -2510,8 +2490,18 @@ function playMath({lv, qs=10, onDone=null}={}){ setRandomBackground();
                   else {
                     m.remove();
                     boss.classList.remove('hit'); void boss.offsetWidth; boss.classList.add('hit'); setTimeout(() => { if(boss) boss.classList.remove('hit'); }, 500);
-                    if(q === total) celebrateAt(boss, {count: 15, parts: ['💥','✨','🌟','🔥']});
-                    else celebrateAt(boss, {count: 6, parts: ['💥','✨']});
+                    
+                    // Telekinesis hit effect
+                    const bRect = boss.getBoundingClientRect();
+                    const tk = document.createElement('div');
+                    tk.className = 'telekinesis-ring';
+                    tk.style.left = (bRect.left + bRect.width/2 - 50) + 'px';
+                    tk.style.top = (bRect.top + bRect.height/2 - 50) + 'px';
+                    document.body.appendChild(tk);
+                    setTimeout(() => tk.remove(), 600);
+
+                    if(q === total) celebrateAt(boss, {count: 15, parts: ['💥','✨','🌟','🔥','🟣']});
+                    else celebrateAt(boss, {count: 6, parts: ['💥','✨','🟣']});
                     beep(220, 0.1);
                     hits++;
                     hp = Math.max(0, hp - (dmgPerQ / chars.length));
