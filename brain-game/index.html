@@ -2641,19 +2641,20 @@ function playMathHard({qs=5, onDone=null}={}){ setRandomBackground();
           const boss = document.querySelector('#bossMathHard');
           function runMathHardAttack(callback) {
             if(!boss) { callback(); return; }
-            let chars = String(p.ans).split('');
+            let chars = String(p.text).replace(/[^0-9]/g, '').split('');
             if (q === total) {
                const base = chars.slice(); chars = [];
                for(let i=0; i<15; i++) chars.push(...base);
             }
-            const rect = btn.getBoundingClientRect();
+            const qbox = v.querySelector('.qbox');
+            const rect = qbox ? qbox.getBoundingClientRect() : btn.getBoundingClientRect();
             btn.style.opacity = '0';
             let hits = 0;
             
             chars.forEach((ch, idx) => {
               const m = el(`<div class="magic-missile">${ch}</div>`);
               document.body.appendChild(m);
-              const startX = rect.left + 15 + (idx * Math.min(20, rect.width/chars.length));
+              const startX = rect.left + 15 + ((idx % chars.length) * Math.min(20, rect.width/Math.max(1, chars.length)));
               const startY = rect.top + rect.height/2;
               m.style.left = startX + 'px'; m.style.top = startY + 'px';
               
