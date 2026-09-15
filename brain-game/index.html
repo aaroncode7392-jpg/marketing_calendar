@@ -247,6 +247,10 @@
   .typing-boss.mushroom { background-image: url('assets/mushroom_monster.jpg') !important; }
   .typing-boss.mushroom.hit { background-image: url('assets/mushroom_monster_hurt.jpg') !important; }
 
+  
+  .typing-boss.pig { background-image: url('assets/pig_monster.jpg') !important; }
+  .typing-boss.pig.hit { background-image: url('assets/pig_monster_hurt.jpg') !important; }
+
   /* modal */
   .overlay{position:fixed;inset:0;background:rgba(58,46,40,.5);display:flex;align-items:center;justify-content:center;padding:20px;z-index:60;}
   .modal{background:var(--paper);border-radius:26px;max-width:480px;width:100%;padding:26px 24px;box-shadow:var(--shadow);max-height:84vh;overflow:auto;}
@@ -1482,7 +1486,12 @@ function playSpeed({lv, rounds=5, onDone=null}={}){ setRandomBackground();
       <div class="fade">
         ${stageBar()}
         <div class="scoreline"><span class="pill">⚡ ${round}/${totalRounds}</span></div>
-        <div class="panel" id="stage">${inner}</div>
+        <div class="panel" style="position:relative;">
+          <div class="typing-boss-wrap" style="height:90px; margin-top:-10px; margin-bottom:5px;">
+             <div class="typing-boss pig" id="bossPigSpeed"></div>
+          </div>
+          <div id="stage">${inner}</div>
+        </div>
         <div class="guide-wrap">${getGuideDogHtml()}<div class="game-guide" id="sc">맞춘 칸 ${totalScore}</div></div>
       </div>`);
     app.appendChild(v);
@@ -1545,6 +1554,7 @@ function playSpeed({lv, rounds=5, onDone=null}={}){ setRandomBackground();
     });
     function submitAnswer(){
       done=true; let roundScore=0;
+      let correctCells = [];
       grid.querySelectorAll('.cell').forEach(c=>{
         const i=+c.dataset.i,isTgt=targetSet.has(i),isPick=selected.has(i);
         c.classList.remove('selected'); c.innerHTML='';
@@ -1554,10 +1564,10 @@ function playSpeed({lv, rounds=5, onDone=null}={}){ setRandomBackground();
           roundScore++;
           shatterSpeedCell(c);
           celebrateAt(c,{count:14, parts:['✨','⭐','🌟','🎉','🎊']});
-          // Floating 점수 태그 효과
           const floatTag = el(`<div class="score-float">+1 ⭐</div>`);
           c.appendChild(floatTag);
           setTimeout(()=>floatTag.remove(), 850);
+          correctCells.push(c);
         }
         else if(!isTgt&&isPick){
           c.classList.add('wrong');
@@ -1570,17 +1580,114 @@ function playSpeed({lv, rounds=5, onDone=null}={}){ setRandomBackground();
           c.innerHTML='⭐';
         }
       });
-      if(roundScore > 0){
-        beep(587, 0.09); setTimeout(()=>beep(784, 0.16), 80);
-      } else {
-        beep(220, 0.15);
+      
+      const allRight = roundScore===findCount;
+      const boss = document.querySelector('#bossPigSpeed');
+      
+      function runAttack(callback) {
+        if(!boss || correctCells.length === 0) { callback(); return; }
+        let totalHits = 0;
+        let expectedHits = correctCells.length * 3;
+        
+        correctCells.forEach((c, cellIdx) => {
+          const rect = c.getBoundingClientRect();
+          for(let i=0; i<3; i++) {
+            const m = el(`<div class="magic-missile" style="font-size:22px;">⚡</div>`);
+            document.body.appendChild(m);
+            const startX = rect.left + rect.width/2;
+            const startY = rect.top + rect.height/2;
+            m.style.left = startX + 'px'; m.style.top = startY + 'px';
+            
+            const bossRect = boss.getBoundingClientRect();
+            const destX = bossRect.left + bossRect.width/2 - 10;
+            const destY = bossRect.top + bossRect.height/2 - 10;
+            
+            const cp1x = startX + (Math.random() > 0.5 ? 1 : -1) * (50 + Math.random()*150);
+            const cp1y = startY - 50 - Math.random()*100;
+            const cp2x = destX + (Math.random() > 0.5 ? 1 : -1) * (50 + Math.random()*150);
+            const cp2y = destY - 50 - Math.random()*100;
+            
+            let tStart = null;
+            const duration = 500 + Math.random()*400;
+            const delay = cellIdx*100 + i*80;
+            let energyTransformed = false;
+            
+            setTimeout(() => {
+              beep(700 + Math.random()*300, 0.05);
+              function anim(t) {
+                if(!tStart) tStart = t;
+                let p = (t - tStart) / duration;
+                if(p > 1) p = 1;
+                
+                const ix = Math.pow(1-p, 3)*startX + 3*Math.pow(1-p, 2)*p*cp1x + 3*(1-p)*Math.pow(p, 2)*cp2x + Math.pow(p, 3)*destX;
+                const iy = Math.pow(1-p, 3)*startY + 3*Math.pow(1-p, 2)*p*cp1y + 3*(1-p)*Math.pow(p, 2)*cp2y + Math.pow(p, 3)*destY;
+                m.style.left = ix + 'px'; m.style.top = iy + 'px';
+                
+                if(p > 0.3 && !energyTransformed) {
+                  energyTransformed = true; m.classList.add('energy');
+                }
+                
+                if(p < 1) { requestAnimationFrame(anim); }
+                else {
+                  m.remove();
+                  boss.classList.remove('hit'); void boss.offsetWidth; boss.classList.add('hit');
+                  celebrateAt(boss, {count: 5, parts: ['💥','✨']});
+                  beep(220 + Math.random()*100, 0.1);
+                  totalHits++;
+                  if(totalHits === expectedHits) setTimeout(callback, 300);
+                }
+              }
+              requestAnimationFrame(anim);
+            }, delay);
+          }
+        });
       }
-      totalScore+=roundScore;
-      const sc=document.querySelector('#sc'); if(sc) sc.textContent='맞춘 칸 '+totalScore;
-      const allRight=roundScore===findCount;
-      if(allRight) flash=Math.max(350,flash-90); else flash=Math.min(1700,flash+130);
-      if(allRight) confetti(2);
-      feedback(allRight?`${pick(PRAISE)} (${findCount}/${findCount})`:`${roundScore}개 맞았어요!`, allRight);
+      
+      function playEpicCutscene(cb) {
+        const isEpic = Math.random() < 0.5;
+        const imgSrc = isEpic ? 'assets/mutul_epic.jpg' : 'assets/mutul_attack.jpg';
+        const dialogue = isEpic ? "가랏!! 초필살기!!" : "머털아 가자!";
+        const cv = el(`<div class="cutscene-overlay">
+            <img src="${imgSrc}" class="cutscene-img cutscene-shake" id="csImg">
+            <div class="cutscene-dialogue" id="csText">${dialogue}</div>
+          </div>`);
+        document.body.appendChild(cv);
+        beep(440, 0.2);
+        setTimeout(() => {
+          const csText = cv.querySelector('#csText');
+          if(csText) {
+            csText.textContent = isEpic ? "받아라 요괴야!!" : "예, 사부님!";
+            csText.style.animation = 'none'; void csText.offsetWidth;
+            csText.style.animation = 'textPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
+            beep(660, 0.2);
+          }
+        }, 1000);
+        setTimeout(() => {
+          cv.style.transition = 'opacity 0.4s'; cv.style.opacity = '0';
+          setTimeout(() => { cv.remove(); cb(); }, 400);
+        }, 2000);
+      }
+      
+      function proceedLogic() {
+        if(roundScore > 0){
+          beep(587, 0.09); setTimeout(()=>beep(784, 0.16), 80);
+        } else {
+          beep(220, 0.15);
+        }
+        totalScore+=roundScore;
+        const sc=document.querySelector('#sc'); if(sc) sc.textContent='맞춘 칸 '+totalScore;
+        if(allRight) flash=Math.max(350,flash-90); else flash=Math.min(1700,flash+130);
+        if(allRight) confetti(2);
+        feedback(allRight?`${pick(PRAISE)} (${findCount}/${findCount})`:`${roundScore}개 맞았어요!`, allRight);
+      }
+
+      if (allRight && Math.random() < 0.5) {
+         playEpicCutscene(() => runAttack(proceedLogic));
+      } else if (roundScore > 0) {
+         runAttack(proceedLogic);
+      } else {
+         proceedLogic();
+      }
     }
   }
   function feedback(text,good){
