@@ -185,6 +185,10 @@
   
   .pad.shattered { background: transparent !important; color: transparent !important; box-shadow: none !important; border-color: transparent !important; transform: scale(0.8) !important; }
 
+  
+  .mcard.shattered .mfront, .mcard.shattered .mback { opacity: 0 !important; }
+  .mcard.shattered { box-shadow: none !important; border: none !important; transform: scale(0.8) !important; background: transparent !important; }
+
   /* modal */
   .overlay{position:fixed;inset:0;background:rgba(58,46,40,.5);display:flex;align-items:center;justify-content:center;padding:20px;z-index:60;}
   .modal{background:var(--paper);border-radius:26px;max-width:480px;width:100%;padding:26px 24px;box-shadow:var(--shadow);max-height:84vh;overflow:auto;}
@@ -1479,6 +1483,59 @@ function playSpeed({lv, rounds=5, onDone=null}={}){
 // ==========================================================
 // GAME 2: 짝 맞추기 (카드 덱 딜링 애니메이션 연출 포함)
 // ==========================================================
+
+  function shatterCard(card) {
+    const wrap = document.createElement('div');
+    wrap.style.position = 'absolute';
+    wrap.style.left = '0'; wrap.style.top = '0';
+    wrap.style.width = '100%'; wrap.style.height = '100%';
+    wrap.style.pointerEvents = 'none';
+    wrap.style.zIndex = '10';
+    card.appendChild(wrap);
+    
+    const emj = document.createElement('div');
+    emj.textContent = '💥';
+    emj.style.position = 'absolute';
+    emj.style.left = '50%'; emj.style.top = '50%';
+    emj.style.transform = 'translate(-50%, -50%) scale(0.2)';
+    emj.style.fontSize = '80px';
+    emj.style.transition = 'transform 0.4s cubic-bezier(0.1, 0.8, 0.3, 1), opacity 0.4s';
+    wrap.appendChild(emj);
+    
+    for(let i=0; i<10; i++){
+      const shard = document.createElement('div');
+      shard.style.position = 'absolute';
+      shard.style.width = '20px';
+      shard.style.height = '20px';
+      shard.style.background = '#FFD54F';
+      shard.style.left = '50%';
+      shard.style.top = '50%';
+      shard.style.clipPath = `polygon(${rnd(100)}% 0%, 100% ${rnd(100)}%, 0% 100%)`;
+      shard.style.transform = 'translate(-50%, -50%)';
+      shard.style.transition = 'transform 0.5s cubic-bezier(0.1, 0.8, 0.3, 1), opacity 0.5s';
+      
+      const ang = Math.random() * Math.PI * 2;
+      const dist = 40 + Math.random() * 70;
+      const dx = Math.cos(ang) * dist;
+      const dy = Math.sin(ang) * dist;
+      const rot = (Math.random() - 0.5) * 720;
+      
+      wrap.appendChild(shard);
+      
+      requestAnimationFrame(()=>{
+        shard.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) rotate(${rot}deg) scale(0)`;
+        shard.style.opacity = '0';
+      });
+    }
+    
+    requestAnimationFrame(()=>{
+      emj.style.transform = 'translate(-50%, -50%) scale(1.5)';
+      emj.style.opacity = '0';
+    });
+    
+    card.classList.add('shattered');
+  }
+
 function playMemory({lv, onDone=null}={}){
   const pairs=memPairs(lv||curLevel());
   const faces=shuffle(EMOJIS).slice(0,pairs);
@@ -1553,7 +1610,7 @@ function playMemory({lv, onDone=null}={}){
       if(first.dataset.f===card.dataset.f){
         first.classList.add('matched');card.classList.add('matched');
         beep(660);matched++;
-        celebrateAt(card,{count:9});juiceTap(first);juiceTap(card);
+        shatterCard(first); shatterCard(card);
         first=null;
         if(matched===pairs) finish();
       } else {
