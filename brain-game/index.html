@@ -1452,7 +1452,7 @@ function showTransition(prevStage, prevScore, isFirst){
         beep(700, 0.2);
         
         setTimeout(() => {
-           playStage(next);
+           runGame(next, onGameDone);
         }, 2000);
       }, 3000);
     } else if (idx === 10) {
@@ -1480,7 +1480,7 @@ function showTransition(prevStage, prevScore, isFirst){
       if(btn) {
         btn.addEventListener('click', () => {
           beep(660);
-          playStage(next);
+          runGame(next, onGameDone);
         });
       }
     }
