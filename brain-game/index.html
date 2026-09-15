@@ -1675,6 +1675,29 @@ function playSpeed({lv, rounds=5, onDone=null}={}){ setRandomBackground();
         });
       }
       
+      function playFinishCutscene(cb) {
+        const imgSrc = 'assets/mutul_speed_finish.jpg';
+        const cv = el(`<div class="cutscene-overlay">
+            <img src="${imgSrc}" class="cutscene-img cutscene-shake" id="csImg" style="animation-duration: 0.1s;">
+            <div class="cutscene-dialogue" id="csText">받아라! 무수한 바늘 공격!!</div>
+          </div>`);
+        document.body.appendChild(cv);
+        beep(440, 0.2);
+        setTimeout(() => {
+          const csText = cv.querySelector('#csText');
+          if(csText) {
+            csText.textContent = "타다다다다다다다!!!!";
+            csText.style.animation = 'none'; void csText.offsetWidth;
+            csText.style.animation = 'textPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
+            beep(660, 0.4);
+          }
+        }, 1200);
+        setTimeout(() => {
+          cv.style.transition = 'opacity 0.4s'; cv.style.opacity = '0';
+          setTimeout(() => { cv.remove(); cb(); }, 400);
+        }, 2200);
+      }
+      
       function playEpicCutscene(cb) {
         const imgSrc = 'assets/mutul_think.jpg';
         const dialogue = "음... 어디 보자...";
@@ -1712,7 +1735,9 @@ function playSpeed({lv, rounds=5, onDone=null}={}){ setRandomBackground();
         feedback(allRight?`${pick(PRAISE)} (${findCount}/${findCount})`:`${roundScore}개 맞았어요!`, allRight);
       }
 
-      if (allRight && Math.random() < 0.5) {
+      if (round === totalRounds && roundScore > 0) {
+         playFinishCutscene(() => runAttack(proceedLogic));
+      } else if (allRight && Math.random() < 0.5) {
          playEpicCutscene(() => runAttack(proceedLogic));
       } else if (roundScore > 0) {
          runAttack(proceedLogic);
