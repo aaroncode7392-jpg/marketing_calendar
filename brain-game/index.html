@@ -1406,7 +1406,7 @@ function showTransition(prevStage, prevScore, isFirst){
   const total=stages.length;
   
   // 691105 유저 전용 로직
-  if (loginUser === '691105') {
+  if (currentMember?.birthdate === '691105') {
     const isWater = idx >= 5;
     const progress = isWater ? (idx - 5) / 5 : idx / 5;
     const overlayColor = isWater ? 'rgba(50, 150, 255, 0.7)' : 'rgba(139, 69, 19, 0.8)';
@@ -1777,7 +1777,7 @@ function playSpeed({lv, rounds=5, onDone=null}={}){ setRandomBackground();
       }
       
       function playFinishCutscene(cb) {
-        if (loginUser === '691105') { cb(); return; }
+        if (currentMember?.birthdate === '691105') { cb(); return; }
         const isSpecial = false;
         const imgSrc = isSpecial ? 'assets/mutul_speed_finish.jpg' : 'assets/mutul_speed_finish_new.jpg';
         const initialText = isSpecial ? "받아라! 무수한 바늘 공격!!" : "머리카락 공격!";
@@ -1816,7 +1816,7 @@ function playSpeed({lv, rounds=5, onDone=null}={}){ setRandomBackground();
       }
       
       function playEpicCutscene(cb) {
-           if (loginUser === '691105') { cb(); return; }
+           if (currentMember?.birthdate === '691105') { cb(); return; }
         const imgSrc = 'assets/mutul_think.jpg';
         const dialogue = "음... 어디 보자...";
         const cv = el(`<div class="cutscene-overlay">
@@ -2094,7 +2094,7 @@ function playMemory({lv, onDone=null}={}){ setRandomBackground();
         }
         
         function playMemoryFinishCutscene(cb) {
-           if (loginUser === '691105') { cb(); return; }
+           if (currentMember?.birthdate === '691105') { cb(); return; }
            const imgSrc = 'assets/mutul_memory_finish.jpg';
            const cv = el(`<div class="cutscene-overlay">
                <img src="${imgSrc}" class="cutscene-img cutscene-shake" id="csImg">
@@ -2221,7 +2221,7 @@ function showRetryNotice(onClose){
 function playSeq({lv, mode='color', onDone=null}={}){ setRandomBackground();
   // 점수 집계에는 포함되지 않는 스테이지 — 맞출 때까지 몇 번이든 다시 보여주고, 최대 6개까지만 외우면 통과.
   let hp = 100;
-  const isSpecialUser = loginUser === '691105';
+  const isSpecialUser = currentMember?.birthdate === '691105';
   // mode: 'color'(기본, 색깔) | 'object'(사물) | 'animal'(동물)
   const L=lv||curLevel();
   const startLen=seqStart(L);
@@ -2532,7 +2532,7 @@ function playMath({lv, qs=10, onDone=null}={}){ setRandomBackground();
         }
         
         function playMathFinishCutscene(cb) {
-           if (loginUser === '691105') { cb(); return; }
+           if (currentMember?.birthdate === '691105') { cb(); return; }
            const imgSrc = 'assets/mutul_math_finish.jpg';
            const cv = el(`<div class="cutscene-overlay">
                <img src="${imgSrc}" class="cutscene-img cutscene-shake" id="csImg">
@@ -2716,7 +2716,7 @@ function playMathHard({qs=5, onDone=null}={}){ setRandomBackground();
           }
           
           function playMathHardFinishCutscene(cb) {
-           if (loginUser === '691105') { cb(); return; }
+           if (currentMember?.birthdate === '691105') { cb(); return; }
             const imgSrc = 'assets/mutul_math_hard_finish.jpg';
             const cv = el(`<div class="cutscene-overlay">
                 <img src="${imgSrc}" class="cutscene-img cutscene-shake" id="csImg">
@@ -2812,7 +2812,7 @@ function playTyping({qs=5, onDone=null}={}){ setRandomBackground();
     }
     
     function playCutscene(cb, type) {
-      if (loginUser === '691105') { cb(); return; }
+      if (currentMember?.birthdate === '691105') { cb(); return; }
       const isLast = type === 'last';
       const imgSrc = isLast ? 'assets/mutul_typing_finish.jpg' : 'assets/mutul_attack.jpg';
       const diag1 = isLast ? '묘션아 준비됐지!' : '머털아 가자!';
