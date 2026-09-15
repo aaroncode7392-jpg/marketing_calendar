@@ -220,7 +220,7 @@
   /* Typing Boss */
   .typing-boss-wrap { text-align: center; margin-top: -10px; margin-bottom: 10px; height: 110px; position: relative; display: flex; justify-content: center; align-items: center; }
   .typing-boss { width: 110px; height: 110px; background: url('assets/slime_monster.jpg') center/cover no-repeat; mix-blend-mode: multiply; filter: contrast(1.1); transition: transform 0.2s; }
-  .typing-boss.hit { animation: bossHit 0.3s ease-out; filter: brightness(0.6) sepia(1) hue-rotate(-50deg) saturate(5) drop-shadow(0 0 10px red); }
+  .typing-boss.hit { animation: bossHit 0.3s ease-out; filter: brightness(0.6) sepia(1) hue-rotate(-50deg) saturate(5) drop-shadow(0 0 10px red); background-image: url('assets/slime_monster_hurt.jpg') !important; }
   @keyframes bossHit {
     0% { transform: scale(1) translateX(0); }
     25% { transform: scale(0.9) translateX(-10px) rotate(-5deg); }
