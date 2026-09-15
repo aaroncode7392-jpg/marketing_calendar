@@ -200,6 +200,9 @@
     pointer-events: none;
   }
 
+  
+  .cell.shattered { background: transparent !important; border-color: transparent !important; box-shadow: none !important; color: transparent !important; }
+
   /* modal */
   .overlay{position:fixed;inset:0;background:rgba(58,46,40,.5);display:flex;align-items:center;justify-content:center;padding:20px;z-index:60;}
   .modal{background:var(--paper);border-radius:26px;max-width:480px;width:100%;padding:26px 24px;box-shadow:var(--shadow);max-height:84vh;overflow:auto;}
@@ -1368,6 +1371,59 @@ function stageBar(){
 // ==========================================================
 // GAME 1: 순간 포착
 // ==========================================================
+
+  function shatterSpeedCell(c) {
+    const wrap = document.createElement('div');
+    wrap.style.position = 'absolute';
+    wrap.style.left = '0'; wrap.style.top = '0';
+    wrap.style.width = '100%'; wrap.style.height = '100%';
+    wrap.style.pointerEvents = 'none';
+    wrap.style.zIndex = '10';
+    c.appendChild(wrap);
+    
+    const emj = document.createElement('div');
+    emj.textContent = '💥';
+    emj.style.position = 'absolute';
+    emj.style.left = '50%'; emj.style.top = '50%';
+    emj.style.transform = 'translate(-50%, -50%) scale(0.2)';
+    emj.style.fontSize = '60px';
+    emj.style.transition = 'transform 0.4s cubic-bezier(0.1, 0.8, 0.3, 1), opacity 0.4s';
+    wrap.appendChild(emj);
+    
+    for(let i=0; i<10; i++){
+      const shard = document.createElement('div');
+      shard.style.position = 'absolute';
+      shard.style.width = '16px';
+      shard.style.height = '16px';
+      shard.style.background = '#E8633F';
+      shard.style.left = '50%';
+      shard.style.top = '50%';
+      shard.style.clipPath = `polygon(${rnd(100)}% 0%, 100% ${rnd(100)}%, 0% 100%)`;
+      shard.style.transform = 'translate(-50%, -50%)';
+      shard.style.transition = 'transform 0.5s cubic-bezier(0.1, 0.8, 0.3, 1), opacity 0.5s';
+      
+      const ang = Math.random() * Math.PI * 2;
+      const dist = 30 + Math.random() * 60;
+      const dx = Math.cos(ang) * dist;
+      const dy = Math.sin(ang) * dist;
+      const rot = (Math.random() - 0.5) * 720;
+      
+      wrap.appendChild(shard);
+      
+      requestAnimationFrame(()=>{
+        shard.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) rotate(${rot}deg) scale(0)`;
+        shard.style.opacity = '0';
+      });
+    }
+    
+    requestAnimationFrame(()=>{
+      emj.style.transform = 'translate(-50%, -50%) scale(1.5)';
+      emj.style.opacity = '0';
+    });
+    
+    c.classList.add('shattered');
+  }
+
 function playSpeed({lv, rounds=5, onDone=null}={}){ setRandomBackground();
   const s0=speedStart(lv||curLevel());
   const findCount=s0.findCount, size=s0.size;
@@ -1450,9 +1506,9 @@ function playSpeed({lv, rounds=5, onDone=null}={}){ setRandomBackground();
         c.classList.remove('selected'); c.innerHTML='';
         if(isTgt&&isPick){
           c.classList.add('correct');
-          c.innerHTML='✅';
+          c.innerHTML='';
           roundScore++;
-          juiceTap(c);
+          shatterSpeedCell(c);
           celebrateAt(c,{count:14, parts:['✨','⭐','🌟','🎉','🎊']});
           // Floating 점수 태그 효과
           const floatTag = el(`<div class="score-float">+1 ⭐</div>`);
