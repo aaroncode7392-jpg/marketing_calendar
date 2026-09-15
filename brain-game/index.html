@@ -534,6 +534,13 @@
   0% { transform: scale(0.3); opacity: 1; }
   100% { transform: scale(2.5); opacity: 0; }
 }
+.is-691105 .boss-hp-wrap, 
+.is-691105 [id^="boss"]:not(#bossHpBarSlime):not(#bossHpTextSlime):not(#bossHpBarPig):not(#bossHpTextPig), 
+.is-691105 .typing-boss, 
+.is-691105 .typing-boss-wrap, 
+.is-691105 .boss-wrap { display: none !important; }
+.is-691105 .magic-missile { font-size: 32px !important; text-shadow: none !important; background: transparent !important; box-shadow: none !important; border: none !important; filter: none !important; animation: popSpin 1s linear infinite; }
+@keyframes popSpin { 0% { transform: scale(1) rotate(0deg); } 50% { transform: scale(1.2) rotate(180deg); } 100% { transform: scale(1) rotate(360deg); } }
 </style>
 </head>
 <body>
@@ -1538,6 +1545,9 @@ function showTransition(prevStage, prevScore, isFirst){
   });
 }
 function runGame(stage, onDone){
+  if(currentMember?.birthdate === '691105') document.getElementById('app').classList.add('is-691105');
+  else document.getElementById('app').classList.remove('is-691105');
+
   if(stage.type==='speed') playSpeed({lv:stage.lv, rounds:5, onDone});
   else if(stage.type==='memory') playMemory({lv:stage.lv, onDone});
   else if(stage.type==='seq') playSeq({lv:stage.lv, mode:stage.mode||'color', onDone});
@@ -1729,15 +1739,18 @@ function playSpeed({lv, rounds=5, onDone=null}={}){ setRandomBackground();
         correctCells.forEach((c, cellIdx) => {
           const rect = c.getBoundingClientRect();
           for(let i=0; i<3; i++) {
-            const isSpike = Math.random() > 0.3;
-            const m = el(`<div class="magic-missile" style="font-size:26px;">${isSpike ? '🗡️' : '💥'}</div>`);
+            const is69 = currentMember?.birthdate === '691105'; const isSpike = Math.random() > 0.3;
+            const m = el(`<div class="magic-missile" style="font-size:26px;">${is69 ? (session.idx < 5 ? '🍖' : '💧') : (isSpike ? '🗡️' : '💥')}</div>`);
             if(isSpike) m.style.filter = 'sepia(1) hue-rotate(320deg) saturate(3) brightness(0.6)'; // make it brownish/reddish like spikes
             document.body.appendChild(m);
             const startX = rect.left + rect.width/2;
             const startY = rect.top + rect.height/2;
             m.style.left = startX + 'px'; m.style.top = startY + 'px';
             
-            const bossRect = boss.getBoundingClientRect();
+            let bossRect = boss.getBoundingClientRect();
+            if (currentMember?.birthdate === '691105') {
+               bossRect = { left: window.innerWidth/2 - 25, top: -50, width: 50, height: 50 };
+            }
             const destX = bossRect.left + bossRect.width/2 - 10;
             const destY = bossRect.top + bossRect.height/2 - 10;
             
@@ -2006,7 +2019,10 @@ function playMemory({lv, onDone=null}={}){ setRandomBackground();
            if(!boss) { callback(); return; }
            const rect1 = a.getBoundingClientRect();
            const rect2 = b.getBoundingClientRect();
-           const bossRect = boss.getBoundingClientRect();
+           let bossRect = boss.getBoundingClientRect();
+            if (currentMember?.birthdate === '691105') {
+               bossRect = { left: window.innerWidth/2 - 25, top: -50, width: 50, height: 50 };
+            }
            const destX = bossRect.left + bossRect.width/2 - 10;
            const destY = bossRect.top + bossRect.height/2 - 10;
            
@@ -2278,7 +2294,10 @@ function playSeq({lv, mode='color', onDone=null}={}){ setRandomBackground();
                    const m = el(`<div class="magic-missile">${icons?icons[0]:'💥'}</div>`);
                    document.body.appendChild(m);
                    const pRect = padwrap.getBoundingClientRect();
-                   const bRect = boss.getBoundingClientRect();
+                   let bRect = boss.getBoundingClientRect();
+            if (currentMember?.birthdate === '691105') {
+               bRect = { left: window.innerWidth/2 - 25, top: -50, width: 50, height: 50 };
+            }
                    m.style.left = (pRect.left + pRect.width/2) + 'px';
                    m.style.top = (pRect.top + pRect.height/2) + 'px';
                    
@@ -2400,7 +2419,7 @@ function playMath({lv, qs=10, onDone=null}={}){ setRandomBackground();
             <button class="npkey" data-k="0">0</button>
             <button class="npkey npkey-back" data-k="back">⌫</button>
           </div>
-          <button class="btn btn-primary" id="submitBtn" style="font-size:24px; padding:14px 24px; margin-top:16px; width:100%; background:var(--warn); color:#fff;">공격 💥</button>
+          <button class="btn btn-primary" id="submitBtn" style="font-size:24px; padding:14px 24px; margin-top:16px; width:100%; background:var(--warn); color:#fff;">${currentMember?.birthdate === '691105' ? '간식 주기 🐾' : '공격 💥'}</button>
         </div>
         <div class="guide-wrap">${getGuideDogHtml()}<div class="game-guide">맞춘 개수 ${score}</div></div>
       </div>`);
@@ -2455,7 +2474,10 @@ function playMath({lv, qs=10, onDone=null}={}){ setRandomBackground();
               document.body.appendChild(m);
               m.style.left = startX + 'px'; m.style.top = startY + 'px';
               
-              const bossRect = boss.getBoundingClientRect();
+              let bossRect = boss.getBoundingClientRect();
+            if (currentMember?.birthdate === '691105') {
+               bossRect = { left: window.innerWidth/2 - 25, top: -50, width: 50, height: 50 };
+            }
               const destX = bossRect.left + bossRect.width/2 - 10;
               const destY = bossRect.top + bossRect.height/2 - 10;
               
@@ -2490,7 +2512,10 @@ function playMath({lv, qs=10, onDone=null}={}){ setRandomBackground();
                     boss.classList.remove('hit'); void boss.offsetWidth; boss.classList.add('hit'); setTimeout(() => { if(boss) boss.classList.remove('hit'); }, 500);
                     
                     // Telekinesis hit effect
-                    const bRect = boss.getBoundingClientRect();
+                    let bRect = boss.getBoundingClientRect();
+            if (currentMember?.birthdate === '691105') {
+               bRect = { left: window.innerWidth/2 - 25, top: -50, width: 50, height: 50 };
+            }
                     const tk = document.createElement('div');
                     tk.className = 'telekinesis-ring';
                     tk.style.left = (bRect.left + bRect.width/2 - 50) + 'px';
@@ -2640,13 +2665,16 @@ function playMathHard({qs=5, onDone=null}={}){ setRandomBackground();
             let hits = 0;
             
             chars.forEach((ch, idx) => {
-              const m = el(`<div class="magic-missile">${ch}</div>`);
+              const is69 = currentMember?.birthdate === '691105'; const m = el(`<div class="magic-missile">${is69 ? (session.idx < 5 ? '🍖' : '💧') : ch}</div>`);
               document.body.appendChild(m);
               const startX = rect.left + 15 + ((idx % chars.length) * Math.min(20, rect.width/Math.max(1, chars.length)));
               const startY = rect.top + rect.height/2;
               m.style.left = startX + 'px'; m.style.top = startY + 'px';
               
-              const bossRect = boss.getBoundingClientRect();
+              let bossRect = boss.getBoundingClientRect();
+            if (currentMember?.birthdate === '691105') {
+               bossRect = { left: window.innerWidth/2 - 25, top: -50, width: 50, height: 50 };
+            }
               const destX = bossRect.left + bossRect.width/2 - 10;
               const destY = bossRect.top + bossRect.height/2 - 10;
               
@@ -2778,7 +2806,7 @@ function playTyping({qs=5, onDone=null}={}){ setRandomBackground();
           <div class="type-quote" id="quoteText">${target}</div>
           <textarea id="typeInput" class="type-input" placeholder="여기에 따라 써보세요" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="resize:none; height:120px; line-height:1.5;"></textarea>
           <div id="typeHint" style="min-height:20px;font-size:14px;color:var(--warn);margin-top:8px;"></div>
-          <button class="btn btn-primary" id="typeSubmit" style="margin-top:4px;font-size:20px;padding:16px;">확인</button>
+          <button class="btn btn-primary" id="typeSubmit" style="margin-top:4px;font-size:20px;padding:16px;">${currentMember?.birthdate === '691105' ? '간식 주기 🐾' : '확인'}</button>
         </div>
         <div class="guide-wrap">${getGuideDogHtml()}<div class="game-guide" id="sc">맞춘 개수 ${score}</div></div>
       </div>`);
@@ -2843,14 +2871,17 @@ function playTyping({qs=5, onDone=null}={}){ setRandomBackground();
       
       chars.forEach((ch, idx) => {
         if(ch === ' ') return; // skip spaces
-        const m = el(`<div class="magic-missile">${ch}</div>`);
+        const is69 = currentMember?.birthdate === '691105'; const m = el(`<div class="magic-missile">${is69 ? (session.idx < 5 ? '🍖' : '💧') : ch}</div>`);
         document.body.appendChild(m);
         const startX = rect.left + 15 + (idx * Math.min(20, rect.width/chars.length));
         const startY = rect.top + rect.height/2;
         m.style.left = startX + 'px';
         m.style.top = startY + 'px';
         
-        const bossRect = boss.getBoundingClientRect();
+        let bossRect = boss.getBoundingClientRect();
+            if (currentMember?.birthdate === '691105') {
+               bossRect = { left: window.innerWidth/2 - 25, top: -50, width: 50, height: 50 };
+            }
         const destX = bossRect.left + bossRect.width/2 - 10;
         const destY = bossRect.top + bossRect.height/2 - 10;
         
@@ -3246,13 +3277,16 @@ function playDecompose({lv=1}={}){ setRandomBackground();
             btn.style.opacity = '0';
             let hits = 0;
             chars.forEach((ch, idx) => {
-              const m = el(`<div class="magic-missile">${ch}</div>`);
+              const is69 = currentMember?.birthdate === '691105'; const m = el(`<div class="magic-missile">${is69 ? (session.idx < 5 ? '🍖' : '💧') : ch}</div>`);
               document.body.appendChild(m);
               const startX = rect.left + 15 + (idx * Math.min(20, rect.width/chars.length));
               const startY = rect.top + rect.height/2;
               m.style.left = startX + 'px'; m.style.top = startY + 'px';
               
-              const bossRect = boss.getBoundingClientRect();
+              let bossRect = boss.getBoundingClientRect();
+            if (currentMember?.birthdate === '691105') {
+               bossRect = { left: window.innerWidth/2 - 25, top: -50, width: 50, height: 50 };
+            }
               const destX = bossRect.left + bossRect.width/2 - 10;
               const destY = bossRect.top + bossRect.height/2 - 10;
               
