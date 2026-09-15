@@ -182,6 +182,9 @@
   .domain-row .dlabel{display:flex;justify-content:space-between;font-family:'Jua';font-size:19px;margin-bottom:6px;}
   .dtrack{background:#F0E8D8;border-radius:999px;height:16px;overflow:hidden;}
   .dfill{height:100%;border-radius:999px;transition:width .9s ease;}
+  
+  .pad.shattered { background: transparent !important; color: transparent !important; box-shadow: none !important; border-color: transparent !important; transform: scale(0.8) !important; }
+
   /* modal */
   .overlay{position:fixed;inset:0;background:rgba(58,46,40,.5);display:flex;align-items:center;justify-content:center;padding:20px;z-index:60;}
   .modal{background:var(--paper);border-radius:26px;max-width:480px;width:100%;padding:26px 24px;box-shadow:var(--shadow);max-height:84vh;overflow:auto;}
@@ -885,10 +888,13 @@ function getAvatarImg(type) {
 }
 
 function getGuideDogHtml() {
+  let isSpecial = false;
   if (currentMember && currentMember.birthdate === '610708') {
     _secToggle = !_secToggle;
+    isSpecial = true;
   }
-  return `<div class="guide-dog" style="background-image: url('${getAvatarImg()}'); width: 80px; height: 80px; background-size: cover; background-position: center; border-radius: 50%; border: 3px solid #FFF; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-right: 12px; flex-shrink: 0;"></div>`;
+  const size = isSpecial ? '110px' : '80px';
+  return `<div class="guide-dog" style="background-image: url('${getAvatarImg()}'); width: ${size}; height: ${size}; background-size: cover; background-position: top center; border-radius: 50%; border: 3px solid #FFF; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-right: 12px; flex-shrink: 0;"></div>`;
 }
 // ---------- 명언 따라쓰기 스테이지용 짧은 문구 (전부 10자 이내로 검증됨) ----------
 const QUOTES=[
@@ -1276,10 +1282,16 @@ function startSession(){
   session={ stages:buildStages(L), idx:0, domainScores:{speed:[],memory:[],math:[],typing:[]} };
   showTransition(null,null,true);
 }
-function onGameDone(score100){
+function onGameDone(score100, durationSec = null){
   const stage=session.stages[session.idx];
   // 색깔 맞추기(순서 기억)는 맞출 때까지 재도전하는 통과형 스테이지라 점수 집계에서 제외
-  if(stage.domain!=='seq') session.domainScores[stage.domain].push(score100);
+  if(stage.domain!=='seq') {
+    session.domainScores[stage.domain].push(score100);
+    if(durationSec !== null) {
+      session.domainDurations = session.domainDurations || {};
+      session.domainDurations[stage.domain] = (session.domainDurations[stage.domain] || 0) + durationSec;
+    }
+  }
   session.idx++;
   if(session.idx>=session.stages.length) showFinalResult();
   else showTransition(stage, score100, false);
@@ -1317,7 +1329,12 @@ function showTransition(prevStage, prevScore, isFirst){
       </div>
     </div>`);
   app.appendChild(v);
-  v.querySelector('#goNext').addEventListener('click',()=>runGame(next, onGameDone));
+  let clicked = false;
+  v.querySelector('#goNext').addEventListener('click',()=> {
+    if (clicked) return;
+    clicked = true;
+    runGame(next, onGameDone);
+  });
 }
 function runGame(stage, onDone){
   if(stage.type==='speed') playSpeed({lv:stage.lv, rounds:5, onDone});
@@ -1573,6 +1590,66 @@ function showRetryNotice(onClose){
   ov.addEventListener('click',close);
   setTimeout(close, 2000); // 팝업 띄우는 시간 약간 늘림 (글씨가 많아졌으므로)
 }
+
+  function shatterPad(pad) {
+    const bg = getComputedStyle(pad).backgroundColor;
+    const wrap = document.createElement('div');
+    wrap.style.position = 'absolute';
+    wrap.style.left = '0'; wrap.style.top = '0';
+    wrap.style.width = '100%'; wrap.style.height = '100%';
+    wrap.style.pointerEvents = 'none';
+    wrap.style.zIndex = '10';
+    pad.appendChild(wrap);
+    
+    // Explosion emoji
+    const emj = document.createElement('div');
+    emj.textContent = '💥';
+    emj.style.position = 'absolute';
+    emj.style.left = '50%'; emj.style.top = '50%';
+    emj.style.transform = 'translate(-50%, -50%) scale(0.2)';
+    emj.style.fontSize = '80px';
+    emj.style.transition = 'transform 0.3s cubic-bezier(0.1, 0.8, 0.3, 1), opacity 0.4s';
+    wrap.appendChild(emj);
+    
+    // Shards
+    for(let i=0; i<10; i++){
+      const shard = document.createElement('div');
+      shard.style.position = 'absolute';
+      shard.style.width = '30px';
+      shard.style.height = '30px';
+      shard.style.background = bg;
+      shard.style.left = '50%';
+      shard.style.top = '50%';
+      shard.style.clipPath = `polygon(${rnd(100)}% 0%, 100% ${rnd(100)}%, 0% 100%)`;
+      shard.style.transform = 'translate(-50%, -50%)';
+      shard.style.transition = 'transform 0.5s cubic-bezier(0.1, 0.8, 0.3, 1), opacity 0.5s';
+      
+      const ang = Math.random() * Math.PI * 2;
+      const dist = 50 + Math.random() * 80;
+      const dx = Math.cos(ang) * dist;
+      const dy = Math.sin(ang) * dist;
+      const rot = (Math.random() - 0.5) * 720;
+      
+      wrap.appendChild(shard);
+      
+      requestAnimationFrame(()=>{
+        shard.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) rotate(${rot}deg) scale(0)`;
+        shard.style.opacity = '0';
+      });
+    }
+    
+    requestAnimationFrame(()=>{
+      emj.style.transform = 'translate(-50%, -50%) scale(1.5)';
+      emj.style.opacity = '0';
+    });
+    
+    pad.classList.add('shattered');
+    setTimeout(() => {
+      wrap.remove();
+      pad.classList.remove('shattered');
+    }, 500);
+  }
+
 function playSeq({lv, mode='color', onDone=null}={}){
   // 점수 집계에는 포함되지 않는 스테이지 — 맞출 때까지 몇 번이든 다시 보여주고, 최대 6개까지만 외우면 통과.
   // mode: 'color'(기본, 색깔) | 'object'(사물) | 'animal'(동물)
@@ -1584,7 +1661,7 @@ function playSeq({lv, mode='color', onDone=null}={}){
   const icons = mode==='object' ? shuffle(SEQ_OBJECTS).slice(0,4) : mode==='animal' ? shuffle(SEQ_ANIMALS).slice(0,4) : null;
   const COLOR_NAMES=['빨강','초록','파랑','노랑'];
   let seq=[],level=startLen-1,lock=true,roundCount=0;
-  for(let i=0;i<startLen-1;i++) seq.push(rnd(4));
+  let last=-1; for(let i=0;i<startLen-1;i++){ let n; do{n=rnd(4);}while(n===last); seq.push(n); last=n; }
   clear();
   const v=el(`
     <div class="fade">
@@ -1620,9 +1697,7 @@ function playSeq({lv, mode='color', onDone=null}={}){
       }
       return;
     }
-    const i=+p.dataset.p; flashPad(i); juiceTap(p); input.push(i);
-    const idx=input.length-1;
-    if(input[idx]!==seq[idx]) return onMistake();
+    const i=+p.dataset.p; input.push(i); const idx=input.length-1; if(input[idx]===seq[idx]){ shatterPad(p); beep(660, 0.1); } else { flashPad(i); juiceTap(p); return onMistake(); }
     if(input.length===seq.length){
       lock=true; stEl.textContent='좋아요! 😊';
       celebrateAt(padwrap,{count:12});
@@ -1757,6 +1832,7 @@ function playMath({lv, qs=10, onDone=null}={}){
 // ==========================================================
 function playMathHard({qs=5, onDone=null}={}){
   let q=0,score=0; const total=qs;
+  let startTime = Date.now();
   function makeProblem(){
     const op=pick(['+','−','×']);
     let a,b,ans;
@@ -1769,7 +1845,7 @@ function playMathHard({qs=5, onDone=null}={}){
     return{text:`${a} ${op} ${b}`,ans,opts:shuffle([...opts])};
   }
   function next(){
-    if(q>=total){ const finalScore=Math.round(score/total*100); return onDone?onDone(finalScore):null; }
+    if(q>=total){ const finalScore=Math.round(score/total*100); const duration=Math.round((Date.now()-startTime)/1000); return onDone?onDone(finalScore, duration):null; }
     q++;
     const p=makeProblem();
     clear();
@@ -1808,9 +1884,10 @@ function playMathHard({qs=5, onDone=null}={}){
 function playTyping({qs=5, onDone=null}={}){
   // 틀리면 입력칸 아래에 무엇이 다른지 알려주고, 정답을 맞힐 때까지 다음으로 넘어가지 않음.
   let q=0,score=0; const total=qs;
+  let startTime = Date.now();
   const pool=shuffle(QUOTES).slice(0,total);
   function next(){
-    if(q>=total){ const finalScore=Math.round(score/total*100); return onDone?onDone(finalScore):null; }
+    if(q>=total){ const finalScore=Math.round(score/total*100); const duration=Math.round((Date.now()-startTime)/1000); return onDone?onDone(finalScore, duration):null; }
     const target=pool[q];
     q++;
     let missedOnce=false;
@@ -2573,8 +2650,10 @@ function showFinalResult(){
   if(totalScore>(currentMember.bestTotal||0)){ currentMember.bestTotal=totalScore; }
   currentMember.scoreLog = pushCapped(currentMember.scoreLog, {
     ts:new Date().toISOString(), total:totalScore,
-    speed:domains.speed.score, math:domains.math.score, memory:domains.memory.score, typing:domains.typing.score
+    speed:domains.speed.score, math:domains.math.score, memory:domains.memory.score, typing:domains.typing.score,
+    durations: session.domainDurations || {}
   });
+  currentMember.completedLog = pushCapped(currentMember.completedLog || [], new Date().toISOString());
   saveMember();
   const PASS_SCORE=PASS_SCORE_BY_BIRTHDATE[currentMember.birthdate] ?? DEFAULT_PASS_SCORE;
   const passed=totalScore>=PASS_SCORE;
@@ -2609,11 +2688,20 @@ function showFinalResult(){
       ${passed?`<div class="btn-row" style="margin-top:10px;"><button class="btn btn-ghost" id="home">홈으로</button></div>`:''}
     </div>`);
   app.appendChild(v);
-  v.querySelector('#retry').addEventListener('click',startSession);
+  let chestTimer = null;
+  const onRetry = () => {
+    if (chestTimer) clearTimeout(chestTimer);
+    startSession();
+  };
+  const onHome = () => {
+    if (chestTimer) clearTimeout(chestTimer);
+    renderHome();
+  };
+  v.querySelector('#retry').addEventListener('click', onRetry);
   if(passed){
-    v.querySelector('#home').addEventListener('click',()=>renderHome());
+    v.querySelector('#home').addEventListener('click', onHome);
     // 통과 기준 점수 이상일 때만 3개 상자 선택 보너스 모달 팝업
-    setTimeout(() => { showChestRewardModal(); }, 650);
+    chestTimer = setTimeout(() => { showChestRewardModal(); }, 650);
   }
 }
 function getDiagnosis(total,domains){
@@ -3146,11 +3234,16 @@ async function renderMemberDetail(member){
   const fmt=fmtBirthdate(member.birthdate);
   const cardCount=Object.keys(member.cards||{}).length;
   const loginLog=(member.loginLog||[]).slice().reverse();
+  const completedLog=(member.completedLog||[]).slice().reverse();
   const scoreLog=(member.scoreLog||[]).slice().reverse();
 
   const loginHtml=loginLog.length? loginLog.slice(0,30).map(ts=>`
       <div style="padding:9px 0;border-bottom:1px solid var(--line);font-size:14px;">${fmtDateTime(ts)}</div>
     `).join('') : '<div style="color:var(--ink-soft);font-size:14px;padding:8px 0;">로그인 기록이 없어요</div>';
+
+  const completedHtml=completedLog.length? completedLog.slice(0,30).map(ts=>`
+      <div style="padding:9px 0;border-bottom:1px solid var(--line);font-size:14px;color:var(--ok);">${fmtDateTime(ts)}</div>
+    `).join('') : '<div style="color:var(--ink-soft);font-size:14px;padding:8px 0;">완료 기록이 없어요</div>';
 
   const scoreHtml=scoreLog.length? scoreLog.slice(0,30).map(s=>`
       <div style="padding:10px 0;border-bottom:1px solid var(--line);">
@@ -3158,7 +3251,8 @@ async function renderMemberDetail(member){
           <span style="font-size:13px;color:var(--ink-soft);">${fmtDateTime(s.ts)}</span>
           <span style="font-family:'Jua';font-size:18px;color:${scoreColor(s.total)};">${s.total}점</span>
         </div>
-        <div style="font-size:12px;color:var(--ink-soft);margin-top:3px;">⚡${s.speed} 🎵${s.seq} 🔢${s.math} 🃏${s.memory}</div>
+        <div style="font-size:12px;color:var(--ink-soft);margin-top:3px;">⚡${s.speed} 🎵${s.seq || 0} 🔢${s.math} 🃏${s.memory} ✍️${s.typing || 0}</div>
+        ${s.durations && Object.keys(s.durations).length > 0 ? `<div style="font-size:11px;color:#888;margin-top:2px;">소요시간: 🔢 ${s.durations.math || '-'}초 | ✍️ ${s.durations.typing || '-'}초</div>` : ''}
       </div>
     `).join('') : '<div style="color:var(--ink-soft);font-size:14px;padding:8px 0;">플레이 기록이 없어요</div>';
 
@@ -3179,6 +3273,10 @@ async function renderMemberDetail(member){
       <div class="admin-panel">
         <div class="section-title">📅 로그인 기록 (최근 ${Math.min(30,loginLog.length)}건)</div>
         <div>${loginHtml}</div>
+      </div>
+      <div class="admin-panel">
+        <div class="section-title">🏁 게임 완료 기록 (최근 ${Math.min(30,completedLog.length)}건)</div>
+        <div>${completedHtml}</div>
       </div>
       <div class="admin-panel">
         <div class="section-title">📊 점수 활동 내역 (최근 ${Math.min(30,scoreLog.length)}건)</div>
