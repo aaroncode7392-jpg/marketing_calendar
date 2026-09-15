@@ -2420,9 +2420,9 @@ function playTyping({qs=5, onDone=null}={}){ setRandomBackground();
     
     function playCutscene(cb, type) {
       const isLast = type === 'last';
-      const imgSrc = isLast ? 'assets/mutul_myosun.jpg' : 'assets/mutul_attack.jpg';
-      const diag1 = isLast ? '묘선아!' : '머털아 가자!';
-      const diag2 = isLast ? '머털아!' : '예, 사부님!';
+      const imgSrc = isLast ? 'assets/mutul_typing_finish.jpg' : 'assets/mutul_attack.jpg';
+      const diag1 = isLast ? '묘산아!' : '머털아 가자!';
+      const diag2 = isLast ? '머털아 가자!' : '예, 사부님!';
       
       const cv = el(`
         <div class="cutscene-overlay">
