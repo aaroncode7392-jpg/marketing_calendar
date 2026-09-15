@@ -219,8 +219,8 @@
   
   /* Typing Boss */
   .typing-boss-wrap { text-align: center; margin-top: -10px; margin-bottom: 10px; height: 110px; position: relative; display: flex; justify-content: center; align-items: center; }
-  .typing-boss { width: 110px; height: 110px; background: url('assets/slime_monster.jpg') center/cover no-repeat; mix-blend-mode: multiply; filter: contrast(1.1); transition: transform 0.2s; }
-  .typing-boss.hit { animation: bossHit 0.3s ease-out; filter: brightness(0.6) sepia(1) hue-rotate(-50deg) saturate(5) drop-shadow(0 0 10px red); background-image: url('assets/slime_monster_hurt.jpg') !important; }
+  .typing-boss { width: 110px; height: 110px; background: url('assets/slime_monster.png') center/cover no-repeat;  filter: contrast(1.1); transition: transform 0.2s; }
+  .typing-boss.hit { animation: bossHit 0.3s ease-out; filter: brightness(0.6) sepia(1) hue-rotate(-50deg) saturate(5) drop-shadow(0 0 10px red); background-image: url('assets/slime_monster_hurt.png') !important; }
   @keyframes bossHit {
     0% { transform: scale(1) translateX(0); }
     25% { transform: scale(0.9) translateX(-10px) rotate(-5deg); }
@@ -244,12 +244,12 @@
   .cutscene-dialogue { font-size: 34px; min-height: 48px; text-shadow: 0 4px 12px rgba(0,0,0,1); animation: textPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
 
   
-  .typing-boss.mushroom { background-image: url('assets/mushroom_monster.jpg') !important; }
-  .typing-boss.mushroom.hit { background-image: url('assets/mushroom_monster_hurt.jpg') !important; }
+  .typing-boss.mushroom { background-image: url('assets/mushroom_monster.png') !important; }
+  .typing-boss.mushroom.hit { background-image: url('assets/mushroom_monster_hurt.png') !important; }
 
   
-  .typing-boss.pig { background-image: url('assets/pig_monster.jpg') !important; }
-  .typing-boss.pig.hit { background-image: url('assets/pig_monster_hurt.jpg') !important; }
+  .typing-boss.pig { background-image: url('assets/pig_monster.png') !important; }
+  .typing-boss.pig.hit { background-image: url('assets/pig_monster_hurt.png') !important; }
 
   /* modal */
   .overlay{position:fixed;inset:0;background:rgba(58,46,40,.5);display:flex;align-items:center;justify-content:center;padding:20px;z-index:60;}
