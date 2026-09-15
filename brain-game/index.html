@@ -1824,6 +1824,7 @@ function playSeq({lv, mode='color', onDone=null}={}){ setRandomBackground();
     const i=+p.dataset.p; input.push(i); const idx=input.length-1; if(input[idx]===seq[idx]){ shatterPad(p); beep(660, 0.1); } else { flashPad(i); juiceTap(p); return onMistake(); }
     if(input.length===seq.length){
       lock=true; stEl.textContent='좋아요! 😊';
+      pads.forEach(p=>shatterPad(p));
       celebrateAt(padwrap,{count:12});
       if(level>=maxLen) return finish();
       setTimeout(nextLevel,850);
