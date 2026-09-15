@@ -1776,10 +1776,12 @@ function playSpeed({lv, rounds=5, onDone=null}={}){ setRandomBackground();
       }
       
       function playFinishCutscene(cb) {
-        const imgSrc = 'assets/mutul_speed_finish.jpg';
+        const isSpecial = loginUser === '691105';
+        const imgSrc = isSpecial ? 'assets/mutul_speed_finish.jpg' : 'assets/mutul_speed_finish_new.jpg';
+        const initialText = isSpecial ? "받아라! 무수한 바늘 공격!!" : "머리카락 공격!";
         const cv = el(`<div class="cutscene-overlay">
             <img src="${imgSrc}" class="cutscene-img cutscene-shake" id="csImg" style="animation-duration: 0.1s;">
-            <div class="cutscene-dialogue" id="csText">받아라! 무수한 바늘 공격!!</div>
+            <div class="cutscene-dialogue" id="csText">${initialText}</div>
           </div>`);
         document.body.appendChild(cv);
         beep(440, 0.2);
