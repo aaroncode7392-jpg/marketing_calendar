@@ -3387,6 +3387,13 @@ async function renderAdminLibrary(){
   });
 }
 
+
+
+  // 랜덤 배경 이미지 설정
+  const bgNum = Math.floor(Math.random() * 6) + 1;
+  document.body.style.background = `linear-gradient(rgba(255,251,242,0.5), rgba(255,251,242,0.5)), url('assets/bg_${bgNum}.jpg') center/cover no-repeat fixed`;
+
+
 // ---------- INIT ----------
 (function init(){ renderLoginScreen(); })();
 </script>
