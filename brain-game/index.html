@@ -2778,7 +2778,7 @@ function playTyping({qs=5, onDone=null}={}){ setRandomBackground();
           </div>
           <div style="font-size:13px;color:var(--ink-soft);margin-bottom:6px;">아래 문장을 그대로 따라 써보세요 (시간 제한 없어요)</div>
           <div class="type-quote" id="quoteText">${target}</div>
-          <input type="text" id="typeInput" class="type-input" placeholder="여기에 따라 써보세요" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+          <textarea id="typeInput" class="type-input" placeholder="여기에 따라 써보세요" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="resize:none; height:120px; line-height:1.5;"></textarea>
           <div id="typeHint" style="min-height:20px;font-size:14px;color:var(--warn);margin-top:8px;"></div>
           <button class="btn btn-primary" id="typeSubmit" style="margin-top:4px;font-size:20px;padding:16px;">확인</button>
         </div>
@@ -2932,11 +2932,12 @@ function playTyping({qs=5, onDone=null}={}){ setRandomBackground();
         beep(220,0.12);
         hint.textContent=diffHint(val);
         input.classList.add('type-wrong');
+        input.value = ''; // 틀렸을 때 작성된 내용 모두 지우기
         setTimeout(()=>input.classList.remove('type-wrong'),400);
       }
     }
     v.querySelector('#typeSubmit').addEventListener('click',submit);
-    input.addEventListener('keydown',(e)=>{ if(e.key==='Enter') submit(); });
+    input.addEventListener('keydown',(e)=>{ if(e.key==='Enter') { e.preventDefault(); submit(); } });
   }
   function msg(v,text){
     const m=el(`<div class="fx-text" style="margin-top:14px;font-family:'Jua';font-size:20px;color:var(--ok)">${text}</div>`);
