@@ -2771,8 +2771,16 @@ function playDecompose({lv=1}={}){ setRandomBackground();
               playDecompose({lv: level+1});
             });
           }
+        }
+        
+        if (Math.random() < 0.5) {
+           playEpicCutscene(() => runDecompAttack(proceedLogic));
         } else {
-          this.classList.add('wrongpick');
+           runDecompAttack(proceedLogic);
+        }
+        
+      } else {
+        this.classList.add('wrongpick');
           
           if (!isAbstract) {
             if (type === 'addition') {
