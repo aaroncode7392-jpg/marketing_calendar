@@ -2106,8 +2106,8 @@ function playTyping({qs=5, onDone=null}={}){ setRandomBackground();
     function playCutscene(cb) {
       const cv = el(`
         <div class="cutscene-overlay">
-          <img src="assets/mutul_attack.jpg" class="cutscene-img cutscene-shake" id="csImg">
-          <div class="cutscene-dialogue" id="csText">머털아 가자!</div>
+          <img src="assets/mutul_myosun.jpg" class="cutscene-img cutscene-shake" id="csImg">
+          <div class="cutscene-dialogue" id="csText">묘선아!</div>
         </div>
       `);
       document.body.appendChild(cv);
@@ -2116,7 +2116,7 @@ function playTyping({qs=5, onDone=null}={}){ setRandomBackground();
       setTimeout(() => {
         const csText = cv.querySelector('#csText');
         if(csText) {
-          csText.textContent = "예, 사부님!";
+          csText.textContent = "머털아!";
           csText.style.animation = 'none';
           void csText.offsetWidth; // trigger reflow
           csText.style.animation = 'textPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
