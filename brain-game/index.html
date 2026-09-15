@@ -2434,13 +2434,116 @@ function playMath({lv, qs=10, onDone=null}={}){ setRandomBackground();
         answered=true;
         digitsEl.classList.add('type-right');
         const qbox = v.querySelector('.qbox');
+        const boss = document.querySelector('#bossMath');
+        
+        function runMathAttack(callback) {
+           if(!boss) { callback(); return; }
+           const chars = String(p.ans).split('');
+           const rect = digitsEl.getBoundingClientRect();
+           const startX = rect.left + rect.width/2;
+           const startY = rect.top + rect.height/2;
+           
+           let hits = 0;
+           chars.forEach((char, idx) => {
+              const m = el(`<div class="magic-missile">${char}</div>`);
+              document.body.appendChild(m);
+              m.style.left = startX + 'px'; m.style.top = startY + 'px';
+              
+              const bossRect = boss.getBoundingClientRect();
+              const destX = bossRect.left + bossRect.width/2 - 10;
+              const destY = bossRect.top + bossRect.height/2 - 10;
+              
+              const cp1x = startX + (Math.random() > 0.5 ? 1 : -1) * (100 + Math.random()*200);
+              const cp1y = startY - 100 - Math.random()*200;
+              const cp2x = destX + (Math.random() > 0.5 ? 1 : -1) * (100 + Math.random()*200);
+              const cp2y = destY - 100 - Math.random()*150;
+              
+              let tStart = null;
+              const duration = 600 + Math.random()*300;
+              const delay = idx * 150;
+              let energyTransformed = false;
+              
+              setTimeout(() => {
+                beep(700, 0.05);
+                function anim(t) {
+                  if(!tStart) tStart = t;
+                  let pt = (t - tStart) / duration;
+                  if(pt > 1) pt = 1;
+                  
+                  const ix = Math.pow(1-pt, 3)*startX + 3*Math.pow(1-pt, 2)*pt*cp1x + 3*(1-pt)*Math.pow(pt, 2)*cp2x + Math.pow(pt, 3)*destX;
+                  const iy = Math.pow(1-pt, 3)*startY + 3*Math.pow(1-pt, 2)*pt*cp1y + 3*(1-pt)*Math.pow(pt, 2)*cp2y + Math.pow(pt, 3)*destY;
+                  m.style.left = ix + 'px'; m.style.top = iy + 'px';
+                  
+                  if(pt > 0.3 && !energyTransformed) {
+                    energyTransformed = true; m.classList.add('energy');
+                  }
+                  
+                  if(pt < 1) { requestAnimationFrame(anim); }
+                  else {
+                    m.remove();
+                    boss.classList.remove('hit'); void boss.offsetWidth; boss.classList.add('hit');
+                    if(q === total) celebrateAt(boss, {count: 15, parts: ['💥','✨','🌟','🔥']});
+                    else celebrateAt(boss, {count: 6, parts: ['💥','✨']});
+                    beep(220, 0.1);
+                    hits++;
+                    hp = Math.max(0, hp - (dmgPerQ / chars.length));
+                    const bar = document.querySelector('#bossHpBarMath');
+                    const txt = document.querySelector('#bossHpTextMath');
+                    if(bar) bar.style.width = hp + '%';
+                    if(txt) txt.textContent = Math.round(hp) + ' / 100';
+                    
+                    if(hits === chars.length) {
+                       if(Math.round(hp) <= 0 && boss) boss.classList.add('boss-die');
+                       setTimeout(callback, 300);
+                    }
+                  }
+                }
+                requestAnimationFrame(anim);
+              }, delay);
+           });
+        }
+        
+        function playMathFinishCutscene(cb) {
+           const imgSrc = 'assets/mutul_math_finish.jpg';
+           const cv = el(`<div class="cutscene-overlay">
+               <img src="${imgSrc}" class="cutscene-img cutscene-shake" id="csImg">
+               <div class="cutscene-dialogue" id="csText">머털아 가자!</div>
+             </div>`);
+           document.body.appendChild(cv);
+           beep(440, 0.2);
+           setTimeout(() => {
+             const csText = cv.querySelector('#csText');
+             if(csText) {
+               csText.textContent = "네 스승님!";
+               csText.style.animation = 'none'; void csText.offsetWidth;
+               csText.style.animation = 'textPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
+               beep(660, 0.4);
+             }
+           }, 1000);
+           setTimeout(() => {
+             cv.style.transition = 'opacity 0.4s'; cv.style.opacity = '0';
+             setTimeout(() => { cv.remove(); cb(); }, 400);
+           }, 2000);
+        }
+        
+        const finishAction = () => {
+          beep(660);score++;if(level<10)level++;
+          const m=el(`<div class="fx-text" style="margin-top:14px;font-family:'Jua';font-size:22px;color:var(--ok)">${pick(PRAISE)}</div>`);
+          v.querySelector('.panel').appendChild(m); setTimeout(next, 900);
+        };
+        
         qbox.classList.add('number-explode-fly');
         digitsEl.classList.add('number-explode-fly');
         celebrateAt(qbox, {count: 25, parts: ['✨','💥','⭐','🎉','🎊','🔥']});
         celebrateAt(digitsEl, {count: 25, parts: ['✨','💥','⭐','🎉','🎊','🔥']});
-        beep(660);score++;if(level<10)level++;
-        const m=el(`<div class="fx-text" style="margin-top:14px;font-family:'Jua';font-size:22px;color:var(--ok)">${pick(PRAISE)}</div>`);
-        v.querySelector('.panel').appendChild(m); setTimeout(next, 900);
+        
+        if (q === total) {
+           playMathFinishCutscene(() => {
+              runMathAttack(finishAction);
+           });
+        } else {
+           runMathAttack(finishAction);
+        }
       } else {
         digitsEl.classList.add('type-wrong');beep(220,0.12);
         const m=el(`<div class="fx-text err-msg" style="margin-top:14px;font-family:'Jua';font-size:18px;color:var(--warn)">다시 생각해보세요!</div>`);
