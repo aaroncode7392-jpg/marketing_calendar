@@ -1357,7 +1357,7 @@ function stageBar(){
 // ==========================================================
 // GAME 1: 순간 포착
 // ==========================================================
-function playSpeed({lv, rounds=5, onDone=null}={}){
+function playSpeed({lv, rounds=5, onDone=null}={}){ setRandomBackground();
   const s0=speedStart(lv||curLevel());
   const findCount=s0.findCount, size=s0.size;
   let round=0, totalScore=0, flash=s0.flash;
@@ -1536,7 +1536,7 @@ function playSpeed({lv, rounds=5, onDone=null}={}){
     card.classList.add('shattered');
   }
 
-function playMemory({lv, onDone=null}={}){
+function playMemory({lv, onDone=null}={}){ setRandomBackground();
   const pairs=memPairs(lv||curLevel());
   const faces=shuffle(EMOJIS).slice(0,pairs);
   const deck=shuffle([...faces,...faces]);
@@ -1707,7 +1707,7 @@ function showRetryNotice(onClose){
     }, 500);
   }
 
-function playSeq({lv, mode='color', onDone=null}={}){
+function playSeq({lv, mode='color', onDone=null}={}){ setRandomBackground();
   // 점수 집계에는 포함되지 않는 스테이지 — 맞출 때까지 몇 번이든 다시 보여주고, 최대 6개까지만 외우면 통과.
   // mode: 'color'(기본, 색깔) | 'object'(사물) | 'animal'(동물)
   const L=lv||curLevel();
@@ -1802,7 +1802,7 @@ function playSeq({lv, mode='color', onDone=null}={}){
 // ==========================================================
 // GAME 4: 빠른 셈
 // ==========================================================
-function playMath({lv, qs=10, onDone=null}={}){
+function playMath({lv, qs=10, onDone=null}={}){ setRandomBackground();
   let q=0,score=0,level=lv||curLevel(); const total=qs;
   function makeProblem(){
     const big=level<=2?9:Math.min(99,level*9);
@@ -1887,7 +1887,7 @@ function playMath({lv, qs=10, onDone=null}={}){
 // ==========================================================
 // GAME 4-2: 심화 계산 (3자리 덧셈/뺄셈, 2자리×1자리 곱셈 — 시간 제한 없음)
 // ==========================================================
-function playMathHard({qs=5, onDone=null}={}){
+function playMathHard({qs=5, onDone=null}={}){ setRandomBackground();
   let q=0,score=0; const total=qs;
   let startTime = Date.now();
   function makeProblem(){
@@ -2006,7 +2006,7 @@ function playTyping({qs=5, onDone=null}={}){
 // ==========================================================
 // GAME: 특별 훈련 (10 묶음 풀기 - 보존 개념 훈련)
 // ==========================================================
-function playDecompose({lv=1}={}){
+function playDecompose({lv=1}={}){ setRandomBackground();
   let level = lv;
   const maxLevels = 20;
   
@@ -2871,7 +2871,7 @@ async function renderHome(isNew=false){
   setTimeout(()=>{ showVerseCard(false); }, 350);
 }
 // ---------- 게임별 개별 연습 모드 (세션/점수 집계와 무관하게 한 판만 플레이) ----------
-function playPractice(type){
+function playPractice(type){ setRandomBackground();
   setGameBackground('assets/bg_landscape_'+(Math.floor(Math.random()*10)+1)+'.jpg');
   const L=curLevel();
   const onDone=(score)=>showPracticeResult(type,score);
@@ -3389,9 +3389,15 @@ async function renderAdminLibrary(){
 
 
 
-  // 랜덤 배경 이미지 설정
+
+function setRandomBackground() {
   const bgNum = Math.floor(Math.random() * 6) + 1;
   document.body.style.background = `linear-gradient(rgba(255,251,242,0.5), rgba(255,251,242,0.5)), url('assets/bg_${bgNum}.jpg') center/cover no-repeat fixed`;
+}
+function clearBackground() {
+  document.body.style.background = '';
+}
+
 
 
 // ---------- INIT ----------
