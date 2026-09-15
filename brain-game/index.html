@@ -2029,7 +2029,12 @@ function playMemory({lv, onDone=null}={}){ setRandomBackground();
            const destY = bossRect.top + bossRect.height/2 - 10;
            
            let hits = 0;
-           [rect1, rect2].forEach((rect, idx) => {
+           let rects = [rect1, rect2];
+           if (matched === pairs) {
+              rects = [];
+              for(let i=0; i<8; i++) { rects.push(rect1, rect2); }
+           }
+           rects.forEach((rect, idx) => {
               const startX = rect.left + rect.width/2;
               const startY = rect.top + rect.height/2;
               const m = el(`<div class="magic-missile">${a.dataset.f}</div>`);
@@ -2043,7 +2048,7 @@ function playMemory({lv, onDone=null}={}){ setRandomBackground();
               
               let tStart = null;
               const duration = 600 + Math.random()*300;
-              const delay = idx * 250;
+              const delay = (matched === pairs) ? idx * 40 : idx * 250;
               let energyTransformed = false;
               
               setTimeout(() => {
@@ -2282,36 +2287,52 @@ function playSeq({lv, mode='color', onDone=null}={}){ setRandomBackground();
         if (boss) {
            const totalRounds = maxLen - startLen + 1;
            const dmgPerRound = 100 / totalRounds;
-           const m = el(`<div class="magic-missile">${icons?icons[0]:'💥'}</div>`);
-           document.body.appendChild(m);
-           const pRect = padwrap.getBoundingClientRect();
-           const bRect = boss.getBoundingClientRect();
-           m.style.left = (pRect.left + pRect.width/2) + 'px';
-           m.style.top = (pRect.top + pRect.height/2) + 'px';
-           
-           setTimeout(() => {
-              m.style.left = (bRect.left + bRect.width/2 - 10) + 'px';
-              m.style.top = (bRect.top + bRect.height/2 - 10) + 'px';
-           }, 50);
-           
-           setTimeout(() => {
-              m.remove();
-              boss.classList.remove('hit'); void boss.offsetWidth; boss.classList.add('hit'); setTimeout(() => { if(boss) boss.classList.remove('hit'); }, 500);
-              celebrateAt(boss, {count:8, parts:['💥','✨']});
-              beep(220, 0.1);
-              hp = Math.max(0, hp - dmgPerRound);
-              const bar = document.querySelector('#bossHpBarSeq');
-              const txt = document.querySelector('#bossHpTextSeq');
-              if(bar) bar.style.width = hp + '%';
-              if(txt) txt.textContent = Math.round(hp) + ' / 100';
-              
-              if(level>=maxLen) {
-                 if(Math.round(hp)<=0) boss.classList.add('boss-die');
-                 setTimeout(() => finish(), 1000);
-              } else {
-                 setTimeout(nextLevel, 850);
-              }
-           }, 600);
+           const isFinal = level >= maxLen;
+           const missileCount = isFinal ? 15 : 1;
+           let hits = 0;
+           for(let i=0; i<missileCount; i++) {
+               const delay = isFinal ? i * 40 : 0;
+               setTimeout(() => {
+                   const m = el(`<div class="magic-missile">${icons?icons[0]:'💥'}</div>`);
+                   document.body.appendChild(m);
+                   const pRect = padwrap.getBoundingClientRect();
+                   const bRect = boss.getBoundingClientRect();
+                   m.style.left = (pRect.left + pRect.width/2) + 'px';
+                   m.style.top = (pRect.top + pRect.height/2) + 'px';
+                   
+                   setTimeout(() => {
+                      m.style.left = (bRect.left + bRect.width/2 - 10 + (Math.random()*40-20)) + 'px';
+                      m.style.top = (bRect.top + bRect.height/2 - 10 + (Math.random()*40-20)) + 'px';
+                   }, 50);
+                   
+                   setTimeout(() => {
+                      m.remove();
+                      hits++;
+                      if (hits === missileCount) {
+                         boss.classList.remove('hit'); void boss.offsetWidth; boss.classList.add('hit'); setTimeout(() => { if(boss) boss.classList.remove('hit'); }, 500);
+                         celebrateAt(boss, {count: isFinal ? 20 : 8, parts:['💥','✨','🌟','🔥']});
+                         beep(220, 0.1);
+                         hp = Math.max(0, hp - dmgPerRound);
+                         const bar = document.querySelector('#bossHpBarSeq');
+                         const txt = document.querySelector('#bossHpTextSeq');
+                         if(bar) bar.style.width = hp + '%';
+                         if(txt) txt.textContent = Math.round(hp) + ' / 100';
+                         
+                         if(isFinal) {
+                            if(Math.round(hp)<=0) boss.classList.add('boss-die');
+                            setTimeout(() => finish(), 1000);
+                         } else {
+                            setTimeout(nextLevel, 850);
+                         }
+                      } else {
+                         beep(220+Math.random()*100, 0.05);
+                         celebrateAt(boss, {count: 2, parts:['💥']});
+                      }
+                   }, 600);
+               }, delay);
+           }
+           // The original logic is replaced above
+
         } else {
            if(level>=maxLen) return finish();
            setTimeout(nextLevel, 850);
@@ -2438,7 +2459,11 @@ function playMath({lv, qs=10, onDone=null}={}){ setRandomBackground();
         
         function runMathAttack(callback) {
            if(!boss) { callback(); return; }
-           const chars = String(p.ans).split('');
+           let chars = String(p.ans).split('');
+           if (q === total) {
+              const base = chars.slice(); chars = [];
+              for(let i=0; i<15; i++) chars.push(...base);
+           }
            const rect = digitsEl.getBoundingClientRect();
            const startX = rect.left + rect.width/2;
            const startY = rect.top + rect.height/2;
@@ -2460,7 +2485,7 @@ function playMath({lv, qs=10, onDone=null}={}){ setRandomBackground();
               
               let tStart = null;
               const duration = 600 + Math.random()*300;
-              const delay = idx * 150;
+              const delay = (q === total) ? idx * 30 : idx * 150;
               let energyTransformed = false;
               
               setTimeout(() => {
@@ -2612,7 +2637,11 @@ function playMathHard({qs=5, onDone=null}={}){ setRandomBackground();
           const boss = document.querySelector('#bossMathHard');
           function runMathHardAttack(callback) {
             if(!boss) { callback(); return; }
-            const chars = String(p.ans).split('');
+            let chars = String(p.ans).split('');
+            if (q === total) {
+               const base = chars.slice(); chars = [];
+               for(let i=0; i<15; i++) chars.push(...base);
+            }
             const rect = btn.getBoundingClientRect();
             btn.style.opacity = '0';
             let hits = 0;
@@ -2635,7 +2664,7 @@ function playMathHard({qs=5, onDone=null}={}){ setRandomBackground();
               
               let tStart = null;
               const duration = 800 + Math.random()*400; // flashy and varied
-              const delay = idx * 150;
+              const delay = (q === total) ? idx * 30 : idx * 150;
               let energyTransformed = false;
               
               setTimeout(() => {
@@ -2838,7 +2867,7 @@ function playTyping({qs=5, onDone=null}={}){ setRandomBackground();
         
         let tStart = null;
         const duration = 700 + Math.random()*500;
-        const delay = idx * 60;
+        const delay = (q === total) ? idx * 20 : idx * 60;
         let energyTransformed = false;
         
         setTimeout(() => {
@@ -3215,7 +3244,11 @@ function playDecompose({lv=1}={}){ setRandomBackground();
           
           function runDecompAttack(callback) {
             if(!boss) { callback(); return; }
-            const chars = String(target).split('');
+            let chars = String(target).split('');
+            if (level >= maxLevels) {
+               const base = chars.slice(); chars = [];
+               for(let i=0; i<10; i++) chars.push(...base);
+            }
             const rect = btn.getBoundingClientRect();
             btn.style.opacity = '0';
             let hits = 0;
@@ -3237,7 +3270,7 @@ function playDecompose({lv=1}={}){ setRandomBackground();
               
               let tStart = null;
               const duration = 600 + Math.random()*400;
-              const delay = idx * 100;
+              const delay = (stageIdx === rounds - 1 && score === target.length) ? idx * 30 : idx * 100;
               let energyTransformed = false;
               
               setTimeout(() => {
