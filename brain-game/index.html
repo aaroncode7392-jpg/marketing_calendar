@@ -2815,8 +2815,8 @@ function playTyping({qs=5, onDone=null}={}){ setRandomBackground();
       if (loginUser === '691105') { cb(); return; }
       const isLast = type === 'last';
       const imgSrc = isLast ? 'assets/mutul_typing_finish.jpg' : 'assets/mutul_attack.jpg';
-      const diag1 = isLast ? '묘산아!' : '머털아 가자!';
-      const diag2 = isLast ? '머털아 가자!' : '예, 사부님!';
+      const diag1 = isLast ? '묘션아 준비됐지!' : '머털아 가자!';
+      const diag2 = isLast ? '응 머털아!' : '예, 사부님!';
       
       const cv = el(`
         <div class="cutscene-overlay">
