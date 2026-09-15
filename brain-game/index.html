@@ -2293,18 +2293,19 @@ function playSeq({lv, mode='color', onDone=null}={}){ setRandomBackground();
       lock=true; stEl.textContent='좋아요! 😊';
       celebrateAt(padwrap,{count:12});
       
-      if (!isSpecialUser) {
-        const boss = document.querySelector('#bossSeq');
-        if (boss) {
-           const totalRounds = maxLen - startLen + 1;
-           const dmgPerRound = 100 / totalRounds;
-           const isFinal = level >= maxLen;
-           const missileCount = isFinal ? 15 : 1;
-           let hits = 0;
-           for(let i=0; i<missileCount; i++) {
-               const delay = isFinal ? i * 40 : 0;
-               setTimeout(() => {
-                   const m = el(`<div class="magic-missile">${icons?icons[0]:'💥'}</div>`);
+      const boss = document.querySelector('#bossSeq');
+      if (boss) {
+         const totalRounds = maxLen - startLen + 1;
+         const dmgPerRound = 100 / totalRounds;
+         const isFinal = level >= maxLen;
+         const missileCount = isFinal ? 15 : 1;
+         let hits = 0;
+         for(let i=0; i<missileCount; i++) {
+             const delay = isFinal ? i * 40 : 0;
+             setTimeout(() => {
+                 const is69 = currentMember?.birthdate === '691105';
+                 const particle = is69 ? (session.idx < 5 ? '🍖' : '💧') : (icons ? icons[0] : '💥');
+                 const m = el(`<div class="magic-missile">${particle}</div>`);
                    document.body.appendChild(m);
                    const pRect = padwrap.getBoundingClientRect();
                    let bRect = boss.getBoundingClientRect();
@@ -2347,13 +2348,9 @@ function playSeq({lv, mode='color', onDone=null}={}){ setRandomBackground();
            }
            // The original logic is replaced above
 
-        } else {
-           if(level>=maxLen) return finish();
-           setTimeout(nextLevel, 850);
-        }
       } else {
-        if(level>=maxLen) return finish();
-        setTimeout(nextLevel,850);
+         if(level>=maxLen) return finish();
+         setTimeout(nextLevel, 850);
       }
     }
   }));
