@@ -2372,7 +2372,10 @@ function playDecompose({lv=1}={}){ setRandomBackground();
           <button class="iconbtn" id="quitDec" style="font-size:18px;">✕</button>
         </div>
         <div class="scoreline"><span class="pill">단계 ${level}/${maxLevels}</span></div>
-        <div class="panel" style="padding:24px 14px;">
+        <div class="panel" style="padding:24px 14px; position:relative;">
+          <div class="typing-boss-wrap" style="height:90px; margin-top:-10px; margin-bottom:15px;">
+             <div class="typing-boss" id="bossSlimeDecomp"></div>
+          </div>
           <div class="guide-wrap" style="margin-bottom:20px; margin-top:0;">
             ${getGuideDogHtml()}
             <div class="game-guide" style="font-size:22px; text-align:left; padding:16px;">
@@ -2519,9 +2522,93 @@ function playDecompose({lv=1}={}){ setRandomBackground();
         if(val === target){
           answered = true;
           this.classList.add('right');
-          juiceTap(this);
+          const btn = this;
+          const boss = document.querySelector('#bossSlimeDecomp');
           
-          if (!isAbstract) {
+          function runDecompAttack(callback) {
+            if(!boss) { callback(); return; }
+            const chars = String(target).split('');
+            const rect = btn.getBoundingClientRect();
+            btn.style.opacity = '0';
+            let hits = 0;
+            chars.forEach((ch, idx) => {
+              const m = el(`<div class="magic-missile">${ch}</div>`);
+              document.body.appendChild(m);
+              const startX = rect.left + 15 + (idx * Math.min(20, rect.width/chars.length));
+              const startY = rect.top + rect.height/2;
+              m.style.left = startX + 'px'; m.style.top = startY + 'px';
+              
+              const bossRect = boss.getBoundingClientRect();
+              const destX = bossRect.left + bossRect.width/2 - 10;
+              const destY = bossRect.top + bossRect.height/2 - 10;
+              
+              const cp1x = startX + (Math.random() > 0.5 ? 1 : -1) * (50 + Math.random()*200);
+              const cp1y = startY - 50 - Math.random()*150;
+              const cp2x = destX + (Math.random() > 0.5 ? 1 : -1) * (50 + Math.random()*200);
+              const cp2y = destY - 100 - Math.random()*150;
+              
+              let tStart = null;
+              const duration = 600 + Math.random()*400;
+              const delay = idx * 100;
+              let energyTransformed = false;
+              
+              setTimeout(() => {
+                beep(700 + Math.random()*300, 0.05);
+                function anim(t) {
+                  if(!tStart) tStart = t;
+                  let p = (t - tStart) / duration;
+                  if(p > 1) p = 1;
+                  
+                  const ix = Math.pow(1-p, 3)*startX + 3*Math.pow(1-p, 2)*p*cp1x + 3*(1-p)*Math.pow(p, 2)*cp2x + Math.pow(p, 3)*destX;
+                  const iy = Math.pow(1-p, 3)*startY + 3*Math.pow(1-p, 2)*p*cp1y + 3*(1-p)*Math.pow(p, 2)*cp2y + Math.pow(p, 3)*destY;
+                  m.style.left = ix + 'px'; m.style.top = iy + 'px';
+                  
+                  if(p > 0.3 && !energyTransformed) {
+                    energyTransformed = true; m.classList.add('energy');
+                  }
+                  
+                  if(p < 1) { requestAnimationFrame(anim); }
+                  else {
+                    m.remove();
+                    boss.classList.remove('hit'); void boss.offsetWidth; boss.classList.add('hit');
+                    celebrateAt(boss, {count: 6, parts: ['💥','✨']});
+                    beep(220 + Math.random()*100, 0.1);
+                    hits++;
+                    if(hits === chars.length) setTimeout(callback, 300);
+                  }
+                }
+                requestAnimationFrame(anim);
+              }, delay);
+            });
+          }
+          
+          function playEpicCutscene(cb) {
+            const isEpic = Math.random() < 0.5;
+            const imgSrc = isEpic ? 'assets/mutul_epic.jpg' : 'assets/mutul_attack.jpg';
+            const dialogue = isEpic ? "가랏!! 초필살기!!" : "머털아 가자!";
+            const cv = el(`<div class="cutscene-overlay">
+                <img src="${imgSrc}" class="cutscene-img cutscene-shake" id="csImg">
+                <div class="cutscene-dialogue" id="csText">${dialogue}</div>
+              </div>`);
+            document.body.appendChild(cv);
+            beep(440, 0.2);
+            setTimeout(() => {
+              const csText = cv.querySelector('#csText');
+              if(csText) {
+                csText.textContent = isEpic ? "받아라 요괴야!!" : "예, 사부님!";
+                csText.style.animation = 'none'; void csText.offsetWidth;
+                csText.style.animation = 'textPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
+                beep(660, 0.2);
+              }
+            }, 1000);
+            setTimeout(() => {
+              cv.style.transition = 'opacity 0.4s'; cv.style.opacity = '0';
+              setTimeout(() => { cv.remove(); cb(); }, 400);
+            }, 2000);
+          }
+          
+          function proceedLogic() {
+            if (!isAbstract) {
             if (type === 'addition') {
               showDecomposeModal(true, "정답입니다!", "낱개 10개가 꽉 차서 <b>금화 주머니 1개</b>로 받아올림 되었어요!", () => {
                 playDecompose({lv: level+1});
