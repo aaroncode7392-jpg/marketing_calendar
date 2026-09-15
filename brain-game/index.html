@@ -264,6 +264,13 @@
     100% { transform: scale(0) rotate(180deg); filter: brightness(0); opacity: 0; }
   }
 
+  
+  @keyframes fleeRight {
+    0% { transform: translateX(0) scale(1) scaleX(-1); opacity: 1; }
+    20% { transform: translateX(-20px) scale(1) scaleX(-1); opacity: 1; }
+    100% { transform: translateX(100vw) scale(0.5) scaleX(-1); opacity: 0; }
+  }
+
   /* modal */
   .overlay{position:fixed;inset:0;background:rgba(58,46,40,.5);display:flex;align-items:center;justify-content:center;padding:20px;z-index:60;}
   .modal{background:var(--paper);border-radius:26px;max-width:480px;width:100%;padding:26px 24px;box-shadow:var(--shadow);max-height:84vh;overflow:auto;}
@@ -1698,6 +1705,19 @@ function playSpeed({lv, rounds=5, onDone=null}={}){ setRandomBackground();
         }, 2200);
       }
       
+      function playFleeCutscene(cb) {
+        const cv = el(`<div class="cutscene-overlay">
+            <img src="assets/pig_monster_bandaged.png" class="cutscene-img" style="animation: fleeRight 2.5s forwards;" id="csImg">
+            <div class="cutscene-dialogue" id="csText" style="font-size: 20px; line-height: 1.4;">허허 마무리가 부족했군<br>문제를 조금 틀리다니 난 도망간다</div>
+          </div>`);
+        document.body.appendChild(cv);
+        beep(330, 0.3);
+        setTimeout(() => {
+          cv.style.transition = 'opacity 0.4s'; cv.style.opacity = '0';
+          setTimeout(() => { cv.remove(); cb(); }, 400);
+        }, 2800);
+      }
+      
       function playEpicCutscene(cb) {
         const imgSrc = 'assets/mutul_think.jpg';
         const dialogue = "음... 어디 보자...";
@@ -1732,6 +1752,14 @@ function playSpeed({lv, rounds=5, onDone=null}={}){ setRandomBackground();
         const sc=document.querySelector('#sc'); if(sc) sc.textContent='맞춘 칸 '+totalScore;
         if(allRight) flash=Math.max(350,flash-90); else flash=Math.min(1700,flash+130);
         if(allRight) confetti(2);
+        
+        if (round === totalRounds && Math.round(hp) > 0) {
+           playFleeCutscene(() => {
+              feedback(allRight?`${pick(PRAISE)} (${findCount}/${findCount})`:`${roundScore}개 맞았어요!`, allRight);
+           });
+           return;
+        }
+        
         feedback(allRight?`${pick(PRAISE)} (${findCount}/${findCount})`:`${roundScore}개 맞았어요!`, allRight);
       }
 
