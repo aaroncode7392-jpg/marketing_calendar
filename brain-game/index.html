@@ -2801,12 +2801,11 @@ function playTyping({qs=5, onDone=null}={}){ setRandomBackground();
       return '';
     }
     
-    function playCutscene(cb, type) {
+    function playCutscene(cb) {
       if (currentMember?.birthdate === '691105') { cb(); return; }
-      const isLast = type === 'last';
-      const imgSrc = isLast ? 'assets/mutul_typing_finish.jpg' : 'assets/mutul_attack.jpg';
-      const diag1 = isLast ? '묘션아 준비됐지!' : '머털아 가자!';
-      const diag2 = isLast ? '응 머털아!' : '예, 사부님!';
+      const imgSrc = 'assets/mutul_typing_finish.jpg';
+      const diag1 = '묘선아 준비됐지!';
+      const diag2 = '응 머털아!';
       
       const cv = el(`
         <div class="cutscene-overlay">
@@ -2922,10 +2921,8 @@ function playTyping({qs=5, onDone=null}={}){ setRandomBackground();
         if(!missedOnce) score++;
         hint.textContent='';
         
-        if (q === 1) {
-          playCutscene(doItanoCircus, 'first');
-        } else if (q === total) {
-          playCutscene(doItanoCircus, 'last');
+        if (q === total) {
+          playCutscene(doItanoCircus);
         } else {
           doItanoCircus();
         }
