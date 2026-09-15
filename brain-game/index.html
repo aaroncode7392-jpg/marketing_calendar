@@ -1753,7 +1753,7 @@ function playSpeed({lv, rounds=5, onDone=null}={}){ setRandomBackground();
                 if(p < 1) { requestAnimationFrame(anim); }
                 else {
                   m.remove();
-                  boss.classList.remove('hit'); void boss.offsetWidth; boss.classList.add('hit');
+                  boss.classList.remove('hit'); void boss.offsetWidth; boss.classList.add('hit'); setTimeout(() => { if(boss) boss.classList.remove('hit'); }, 500);
                   celebrateAt(boss, {count: 5, parts: ['💥','✨']});
                   beep(220 + Math.random()*100, 0.1);
                   totalHits++;
@@ -2064,7 +2064,7 @@ function playMemory({lv, onDone=null}={}){ setRandomBackground();
                   if(pt < 1) { requestAnimationFrame(anim); }
                   else {
                     m.remove();
-                    boss.classList.remove('hit'); void boss.offsetWidth; boss.classList.add('hit');
+                    boss.classList.remove('hit'); void boss.offsetWidth; boss.classList.add('hit'); setTimeout(() => { if(boss) boss.classList.remove('hit'); }, 500);
                     if(matched === pairs) celebrateAt(boss, {count: 15, parts: ['💥','✨','🌟','🔥']});
                     else celebrateAt(boss, {count: 6, parts: ['💥','✨']});
                     beep(220, 0.1);
@@ -2296,7 +2296,7 @@ function playSeq({lv, mode='color', onDone=null}={}){ setRandomBackground();
            
            setTimeout(() => {
               m.remove();
-              boss.classList.remove('hit'); void boss.offsetWidth; boss.classList.add('hit');
+              boss.classList.remove('hit'); void boss.offsetWidth; boss.classList.add('hit'); setTimeout(() => { if(boss) boss.classList.remove('hit'); }, 500);
               celebrateAt(boss, {count:8, parts:['💥','✨']});
               beep(220, 0.1);
               hp = Math.max(0, hp - dmgPerRound);
@@ -2481,7 +2481,7 @@ function playMath({lv, qs=10, onDone=null}={}){ setRandomBackground();
                   if(pt < 1) { requestAnimationFrame(anim); }
                   else {
                     m.remove();
-                    boss.classList.remove('hit'); void boss.offsetWidth; boss.classList.add('hit');
+                    boss.classList.remove('hit'); void boss.offsetWidth; boss.classList.add('hit'); setTimeout(() => { if(boss) boss.classList.remove('hit'); }, 500);
                     if(q === total) celebrateAt(boss, {count: 15, parts: ['💥','✨','🌟','🔥']});
                     else celebrateAt(boss, {count: 6, parts: ['💥','✨']});
                     beep(220, 0.1);
@@ -2656,7 +2656,7 @@ function playMathHard({qs=5, onDone=null}={}){ setRandomBackground();
                   if(pt < 1) { requestAnimationFrame(anim); }
                   else {
                     m.remove();
-                    boss.classList.remove('hit'); void boss.offsetWidth; boss.classList.add('hit');
+                    boss.classList.remove('hit'); void boss.offsetWidth; boss.classList.add('hit'); setTimeout(() => { if(boss) boss.classList.remove('hit'); }, 500);
                     
                     if(q === total) celebrateAt(boss, {count: 15, parts: ['💥','✨','🌟','🔥']});
                     else celebrateAt(boss, {count: 6, parts: ['💥','✨']});
@@ -2865,7 +2865,7 @@ function playTyping({qs=5, onDone=null}={}){ setRandomBackground();
               m.remove();
               boss.classList.remove('hit');
               void boss.offsetWidth;
-              boss.classList.add('hit');
+              boss.classList.add('hit'); setTimeout(() => { if(boss) boss.classList.remove('hit'); }, 500);
               celebrateAt(boss, {count: 5, parts: ['💥','✨']});
               beep(220 + Math.random()*100, 0.1);
               hits++;
@@ -3258,7 +3258,7 @@ function playDecompose({lv=1}={}){ setRandomBackground();
                   if(p < 1) { requestAnimationFrame(anim); }
                   else {
                     m.remove();
-                    boss.classList.remove('hit'); void boss.offsetWidth; boss.classList.add('hit');
+                    boss.classList.remove('hit'); void boss.offsetWidth; boss.classList.add('hit'); setTimeout(() => { if(boss) boss.classList.remove('hit'); }, 500);
                     celebrateAt(boss, {count: 6, parts: ['💥','✨']});
                     beep(220 + Math.random()*100, 0.1);
                     hits++;
