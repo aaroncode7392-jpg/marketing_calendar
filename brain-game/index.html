@@ -1505,7 +1505,7 @@ function showTransition(prevStage, prevScore, isFirst){
         </div>
         
         <div style="position:relative; width: 300px; height: 300px; margin: 0 auto;">
-          <img id="malaImg" src="assets/mala_wait_food.png" style="width: 100%; height: 100%; object-fit: contain; transition: transform 0.5s ease-in-out;">
+          <img id="malaImg" src="assets/mala_frames/idle_0.png" style="width: 100%; height: 100%; object-fit: contain; transition: transform 0.5s ease-in-out;">
           <div id="bowlOverlay" style="position:absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 140px; height: ${bowlHeight}px; background: ${overlayColor}; border-radius: 50% 50% 10px 10px; transition: height 1s; opacity: ${isWater ? '0.9' : '1'}; pointer-events: none; mix-blend-mode: ${isWater ? 'multiply' : 'normal'}; overflow: hidden;">
              ${pelletsHtml}
           </div>
@@ -1522,58 +1522,74 @@ function showTransition(prevStage, prevScore, isFirst){
     const malaImg = v.querySelector('#malaImg');
     
     // 강아지 AI 상태 머신 로직
-    let puppyAiTimer = null;
+    let puppyStateTimer = null;
+    let puppyAnimTimer = null;
     let currentPuppyX = 0;
     
-    function startPuppyAI() {
-       puppyAiTimer = setInterval(() => {
+    const frames = {
+       IDLE: ['assets/mala_frames/idle_0.png', 'assets/mala_frames/idle_1.png', 'assets/mala_frames/idle_2.png', 'assets/mala_frames/idle_3.png'],
+       WALK: ['assets/mala_frames/walk_0.png', 'assets/mala_frames/walk_1.png', 'assets/mala_frames/walk_2.png', 'assets/mala_frames/walk_3.png', 'assets/mala_frames/walk_4.png', 'assets/mala_frames/walk_5.png'],
+       SNIFF: ['assets/mala_frames/sniff_0.png', 'assets/mala_frames/sniff_1.png', 'assets/mala_frames/sniff_2.png', 'assets/mala_frames/sniff_3.png', 'assets/mala_frames/sniff_4.png']
+    };
+    
+    let currentState = 'IDLE';
+    let frameIdx = 0;
+    let dir = 1;
+    
+    function startPuppyAnim() {
+       puppyAnimTimer = setInterval(() => {
           if (!malaImg || !document.body.contains(malaImg)) {
-             clearInterval(puppyAiTimer);
+             clearInterval(puppyAnimTimer);
+             if (puppyStateTimer) clearInterval(puppyStateTimer);
              return;
           }
+          frameIdx = (frameIdx + 1) % frames[currentState].length;
+          malaImg.src = frames[currentState][frameIdx];
+       }, 150);
+    }
+
+    function startPuppyAI() {
+       puppyStateTimer = setInterval(() => {
+          if (!malaImg || !document.body.contains(malaImg)) return;
           const r = Math.random();
           if (r < 0.4) {
-             // WANDER (좌우로 뛰기)
-             const dir = Math.random() < 0.5 ? -1 : 1;
-             currentPuppyX = dir * (40 + Math.random() * 70);
+             currentState = 'WALK';
+             dir = Math.random() < 0.5 ? -1 : 1;
+             // 300px 그림 상자가 폭 375~390px 폰 화면 밖으로 나가 얼굴이 잘리지 않도록 이동 폭 제한
+             currentPuppyX = dir * (15 + Math.random() * 25);
              malaImg.style.transform = `translateX(${currentPuppyX}px) scaleX(${dir})`;
-             malaImg.src = 'assets/mala_wait_food.png';
              malaImg.classList.remove('puppy-bounce');
-             void malaImg.offsetWidth; // trigger reflow
-             malaImg.classList.add('puppy-bounce');
           } else if (r < 0.6) {
-             // SNIFF (밥그릇 냄새 맡기)
+             currentState = 'SNIFF';
              currentPuppyX = 0;
              malaImg.style.transform = `translateX(0px) scaleX(1)`;
-             malaImg.src = 'assets/mala_eat_1.png';
           } else {
-             // IDLE (가만히 두리번)
-             malaImg.style.transform = `translateX(${currentPuppyX}px) scaleX(${Math.random() < 0.5 ? 1 : -1})`;
-             malaImg.src = 'assets/mala_wait_food.png';
+             currentState = 'IDLE';
+             dir = Math.random() < 0.5 ? 1 : -1;
+             malaImg.style.transform = `translateX(${currentPuppyX}px) scaleX(${dir})`;
           }
-       }, 1500);
+          frameIdx = 0;
+       }, 2000);
     }
     
     // 특수 클리어 이벤트(5단계, 10단계)가 아니면 AI 시작
     if (!(idx === 5 && !isFirst) && idx !== 10) {
+       startPuppyAnim();
        startPuppyAI();
     }
     
     // 특수 이벤트 처리: 5스테이지 클리어(밥 다먹음), 10스테이지 클리어(물 다마심)
     if (idx === 5 && !isFirst) {
       if(btn) btn.style.display = 'none'; // 자동 진행이므로 숨김
-      const malaImg = v.querySelector('#malaImg');
       const bowl = v.querySelector('#bowlOverlay');
       
-      let t = 0;
-      const eatAnim = setInterval(() => {
-        malaImg.src = t % 2 === 0 ? 'assets/mala_eat_1.png' : 'assets/mala_wait_food.png';
-        t++;
-      }, 300);
+      currentState = 'SNIFF';
+      frameIdx = 0;
+      startPuppyAnim();
       
       setTimeout(() => {
-        clearInterval(eatAnim);
-        malaImg.src = 'assets/mala_wait_food.png';
+        clearInterval(puppyAnimTimer);
+        malaImg.src = frames['IDLE'][0];
         bowl.style.height = '0px'; // 밥 다 먹음
         v.querySelector('#malaText').textContent = "물도 마시고 싶어요";
         v.querySelector('#malaText').style.animation = 'textPop 0.5s';
@@ -1584,17 +1600,15 @@ function showTransition(prevStage, prevScore, isFirst){
         }, 2000);
       }, 3000);
     } else if (idx === 10) {
-      const malaImg = v.querySelector('#malaImg');
       const bowl = v.querySelector('#bowlOverlay');
-      let t = 0;
-      const drinkAnim = setInterval(() => {
-        malaImg.src = t % 2 === 0 ? 'assets/mala_eat_1.png' : 'assets/mala_wait_food.png';
-        t++;
-      }, 300);
+      
+      currentState = 'SNIFF';
+      frameIdx = 0;
+      startPuppyAnim();
       
       setTimeout(() => {
-        clearInterval(drinkAnim);
-        malaImg.src = 'assets/mala_wait_food.png';
+        clearInterval(puppyAnimTimer);
+        malaImg.src = frames['IDLE'][0];
         bowl.style.height = '0px'; // 물 다 마심
         v.querySelector('#malaText').textContent = "고마워요!";
         v.querySelector('#malaText').style.animation = 'textPop 0.5s';
@@ -4597,6 +4611,6 @@ function clearBackground() {
 // ---------- INIT ----------
 (function init(){ renderLoginScreen(); })();
 </script>
-<script src="benchmark.js?v=1"></script>
+<script src="benchmark.js?v=2"></script>
 </body>
 </html>

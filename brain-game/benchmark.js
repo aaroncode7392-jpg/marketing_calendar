@@ -1,11 +1,11 @@
 // ==========================================================
-// 월 1회 두뇌 건강 측정 (benchmark v1)
-// 매달 같은 조건으로 재야 추이를 비교할 수 있으므로, 이 파일의 문항·시간·채점 방식은 바꾸지 말 것.
+// 주 1회 두뇌 건강 측정 (benchmark v1)
+// 매주 같은 조건으로 재야 추이를 비교할 수 있으므로, 이 파일의 문항·시간·채점 방식은 바꾸지 말 것.
 // 바꿔야 한다면 BM_VERSION을 올려서 이전 버전 기록과 섞이지 않게 한다.
 // ==========================================================
 (function () {
   const BM_VERSION = 1;
-  const DUE_DAYS = 28;
+  const DUE_DAYS = 7;
   const LOG_CAP = 240;
   const WORD_SHOW_MS = 2500, WORD_GAP_MS = 500;
   const DIGIT_SHOW_MS = 700, DIGIT_GAP_MS = 300;
@@ -304,8 +304,8 @@
     card.className = 'hero';
     card.style.cssText = 'padding:16px 20px;border-color:#BFDBFF;background:#F2F8FF;';
     card.innerHTML = `
-      <div style="font-family:'Jua';font-size:20px;">📋 이달의 두뇌 건강 측정</div>
-      <div style="font-size:15px;color:var(--ink-soft);margin:4px 0 10px;line-height:1.5;">한 달에 한 번, 약 5분이에요.<br>매번 같은 방식으로 재서 변화를 살펴봐요.</div>
+      <div style="font-family:'Jua';font-size:20px;">📋 이번 주 두뇌 건강 측정</div>
+      <div style="font-size:15px;color:var(--ink-soft);margin:4px 0 10px;line-height:1.5;">일주일에 한 번, 약 5분이에요.<br>매번 같은 방식으로 재서 변화를 살펴봐요.</div>
       <button class="btn" id="bmStart" style="margin:0;background:#4A7FD4;font-size:20px;padding:14px;">측정 시작하기</button>`;
     anchor.parentNode.insertBefore(card, anchor);
     card.querySelector('#bmStart').addEventListener('click', start);
@@ -329,12 +329,19 @@
       const a = log[log.length - 2], b = log[log.length - 1];
       change = `<div style="font-size:13px;margin-top:8px;">직전 대비: 단어 ${cmp(b.wordImm.hit, a.wordImm.hit)} · 숫자 ${cmp(b.digitSpan, a.digitSpan)} · 그림 ${cmp(b.speed.correct, a.speed.correct)} · 나중 단어 ${cmp(b.wordDel.hit, a.wordDel.hit)}</div>`;
     }
+    // 매주 재면 한 주 단위 오르내림이 크므로, 4회(약 한 달) 평균으로 흐름을 본다
+    const avg4 = (rs) => {
+      const m = f => (rs.reduce((s, r) => s + f(r), 0) / rs.length).toFixed(1);
+      return `단어 ${m(r => r.wordImm.hit)} · 숫자 ${m(r => r.digitSpan)} · 그림 ${m(r => r.speed.correct)} · 나중 단어 ${m(r => r.wordDel.hit)}`;
+    };
+    if (log.length >= 4) change += `<div style="font-size:13px;margin-top:4px;"><b>최근 4회 평균</b>: ${avg4(log.slice(-4))}</div>`;
+    if (log.length >= 12) change += `<div style="font-size:13px;margin-top:2px;"><b>기준선(5~8회차) 평균</b>: ${avg4(log.slice(4, 8))}</div>`;
     const dl = member.domainLevels || {};
     const lvLine = `⚡ 순간포착 ${dl.speed ?? member.level ?? 8}단계 · 🔢 빠른셈 ${dl.math ?? member.level ?? 8}단계 · 🃏 짝맞추기 ${dl.memory ?? member.level ?? 8}단계`;
     const panel = document.createElement('div');
     panel.className = 'admin-panel';
     panel.innerHTML = `
-      <div class="section-title">🧪 월 1회 두뇌 건강 측정 (${log.length}회)</div>
+      <div class="section-title">🧪 주 1회 두뇌 건강 측정 (${log.length}회)</div>
       ${log.length ? `
       <div style="overflow-x:auto;">
         <table style="width:100%;border-collapse:collapse;font-size:13px;text-align:center;">
@@ -343,8 +350,8 @@
         </table>
       </div>${change}` : '<div style="font-size:14px;color:var(--ink-soft);">아직 측정 기록이 없어요. 홈 화면에 측정 카드가 떠 있어요.</div>'}
       <div style="font-size:12px;color:var(--ink-soft);line-height:1.6;margin-top:10px;">
-        · 처음 2~3회는 익숙해지면서 오르는 게 정상이라, 3회차 이후를 기준선으로 보세요.<br>
-        · 한 번 떨어진 건 수면·피로·컨디션 영향이 커요. 2~3회 연속으로 떨어지면(특히 '단어(나중)') 치매안심센터 선별검사를 권해요.<br>
+        · 처음 4회(약 한 달)는 익숙해지면서 오르는 게 정상이라, 5~8회차 평균을 기준선으로 보세요.<br>
+        · 매주 기록은 수면·피로·컨디션에 따라 오르내림이 커요. 한 주가 아니라 '최근 4회 평균'이 기준선보다 2달 이상 계속 낮으면(특히 '단어(나중)') 치매안심센터 선별검사를 권해요.<br>
         · 진단 도구가 아니라 같은 조건에서 본인 변화를 보는 기록이에요.
       </div>
       <div style="font-size:13px;margin-top:10px;"><b>매일 게임 훈련 난이도(자동 조절)</b><br>${lvLine}</div>`;
