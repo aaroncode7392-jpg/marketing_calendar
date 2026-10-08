@@ -979,7 +979,8 @@ async function listAllMembers(){
     try{
       const snap=await db.collection('members').get();
       const members=[];
-      snap.forEach(doc=>members.push(doc.data()));
+      // 같은 컬렉션에 있는 합동게임 방 문서(coop-...)는 회원이 아니므로 제외
+      snap.forEach(doc=>{ const d=doc.data(); if(d.birthdate) members.push(d); });
       return members.sort((a,b)=> (b.lastLogin||'').localeCompare(a.lastLogin||''));
     }catch(e){ /* 실패 시 아래 로컬 목록으로 폴백 */ }
   }
@@ -4114,6 +4115,7 @@ async function renderHome(isNew=false){
   v.querySelector('#switchUser').addEventListener('click',()=>{ currentMember=null; renderLoginScreen(); });
   v.querySelector('#toAdmin').addEventListener('click',()=>renderAdminPinScreen());
   if(window.BM) BM.injectHomeCard(v);
+  if(window.COOP) COOP.injectHomeButton(v);
 
   // 6시간 슬롯 기준 첫 접속 시 자동 팝업
   setTimeout(()=>{ showVerseCard(false); }, 350);
@@ -4590,6 +4592,7 @@ async function renderMemberDetail(member){
     </div>`);
   app.appendChild(v);
   if(window.BM) BM.injectAdminPanel(v, member);
+  if(window.COOP) COOP.injectAdminPanel(v, member);
   v.querySelector('#back').addEventListener('click',renderAdminDashboard);
   v.querySelector('#back2').addEventListener('click',renderAdminDashboard);
 }
@@ -4652,5 +4655,6 @@ function clearBackground() {
 (function init(){ renderLoginScreen(); })();
 </script>
 <script src="benchmark.js?v=2"></script>
+<script src="coop.js?v=1"></script>
 </body>
 </html>
