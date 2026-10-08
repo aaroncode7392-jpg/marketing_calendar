@@ -2502,8 +2502,43 @@ function playSeq({lv, mode='color', onDone=null}={}){ setRandomBackground();
 // ==========================================================
 // GAME 4: 빠른 셈
 // ==========================================================
+// 빠른셈 자기 기록: 시작 단계가 같은 판끼리만 비교 (단계마다 문제 크기가 달라서)
+function showMathRecord(startLv, sec, onClose){
+  if(!currentMember){ onClose(); return; }
+  const prev=(currentMember.mathTimeLog||[]).filter(r=>r.lv===startLv);
+  const best=prev.length?Math.min(...prev.map(r=>r.sec)):null;
+  const last=prev.length?prev[prev.length-1].sec:null;
+  currentMember.mathTimeLog=pushCapped(currentMember.mathTimeLog,{ts:new Date().toISOString(),lv:startLv,sec});
+  saveMember();
+  let headline, detail='';
+  if(best===null){
+    headline='이 단계 첫 기록이에요!';
+    detail='다음엔 이 기록을 깨봐요 💪';
+  } else if(sec<best){
+    headline='🏆 최고 기록 경신!';
+    detail=`이전 최고 기록 ${best}초보다 ${best-sec}초 빨라졌어요`;
+    confetti(4);
+  } else {
+    headline=`최고 기록 ${best}초까지 ${sec-best}초 남았어요`;
+    detail = sec<last ? `지난번(${last}초)보다 ${last-sec}초 빨라졌어요 👍` : '천천히 하셔도 괜찮아요, 다음엔 조금 더 빨리 해봐요 😊';
+  }
+  const ov=el(`
+    <div class="overlay" style="z-index:90;">
+      <div class="modal fade" style="text-align:center;padding:28px 22px;">
+        <div style="font-size:16px;color:var(--ink-soft);">⏱ 오늘 푼 시간</div>
+        <div style="font-family:'Jua';font-size:56px;color:var(--math);line-height:1.2;">${sec}초</div>
+        <div style="font-family:'Jua';font-size:22px;margin-top:6px;">${headline}</div>
+        <div style="font-size:16px;color:var(--ink-soft);margin-top:6px;line-height:1.5;">${detail}</div>
+        <button class="btn btn-primary" id="mathRecOk" style="margin-top:18px;font-size:20px;padding:14px;">확인</button>
+      </div>
+    </div>`);
+  document.body.appendChild(ov);
+  ov.querySelector('#mathRecOk').addEventListener('click',()=>{ ov.remove(); onClose(); });
+}
 function playMath({lv, qs=10, onDone=null}={}){ setRandomBackground();
   let q=0,score=0,level=lv||curLevel(); const total=qs;
+  const startLv=level;
+  let solveMs=0, qShownAt=0; // 정답 연출 시간은 빼고, 문제를 보고 맞힐 때까지의 시간만 합산
   let hp = 100; const dmgPerQ = 100/total;
   function makeProblem(){
     const big=level<=2?9:Math.min(99,level*9);
@@ -2516,7 +2551,10 @@ function playMath({lv, qs=10, onDone=null}={}){ setRandomBackground();
     return{text:`${a} ${op} ${b}`,ans};
   }
   function next(){
-    if(q>=total){ const finalScore=Math.round(score/total*100); return onDone?onDone(finalScore):null; }
+    if(q>=total){
+      const finalScore=Math.round(score/total*100);
+      return showMathRecord(startLv, Math.max(1,Math.round(solveMs/1000)), ()=>{ if(onDone) onDone(finalScore); });
+    }
     q++;
     const p=makeProblem();
     clear();
@@ -2542,7 +2580,8 @@ function playMath({lv, qs=10, onDone=null}={}){ setRandomBackground();
         <div class="guide-wrap">${getGuideDogHtml()}<div class="game-guide">맞춘 개수 ${score}</div></div>
       </div>`);
     app.appendChild(v);
-    
+    qShownAt=performance.now();
+
     let digits='';
     const digitsEl=v.querySelector('#npdigits');
     function updateDigits(){
@@ -2572,6 +2611,7 @@ function playMath({lv, qs=10, onDone=null}={}){ setRandomBackground();
       
       if(val===p.ans){
         answered=true;
+        solveMs += performance.now()-qShownAt;
         digitsEl.classList.add('type-right');
         const qbox = v.querySelector('.qbox');
         const boss = document.querySelector('#bossMath');
