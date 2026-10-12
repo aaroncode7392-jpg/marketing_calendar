@@ -814,6 +814,7 @@ function showVerseCard(force = false) {
   // 모달 닫기 및 해당 슬롯 확인 기록 저장
   const close = () => {
     localStorage.setItem(info.slotKey, 'true');
+    if(window.RECALL) RECALL.note(v.ref);
     ov.remove();
   };
 
@@ -1291,6 +1292,13 @@ function speedStart(L){
   return{size,flash,findCount};
 }
 function memPairs(L){return Math.min(8,Math.max(3,2+Math.ceil(L/2)));}
+// 짝맞추기 도움: 최근 기억력 점수가 낮으면 시작 전에 카드를 잠깐 보여주고, 점수가 오를수록 시간을 줄여 스스로 하게 이끈다
+function memoryPeekMs(){
+  const recent=((currentMember&&currentMember.scoreLog)||[]).filter(s=>s.total>40&&typeof s.memory==='number').slice(-4).map(s=>s.memory);
+  if(recent.length<2) return 0;
+  const avg=recent.reduce((a,b)=>a+b,0)/recent.length;
+  return avg<40?3500:avg<50?2500:avg<55?1500:0;
+}
 function seqStart(L){return Math.min(4, 2+Math.floor((L-1)/3));}
 function seqFlashMs(L){return Math.max(480, 780-L*30);}
 function scoreColor(s){return s>=80?'var(--ok)':s>=60?'#E0A33B':'var(--warn)';}
@@ -2109,16 +2117,28 @@ function playMemory({lv, onDone=null}={}){ setRandomBackground();
 
   // 모든 카드가 딜링 완료된 후 게임 시작
   const totalDealTime = cardEls.length * 75 + 450;
-  setTimeout(() => {
-    cardEls.forEach(c => {
-      c.classList.remove('dealing');
-      c.style.opacity = '1';
-    });
+  const peekMs = memoryPeekMs();
+  if(session) session.memPeek = Math.max(session.memPeek||0, peekMs);
+  const startPlay = () => {
     lock = false;
     stMsg.textContent = '시작! 짝을 찾아보세요';
     stMsg.style.color = 'var(--ok)';
     celebrateAt(grid, { count: 8, parts: ['✨','⭐','🃏'] });
     beep(784, 0.15);
+  };
+  setTimeout(() => {
+    cardEls.forEach(c => {
+      c.classList.remove('dealing');
+      c.style.opacity = '1';
+    });
+    if (peekMs > 0) {
+      cardEls.forEach(c => c.classList.add('flipped'));
+      stMsg.textContent = '👀 잘 보고 위치를 외워보세요!';
+      stMsg.style.color = 'var(--memory)';
+      setTimeout(() => { cardEls.forEach(c => c.classList.remove('flipped')); setTimeout(startPlay, 450); }, peekMs);
+    } else {
+      startPlay();
+    }
   }, totalDealTime);
 
   cardEls.forEach(card=>{
@@ -3135,8 +3155,9 @@ function playTyping({qs=5, onDone=null}={}){ setRandomBackground();
 }
 
 // ==========================================================
-function playDecompose({lv=1}={}){ setRandomBackground();
+function playDecompose({lv=1, bossHp=100}={}){ setRandomBackground();
   let level = lv;
+  let currentHp = bossHp; // 단계가 바뀌어도 요괴 체력을 이어받는다
   const maxLevels = 20;
   
   if(level > maxLevels) {
@@ -3273,7 +3294,8 @@ function playDecompose({lv=1}={}){ setRandomBackground();
         </div>
         <div class="scoreline"><span class="pill">단계 ${level}/${maxLevels}</span></div>
         <div class="panel" style="padding:24px 14px; position:relative;">
-          <div class="typing-boss-wrap" style="height:90px; margin-top:-10px; margin-bottom:15px;">
+          <div class="typing-boss-wrap" style="height:110px; margin-top:-10px; margin-bottom:15px;">
+             <div class="boss-hp-wrap"><div class="boss-hp-bar" id="bossHpBarDecomp" style="width:${currentHp}%"></div><div class="boss-hp-text" id="bossHpTextDecomp">${Math.round(currentHp)} / 100</div></div>
              <div class="typing-boss mushroom" id="bossSlimeDecomp"></div>
           </div>
           <div class="guide-wrap" style="margin-bottom:20px; margin-top:0;">
@@ -3456,7 +3478,7 @@ function playDecompose({lv=1}={}){ setRandomBackground();
               
               let tStart = null;
               const duration = 600 + Math.random()*400;
-              const delay = (stageIdx === rounds - 1 && score === target.length) ? idx * 30 : idx * 100;
+              const delay = (level >= maxLevels) ? idx * 30 : idx * 100;
               let energyTransformed = false;
               
               setTimeout(() => {
@@ -3955,7 +3977,8 @@ function showFinalResult(){
     ts:new Date().toISOString(), total:totalScore,
     speed:domains.speed.score, math:domains.math.score, memory:domains.memory.score, typing:domains.typing.score,
     durations: session.domainDurations || {},
-    lv: session.levels || {}
+    lv: session.levels || {},
+    memPeek: session.memPeek || 0
   });
   currentMember.domainLevels = adaptDomainLevels(currentMember.scoreLog);
   currentMember.completedLog = pushCapped(currentMember.completedLog || [], new Date().toISOString());
@@ -4116,6 +4139,7 @@ async function renderHome(isNew=false){
   v.querySelector('#toAdmin').addEventListener('click',()=>renderAdminPinScreen());
   if(window.BM) BM.injectHomeCard(v);
   if(window.COOP) COOP.injectHomeButton(v);
+  if(window.RECALL) RECALL.injectHomeCard(v);
 
   // 6시간 슬롯 기준 첫 접속 시 자동 팝업
   setTimeout(()=>{ showVerseCard(false); }, 350);
@@ -4593,6 +4617,7 @@ async function renderMemberDetail(member){
   app.appendChild(v);
   if(window.BM) BM.injectAdminPanel(v, member);
   if(window.COOP) COOP.injectAdminPanel(v, member);
+  if(window.RECALL) RECALL.injectAdminPanel(v, member);
   v.querySelector('#back').addEventListener('click',renderAdminDashboard);
   v.querySelector('#back2').addEventListener('click',renderAdminDashboard);
 }
@@ -4656,5 +4681,6 @@ function clearBackground() {
 </script>
 <script src="benchmark.js?v=2"></script>
 <script src="coop.js?v=1"></script>
+<script src="recall.js?v=1"></script>
 </body>
 </html>
