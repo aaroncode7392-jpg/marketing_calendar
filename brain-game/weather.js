@@ -74,24 +74,26 @@
     return data;
   }
 
+  // 오늘 챙길 것: [날씨 탭에 쓰는 문장, 첫 화면에 쓰는 짧은 문장] (중요한 것부터)
   function tips(fc, pm10, pm25) {
     const d = fc.daily, c = fc.current;
     const rain = d.precipitation_probability_max[0], tmin = d.temperature_2m_min[0], tmax = d.temperature_2m_max[0];
     const uv = d.uv_index_max[0], code = d.weather_code[0];
     const out = [];
-    if (isSnow(code)) out.push('⛄ 눈 소식이 있어요. 길이 미끄러우니 천천히 걸으세요.');
-    else if (rain >= 60) out.push('☂️ 비 소식이 있어요. 우산을 꼭 챙기세요.');
-    else if (rain >= 30) out.push('🌂 비가 올 수도 있어요. 작은 우산을 챙기세요.');
-    if (tmin <= 0) out.push('🧣 영하로 내려가요. 목도리와 두꺼운 옷을 입으세요.');
-    else if (tmin <= 7) out.push('🧥 아침저녁으로 쌀쌀해요. 겉옷을 챙기세요.');
-    if (tmax >= 33) out.push('🥵 아주 더워요. 한낮 외출은 피하고 물을 자주 드세요.');
-    else if (tmax >= 29) out.push('💧 더운 날이에요. 물을 자주 드세요.');
-    if (tmax - tmin >= 10) out.push('🌡️ 낮과 밤 기온 차이가 커요. 얇은 옷을 겹쳐 입으세요.');
-    if (uv >= 8) out.push('🧢 햇볕이 아주 강해요. 모자와 선크림을 챙기세요.');
-    else if (uv >= 6) out.push('🧢 햇볕이 강해요. 모자를 쓰세요.');
-    if ((pm10 && pm10.level >= 2) || (pm25 && pm25.level >= 2)) out.push('😷 미세먼지가 나빠요. 마스크를 쓰고 외출은 짧게 하세요.');
-    if (c.wind_speed_10m >= 9) out.push('🌬️ 바람이 강해요. 모자가 날아가지 않게 조심하세요.');
-    if (!out.length) out.push('🚶 걷기 좋은 날씨예요. 30분 산책 어떠세요?');
+    const add = (long, short) => out.push({ long, short });
+    if (isSnow(code)) add('⛄ 눈 소식이 있어요. 길이 미끄러우니 천천히 걸으세요.', '⛄ 눈길 조심하세요');
+    else if (rain >= 60) add('☂️ 비 소식이 있어요. 우산을 꼭 챙기세요.', '☂️ 우산 꼭 챙기세요');
+    else if (rain >= 30) add('🌂 비가 올 수도 있어요. 작은 우산을 챙기세요.', '🌂 작은 우산 챙기세요');
+    if (tmin <= 0) add('🧣 영하로 내려가요. 목도리와 두꺼운 옷을 입으세요.', '🧣 영하예요, 따뜻하게 입으세요');
+    else if (tmin <= 7) add('🧥 아침저녁으로 쌀쌀해요. 겉옷을 챙기세요.', '🧥 쌀쌀해요, 겉옷 챙기세요');
+    if (tmax >= 33) add('🥵 아주 더워요. 한낮 외출은 피하고 물을 자주 드세요.', '🥵 아주 더워요, 물 자주 드세요');
+    else if (tmax >= 29) add('💧 더운 날이에요. 물을 자주 드세요.', '💧 더워요, 물 자주 드세요');
+    if (tmax - tmin >= 10) add('🌡️ 낮과 밤 기온 차이가 커요. 얇은 옷을 겹쳐 입으세요.', '🌡️ 일교차가 커요, 겉옷 챙기세요');
+    if (uv >= 8) add('🧢 햇볕이 아주 강해요. 모자와 선크림을 챙기세요.', '🧢 햇볕이 아주 강해요, 모자 쓰세요');
+    else if (uv >= 6) add('🧢 햇볕이 강해요. 모자를 쓰세요.', '🧢 햇볕이 강해요, 모자 쓰세요');
+    if ((pm10 && pm10.level >= 2) || (pm25 && pm25.level >= 2)) add('😷 미세먼지가 나빠요. 마스크를 쓰고 외출은 짧게 하세요.', '😷 미세먼지 나빠요, 마스크 챙기세요');
+    if (c.wind_speed_10m >= 9) add('🌬️ 바람이 강해요. 모자가 날아가지 않게 조심하세요.', '🌬️ 바람이 강해요');
+    if (!out.length) add('🚶 걷기 좋은 날씨예요. 30분 산책 어떠세요?', '🚶 산책하기 좋은 날이에요');
     return out;
   }
 
@@ -171,7 +173,7 @@
         <div class="wx-meta">최고 ${r(d.temperature_2m_max[0])}° · 최저 ${r(d.temperature_2m_min[0])}° · 체감 ${r(c.apparent_temperature)}°</div>
         <div class="wx-meta">습도 ${r(c.relative_humidity_2m)}% · 바람 ${c.wind_speed_10m.toFixed(1)}m/s · 비 올 확률 ${r(d.precipitation_probability_max[0] || 0)}%</div>
       </div>
-      <div class="wx-card"><div class="wx-h">오늘 챙길 것</div>${tips(fc, pm10, pm25).map(t => `<div class="wx-tip">${esc(t)}</div>`).join('')}</div>
+      <div class="wx-card"><div class="wx-h">오늘 챙길 것</div>${tips(fc, pm10, pm25).map(t => `<div class="wx-tip">${esc(t.long)}</div>`).join('')}</div>
       ${pm10 || pm25 ? `<div class="wx-card"><div class="wx-h">미세먼지</div><div class="wx-air">
         ${pm10 ? `<div><small>미세먼지</small><b style="color:${pm10.color}">${pm10.emoji} ${pm10.text}</b><small>${r(air.current.pm10)}㎍/㎥</small></div>` : ''}
         ${pm25 ? `<div><small>초미세먼지</small><b style="color:${pm25.color}">${pm25.emoji} ${pm25.text}</b><small>${r(air.current.pm2_5)}㎍/㎥</small></div>` : ''}
@@ -219,5 +221,57 @@
       });
   }
 
-  window.WEATHER = { mount, describe, airGrade };
+  // ---------------- 첫 화면: 오늘 날씨 짧게 ----------------
+  const BRIEF_KEY = 'wxBrief';
+  const BRIEF_FRESH_MS = 15 * 60e3, BRIEF_MAX_MS = 60 * 60e3;
+  const PREDICATE = {
+    0: '맑아요', 1: '대체로 맑아요', 2: '구름이 조금 있어요', 3: '흐려요', 45: '안개가 껴요', 48: '안개가 짙어요',
+    51: '이슬비가 내려요', 53: '이슬비가 내려요', 55: '이슬비가 내려요', 56: '얼어붙는 비가 내려요', 57: '얼어붙는 비가 내려요',
+    61: '비가 조금 와요', 63: '비가 와요', 65: '비가 많이 와요', 66: '얼어붙는 비가 와요', 67: '얼어붙는 비가 와요',
+    71: '눈이 조금 와요', 73: '눈이 와요', 75: '눈이 많이 와요', 77: '싸락눈이 와요',
+    80: '소나기가 와요', 81: '소나기가 와요', 82: '소나기가 세차게 와요', 85: '눈이 오다 말다 해요', 86: '눈이 많이 와요',
+    95: '천둥번개가 쳐요', 96: '천둥번개가 쳐요', 99: '천둥번개가 쳐요',
+  };
+  // 받침이 있으면 '은', 없으면 '는'
+  const topic = w => { const ch = w.charCodeAt(w.length - 1); return w + (ch >= 0xAC00 && ch <= 0xD7A3 && (ch - 0xAC00) % 28 ? '은' : '는'); };
+
+  function briefOf(city, data) {
+    const { fc, air } = data;
+    const d = fc.daily, c = fc.current, r = v => Math.round(v);
+    const code = d.weather_code[0];
+    const place = city.name === '지금 있는 곳' ? '이곳은' : topic(city.name);
+    const pm10 = air && air.current ? airGrade(air.current.pm10, 'pm10') : null;
+    const pm25 = air && air.current ? airGrade(air.current.pm2_5, 'pm25') : null;
+    return {
+      city: city.name,
+      at: Date.now(),
+      title: `${describe(code, 1).icon} 오늘 ${place} ${PREDICATE[code] || '날씨를 알 수 없어요'}`,
+      lines: [`지금 ${r(c.temperature_2m)}° · 최고 ${r(d.temperature_2m_max[0])}° · 최저 ${r(d.temperature_2m_min[0])}°`, tips(fc, pm10, pm25)[0].short],
+    };
+  }
+
+  function injectHomeBrief(homeView) {
+    const hero = homeView.querySelector('.hero');
+    const hello = hero && hero.querySelector('.hello'), sub = hero && hero.querySelector('.sub');
+    if (!hello || !sub || hello.textContent.includes('첫 방문')) return; // 처음 온 분께는 환영 인사를 그대로 둔다
+    const orig = { hello: hello.innerHTML, sub: sub.innerHTML };
+    const city = loadCity();
+    const show = b => { hello.textContent = b.title; sub.innerHTML = b.lines.map(esc).join('<br>'); };
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(BRIEF_KEY) || 'null'); } catch (e) { saved = null; }
+    const usable = saved && saved.city === city.name && Array.isArray(saved.lines) && Date.now() - saved.at < BRIEF_MAX_MS;
+    if (usable) show(saved);
+    else { hello.textContent = '🌤️ 오늘 날씨를 알아보는 중이에요'; sub.textContent = '잠깐만 기다려 주세요…'; }
+    if (usable && Date.now() - saved.at < BRIEF_FRESH_MS) return;
+    load(city).then(data => {
+      const b = briefOf(city, data);
+      try { localStorage.setItem(BRIEF_KEY, JSON.stringify(b)); } catch (e) { /* 무시 */ }
+      if (hello.isConnected) show(b);
+    }).catch(() => {
+      // 날씨를 못 받으면 원래 인사로 되돌린다
+      if (!usable && hello.isConnected) { hello.innerHTML = orig.hello; sub.innerHTML = orig.sub; }
+    });
+  }
+
+  window.WEATHER = { mount, describe, airGrade, injectHomeBrief };
 })();
