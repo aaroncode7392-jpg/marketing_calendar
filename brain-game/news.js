@@ -59,6 +59,16 @@
       .nw-title{font-family:'Jua';font-size:22px;line-height:1.4;margin:0 0 6px;word-break:keep-all;}
       .nw-desc{font-size:17px;line-height:1.55;color:var(--ink-soft);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:keep-all;}
       .nw-note{text-align:center;color:var(--ink-soft);font-size:16px;padding:10px 0 4px;}
+      .nw-hint{text-align:center;color:var(--ink);font-size:17px;margin:2px 0 12px;font-family:'Jua';}
+      .nw-from-r{animation:nwInR .3s ease both;} .nw-from-l{animation:nwInL .3s ease both;}
+      @keyframes nwInR{from{opacity:0;transform:translateX(60px);}to{opacity:1;transform:none;}}
+      @keyframes nwInL{from{opacity:0;transform:translateX(-60px);}to{opacity:1;transform:none;}}
+      .nw-reader{position:fixed;inset:0;z-index:300;background:#fff;display:flex;flex-direction:column;animation:nwInR .25s ease both;}
+      .nw-bar{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:2px solid var(--line);background:var(--cream);}
+      .nw-bar button,.nw-bar a{font-family:'Jua';font-size:18px;padding:10px 14px;border-radius:12px;border:2px solid var(--line);background:#fff;color:var(--ink);text-decoration:none;cursor:pointer;white-space:nowrap;}
+      .nw-bar .sp{flex:1;min-width:0;font-size:14px;color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+      .nw-frame{flex:1;width:100%;border:0;background:#fff;}
+      .nw-tip{font-size:14px;color:var(--ink-soft);text-align:center;padding:6px 10px;background:var(--cream);}
     `;
     document.head.appendChild(st);
   }
@@ -75,12 +85,12 @@
     </a>`;
   }
 
-  function openFeed() {
+  function openFeed(dir) {
     injectStyle();
     const root = document.getElementById('app');
     root.innerHTML = '';
     const wrap = document.createElement('div');
-    wrap.className = 'fade';
+    wrap.className = dir === 'left' ? 'nw-from-l' : 'nw-from-r';
     wrap.innerHTML = `
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
         <button class="btn btn-ghost" id="nwBack" style="margin:0;width:auto;padding:10px 16px;font-size:18px;">← 돌아가기</button>
@@ -101,7 +111,7 @@
         const stale = Date.now() - Date.parse(data.updated) > STALE_DAYS * 86400e3;
         list.innerHTML = (stale ? '<div class="nw-note">⚠️ 며칠째 새 소식이 오지 않았어요.</div>' : '')
           + (items.length ? items.map(it => cardHtml(it, read.has(it.id))).join('') : '<div class="nw-note">지금은 보여드릴 소식이 없어요.</div>')
-          + '<div class="nw-note">누르면 기사 원문이 열려요. 소식은 매일 아침 새로 바뀌어요.</div>';
+          + '<div class="nw-note">누르면 앱 안에서 기사가 열려요. 소식은 매일 아침 새로 바뀌어요.</div>';
       };
       paint();
       wrap.querySelector('#nwChips').addEventListener('click', e => {
@@ -112,26 +122,75 @@
       });
       list.addEventListener('click', e => {
         const a = e.target.closest('.nw-card'); if (!a) return;
+        e.preventDefault();
         read.add(a.dataset.id); markRead(data.updated, read);
         a.classList.add('read');
+        openReader(data.items.find(it => it.id === a.dataset.id));
       });
     }).catch(() => {
       wrap.querySelector('#nwList').innerHTML = '<div class="nw-note">지금은 소식을 불러올 수 없어요.<br>잠시 뒤에 다시 눌러 주세요.</div>';
     });
   }
 
+  // 기사를 앱 안에서 열기 (뒤로가기 버튼으로도 닫힘)
+  function openReader(it) {
+    if (!it || document.getElementById('nwReader')) return;
+    const r = document.createElement('div');
+    r.id = 'nwReader';
+    r.className = 'nw-reader';
+    r.innerHTML = `
+      <div class="nw-bar">
+        <button id="nwClose">← 닫기</button>
+        <div class="sp">${esc(it.src)}</div>
+        <a href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener noreferrer">새 창 ↗</a>
+      </div>
+      <iframe class="nw-frame" title="${esc(it.title)}" referrerpolicy="no-referrer" allow="autoplay 'none'"></iframe>
+      <div class="nw-tip">화면이 비어 있으면 오른쪽 위 '새 창 ↗'을 눌러 보세요.</div>`;
+    document.body.appendChild(r);
+    r.querySelector('iframe').src = safeUrl(it.url);
+    document.body.style.overflow = 'hidden';
+    history.pushState({ nwReader: 1 }, '');
+    r.querySelector('#nwClose').addEventListener('click', () => { if (history.state && history.state.nwReader) history.back(); else closeReader(); });
+  }
+  function closeReader() {
+    const r = document.getElementById('nwReader');
+    if (r) r.remove();
+    document.body.style.overflow = '';
+  }
+  window.addEventListener('popstate', () => closeReader());
+
+  // 첫 화면에서 좌우로 밀면 소식이 열리고, 소식에서 오른쪽으로 밀면 홈으로 돌아간다
+  const SWIPE_MIN = 70, SWIPE_MAX_Y = 60, SWIPE_MAX_MS = 700;
+  let touch = null, bound = false;
+  const onHome = () => !!document.getElementById('startBtn') && !document.querySelector('.overlay') && !document.getElementById('nwReader');
+  const onFeed = () => !!document.getElementById('nwBack') && !document.getElementById('nwReader');
+  function bindSwipe() {
+    if (bound) return; bound = true;
+    document.addEventListener('touchstart', e => {
+      if (e.touches.length !== 1) { touch = null; return; }
+      const t = e.touches[0];
+      touch = { x: t.clientX, y: t.clientY, at: Date.now(), inChips: !!(e.target.closest && e.target.closest('#nwChips')) };
+    }, { passive: true });
+    document.addEventListener('touchend', e => {
+      const s0 = touch; touch = null;
+      if (!s0 || s0.inChips || !e.changedTouches.length) return;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - s0.x, dy = t.clientY - s0.y;
+      if (Math.abs(dx) < SWIPE_MIN || Math.abs(dy) > SWIPE_MAX_Y || Math.abs(dx) < Math.abs(dy) * 1.5 || Date.now() - s0.at > SWIPE_MAX_MS) return;
+      if (onHome()) openFeed(dx < 0 ? 'right' : 'left');
+      else if (onFeed() && dx > 0) renderHome();
+    }, { passive: true });
+  }
+
   function injectHomeCard(homeView) {
     const anchor = homeView.querySelector('#startBtn');
     if (!anchor) return;
     injectStyle();
-    const btn = document.createElement('button');
-    btn.className = 'btn btn-ghost';
-    btn.id = 'newsBtn';
-    btn.style.cssText = 'font-size:20px;margin-top:12px;';
-    btn.textContent = '📰 오늘의 소식 보기';
-    const lib = homeView.querySelector('#myCardsBtn');
-    if (lib) lib.parentNode.insertBefore(btn, lib); else anchor.parentNode.appendChild(btn);
-    btn.addEventListener('click', openFeed);
+    bindSwipe();
+    const hint = document.createElement('div');
+    hint.className = 'nw-hint';
+    hint.textContent = '👈 화면을 옆으로 밀면 오늘의 소식이 나와요 👉';
+    anchor.parentNode.insertBefore(hint, anchor);
   }
 
   window.NEWS = { injectHomeCard, openFeed };
