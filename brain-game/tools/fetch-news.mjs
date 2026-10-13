@@ -11,11 +11,22 @@ const FEEDS = [
   { cat: '건강', src: '연합뉴스', url: 'https://www.yna.co.kr/rss/health.xml' },
   { cat: '건강', src: '동아일보', url: 'https://rss.donga.com/health.xml' },
   { cat: '문화·생활', src: '연합뉴스', url: 'https://www.yna.co.kr/rss/culture.xml' },
+  // 정치·경제·기독교는 사건·사고(사망·재난·폭력)만 거르고 나머지는 그대로 보여준다
+  { cat: '정치', src: '연합뉴스', url: 'https://www.yna.co.kr/rss/politics.xml', mode: 'lite' },
+  { cat: '정치', src: '동아일보', url: 'https://rss.donga.com/politics.xml', mode: 'lite' },
+  { cat: '경제', src: '연합뉴스', url: 'https://www.yna.co.kr/rss/economy.xml', mode: 'lite' },
+  { cat: '경제', src: '동아일보', url: 'https://rss.donga.com/economy.xml', mode: 'lite' },
+  { cat: '기독교', src: '가스펠투데이', url: 'https://www.gospeltoday.co.kr/rss/allArticle.xml', mode: 'lite' },
+  { cat: '기독교', src: '아이굿뉴스', url: 'https://www.igoodnews.net/rss/allArticle.xml', mode: 'lite' },
   { cat: '스포츠', src: '연합뉴스', url: 'https://www.yna.co.kr/rss/sports.xml' },
 ];
 
 // 불안·불쾌감을 줄 수 있거나 어르신에게 의미 없는 기사는 제외
 const TITLE_PREFIX_BLOCK = /^\s*\[(부고|인사|게시판|동정|포토|영상|화보|사진|오늘의 날씨|운세|특징주|증시)/;
+const LITE_BLOCK_WORDS = [
+  '사망', '숨져', '숨진', '숨지', '시신', '변사', '살인', '피살', '살해', '자살', '극단', '흉기', '폭행', '성폭', '성추행', '강간', '납치', '유괴', '학대',
+  '화재', '불이 나', '폭발', '붕괴', '추락', '침몰', '참사', '전복', '교통사고', '음주운전', '지진', '산불', '테러', '칼부림', '피습', '총격', '난동',
+];
 const BLOCK_WORDS = [
   '사망', '숨져', '숨진', '숨지', '시신', '변사', '살인', '피살', '살해', '자살', '극단', '흉기', '폭행', '성폭', '성추행', '강간', '납치', '유괴', '학대',
   '화재', '불이 나', '폭발', '붕괴', '추락', '침몰', '참사', '충돌', '전복', '교통사고', '음주운전',
@@ -35,13 +46,16 @@ const decode = s => s
 const strip = s => decode(s).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 const pick = (block, tag) => { const m = block.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`)); return m ? m[1] : ''; };
 
+// 타임존 없이 "2026-10-14 00:45:40"처럼 오는 날짜는 한국 시간으로 본다
+const parseDate = v => (/^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d$/.test(v) ? Date.parse(`${v.replace(' ', 'T')}+09:00`) : Date.parse(v));
+
 function parseItems(xml, feed) {
   const out = [];
   for (const m of xml.matchAll(/<item[\s>][\s\S]*?<\/item>/g)) {
     const b = m[0];
     const title = strip(pick(b, 'title'));
-    const link = strip(pick(b, 'link')) || strip(pick(b, 'guid'));
-    const ts = Date.parse(strip(pick(b, 'pubDate')));
+    const link = (strip(pick(b, 'link')) || strip(pick(b, 'guid'))).replace(/^http:\/\//, 'https://');
+    const ts = parseDate(strip(pick(b, 'pubDate')));
     const rawDesc = decode(pick(b, 'description'));
     let desc = strip(rawDesc)
       .replace(/^\([^)]*\)\s*[가-힣·\s]{0,20}(기자|특파원|통신원)\s*=\s*/, '')
@@ -49,7 +63,7 @@ function parseItems(xml, feed) {
     if (desc.length > 110) desc = desc.slice(0, 108).trimEnd() + '…';
     const img = (b.match(/<media:content[^>]+url="([^"]+)"/) || b.match(/<enclosure[^>]+url="([^"]+)"/) || rawDesc.match(/<img[^>]+src=['"]([^'"]+)['"]/) || [])[1] || '';
     if (!title || !link || !Number.isFinite(ts)) continue;
-    out.push({ cat: feed.cat, src: feed.src, title, desc, img: img.startsWith('https://') ? img : '', url: link, ts });
+    out.push({ cat: feed.cat, src: feed.src, mode: feed.mode || 'strict', title, desc, img: img.startsWith('https://') ? img : '', url: link, ts });
   }
   return out;
 }
@@ -57,8 +71,9 @@ function parseItems(xml, feed) {
 function acceptable(it, now) {
   if (TITLE_PREFIX_BLOCK.test(it.title)) return false;
   if (now - it.ts > MAX_AGE_HOURS * 3600e3 || it.ts - now > 3600e3) return false;
-  const text = `${it.title} ${it.desc}`;
-  if (BLOCK_WORDS.some(w => text.includes(w))) return false;
+  const words = it.mode === 'lite' ? LITE_BLOCK_WORDS : BLOCK_WORDS;
+  const text = it.mode === 'lite' ? it.title : `${it.title} ${it.desc}`;
+  if (words.some(w => text.includes(w))) return false;
   return /^https:\/\//.test(it.url);
 }
 
@@ -78,7 +93,7 @@ async function load(feed) {
 const now = Date.now();
 const all = (await Promise.all(FEEDS.map(load))).flat();
 const seen = new Set();
-const kept = all.filter(it => acceptable(it, now)).filter(it => { const k = it.url || it.title; if (seen.has(k)) return false; seen.add(k); return true; });
+const kept = all.filter(it => acceptable(it, now)).filter(it => { const k = it.title.replace(/\((종합|1보|2보|3보|4보|상보|사진)[^)]*\)\s*$/, '').replace(/\s+/g, ''); if (seen.has(k)) return false; seen.add(k); return true; });
 console.log(`거르고 남은 기사: ${kept.length} / ${all.length}`);
 
 const byCat = new Map();
@@ -99,10 +114,22 @@ for (const [cat, list] of byCat) {
   picked.push(...chosen.sort((a, b) => b.ts - a.ts));
 }
 
+// 사진이 없는 기사는 기사 페이지의 대표 이미지(og:image)로 채운다
+await Promise.all(picked.filter(it => !it.img).map(async it => {
+  try {
+    const res = await fetch(it.url, { headers: { 'User-Agent': 'Mozilla/5.0 (brain-game news bot)' }, signal: AbortSignal.timeout(8000) });
+    if (!res.ok) return;
+    const html = (await res.text()).slice(0, 60000);
+    const m = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/) || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/);
+    const og = m && m[1].replace(/^http:\/\//, 'https://');
+    if (og && og.startsWith('https://')) it.img = og;
+  } catch { /* 사진 없이 보여준다 */ }
+}));
+
 if (!picked.length) {
   console.warn('가져온 기사가 없어 기존 파일을 그대로 둡니다.');
   process.exit(0);
 }
-const items = picked.map((it, i) => ({ id: `${new Date(now).toISOString().slice(0, 10)}-${i}`, ...it }));
+const items = picked.map(({ mode, ...it }, i) => ({ id: `${new Date(now).toISOString().slice(0, 10)}-${i}`, ...it }));
 fs.writeFileSync(OUT, JSON.stringify({ updated: new Date(now).toISOString(), items }, null, 1) + '\n');
 console.log(`저장 완료: ${items.length}건 → ${OUT}`);

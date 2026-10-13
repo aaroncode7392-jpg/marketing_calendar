@@ -7,7 +7,7 @@
   const DATA_URL = 'assets/news-data.json';
   const READ_KEY = 'newsRead';
   const STALE_DAYS = 3;
-  const CATS = ['전체', '건강', '문화·생활', '스포츠'];
+  const CATS = ['전체', '건강', '문화·생활', '스포츠', '정치', '경제', '기독교'];
 
   let cache = null;
 
