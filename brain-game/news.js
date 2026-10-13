@@ -59,7 +59,7 @@
       .nw-title{font-family:'Jua';font-size:22px;line-height:1.4;margin:0 0 6px;word-break:keep-all;}
       .nw-desc{font-size:17px;line-height:1.55;color:var(--ink-soft);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:keep-all;}
       .nw-note{text-align:center;color:var(--ink-soft);font-size:16px;padding:10px 0 4px;}
-      .nw-hint{text-align:center;color:var(--ink);font-size:17px;margin:2px 0 12px;font-family:'Jua';}
+      .nw-hint{display:block;width:100%;text-align:center;color:var(--ink);font-size:18px;margin:2px 0 12px;padding:12px 10px;font-family:'Jua';background:#fff;border:2px solid var(--line);border-radius:16px;box-shadow:0 4px 10px rgba(0,0,0,.06);cursor:pointer;}
       .nw-from-r{animation:nwInR .3s ease both;} .nw-from-l{animation:nwInL .3s ease both;}
       @keyframes nwInR{from{opacity:0;transform:translateX(60px);}to{opacity:1;transform:none;}}
       @keyframes nwInL{from{opacity:0;transform:translateX(-60px);}to{opacity:1;transform:none;}}
@@ -74,8 +74,8 @@
   }
 
   function cardHtml(it, isRead) {
-    const img = it.img ? `<img class="nw-img" src="${esc(it.img)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : '';
-    return `<a class="nw-card${isRead ? ' read' : ''}" data-id="${esc(it.id)}" href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener noreferrer">
+    const img = it.img ? `<img class="nw-img" draggable="false" src="${esc(it.img)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : '';
+    return `<a draggable="false" class="nw-card${isRead ? ' read' : ''}" data-id="${esc(it.id)}" href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener noreferrer">
       ${img}
       <div class="nw-body">
         <div class="nw-meta">${esc(it.src)} · ${esc(ago(it.ts))}${isRead ? ' · 읽음' : ''}</div>
@@ -171,15 +171,20 @@
       const t = e.touches[0];
       touch = { x: t.clientX, y: t.clientY, at: Date.now(), inChips: !!(e.target.closest && e.target.closest('#nwChips')) };
     }, { passive: true });
+    document.addEventListener('mousedown', e => { touch = { x: e.clientX, y: e.clientY, at: Date.now(), inChips: !!(e.target.closest && e.target.closest('#nwChips, input, textarea')) }; });
+    document.addEventListener('mouseup', e => { handleEnd(e.clientX, e.clientY); });
     document.addEventListener('touchend', e => {
+      if (e.changedTouches.length) handleEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+    }, { passive: true });
+    function handleEnd(cx, cy) {
       const s0 = touch; touch = null;
-      if (!s0 || s0.inChips || !e.changedTouches.length) return;
-      const t = e.changedTouches[0];
-      const dx = t.clientX - s0.x, dy = t.clientY - s0.y;
+      if (!s0 || s0.inChips) return;
+      const dx = cx - s0.x, dy = cy - s0.y;
       if (Math.abs(dx) < SWIPE_MIN || Math.abs(dy) > SWIPE_MAX_Y || Math.abs(dx) < Math.abs(dy) * 1.5 || Date.now() - s0.at > SWIPE_MAX_MS) return;
       if (onHome()) openFeed(dx < 0 ? 'right' : 'left');
       else if (onFeed() && dx > 0) renderHome();
-    }, { passive: true });
+    }
+    document.addEventListener('touchcancel', () => { touch = null; }, { passive: true });
   }
 
   function injectHomeCard(homeView) {
@@ -187,9 +192,11 @@
     if (!anchor) return;
     injectStyle();
     bindSwipe();
-    const hint = document.createElement('div');
+    const hint = document.createElement('button');
+    hint.type = 'button';
     hint.className = 'nw-hint';
-    hint.textContent = '👈 화면을 옆으로 밀면 오늘의 소식이 나와요 👉';
+    hint.textContent = '📰 오늘의 소식 보기 · 옆으로 밀어도 돼요';
+    hint.addEventListener('click', () => openFeed('right'));
     anchor.parentNode.insertBefore(hint, anchor);
   }
 
