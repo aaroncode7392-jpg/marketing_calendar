@@ -121,6 +121,8 @@
       .nw-note{text-align:center;color:var(--ink-soft);font-size:16px;padding:12px 0 4px;}
       .nw-hint{display:block;width:100%;text-align:center;color:#fff;font-size:20px;margin:2px 0 12px;padding:14px 10px;font-family:var(--tds);font-weight:700;background:#3182F6;border:0;border-radius:18px;box-shadow:0 6px 14px rgba(49,130,246,.35);cursor:pointer;}
       .nw-hint:active{transform:scale(.98);}
+      .nw-hint.ready{background:linear-gradient(135deg,#FF9F1C,#F04452);box-shadow:0 6px 18px rgba(240,68,82,.45);animation:nwGlow 1.4s ease-in-out infinite;}
+      @keyframes nwGlow{0%,100%{transform:scale(1);}50%{transform:scale(1.03);}}
       .nw-hint small{display:block;font-family:var(--tds);font-weight:500;font-size:15px;color:rgba(255,255,255,.85);margin-top:2px;}
       .nw-from-r{animation:nwInR .3s ease both;} .nw-from-l{animation:nwInL .3s ease both;}
       @keyframes nwInR{from{opacity:0;transform:translateX(60px);}to{opacity:1;transform:none;}}
@@ -187,6 +189,7 @@
     window.scrollTo(0, 0);
     wrap.querySelector('#nwBack').addEventListener('click', leaveFeed);
     if (window.RADIO) RADIO.mountMini(wrap.querySelector('#nwMini'));
+    if (window.GLASS) GLASS.mount(wrap);
 
     const list = wrap.querySelector('#nwList');
     const chips = wrap.querySelector('#nwChips');
@@ -355,13 +358,16 @@
     if (!anchor) return;
     injectStyle();
     bindSwipe();
+    const gate = window.GLASS ? GLASS.state() : 'open';
     const hint = document.createElement('button');
     hint.type = 'button';
-    hint.className = 'nw-hint';
-    hint.innerHTML = '📰 뉴스 · 📻 라디오 · ▶ 영상<small>눌러도 되고, 옆으로 밀어도 열려요</small>';
+    hint.className = `nw-hint${gate === 'ready' ? ' ready' : ''}`;
+    hint.innerHTML = gate === 'ready'
+      ? '🎁 두뇌운동 완료! 유리를 깨 보세요<small>뉴스 · 라디오 · 영상이 기다려요</small>'
+      : `📰 뉴스 · 📻 라디오 · ▶ 영상<small>${gate === 'locked' ? '🔒 두뇌운동을 마치면 열려요' : '눌러도 되고, 옆으로 밀어도 열려요'}</small>`;
     hint.addEventListener('click', () => openFeed('right'));
     anchor.parentNode.insertBefore(hint, anchor);
   }
 
-  window.NEWS = { injectHomeCard, openFeed };
+  window.NEWS = { injectHomeCard, openFeed, leave: leaveFeed };
 })();
