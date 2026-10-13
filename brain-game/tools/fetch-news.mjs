@@ -16,6 +16,7 @@ const FEEDS = [
   { cat: '정치', src: '동아일보', url: 'https://rss.donga.com/politics.xml', mode: 'lite' },
   { cat: '경제', src: '연합뉴스', url: 'https://www.yna.co.kr/rss/economy.xml', mode: 'lite' },
   { cat: '경제', src: '동아일보', url: 'https://rss.donga.com/economy.xml', mode: 'lite' },
+  { cat: '반려동물', src: '한국반려동물신문', url: 'https://www.pet-news.or.kr/rss/allArticle.xml', mode: 'lite', maxAgeHours: 240 },
   { cat: '기독교', src: '가스펠투데이', url: 'https://www.gospeltoday.co.kr/rss/allArticle.xml', mode: 'lite' },
   { cat: '기독교', src: '아이굿뉴스', url: 'https://www.igoodnews.net/rss/allArticle.xml', mode: 'lite' },
   { cat: '스포츠', src: '연합뉴스', url: 'https://www.yna.co.kr/rss/sports.xml' },
@@ -63,14 +64,14 @@ function parseItems(xml, feed) {
     if (desc.length > 110) desc = desc.slice(0, 108).trimEnd() + '…';
     const img = (b.match(/<media:content[^>]+url="([^"]+)"/) || b.match(/<enclosure[^>]+url="([^"]+)"/) || rawDesc.match(/<img[^>]+src=['"]([^'"]+)['"]/) || [])[1] || '';
     if (!title || !link || !Number.isFinite(ts)) continue;
-    out.push({ cat: feed.cat, src: feed.src, mode: feed.mode || 'strict', title, desc, img: img.startsWith('https://') ? img : '', url: link, ts });
+    out.push({ cat: feed.cat, src: feed.src, mode: feed.mode || 'strict', maxAge: feed.maxAgeHours || MAX_AGE_HOURS, title, desc, img: img.startsWith('https://') ? img : '', url: link, ts });
   }
   return out;
 }
 
 function acceptable(it, now) {
   if (TITLE_PREFIX_BLOCK.test(it.title)) return false;
-  if (now - it.ts > MAX_AGE_HOURS * 3600e3 || it.ts - now > 3600e3) return false;
+  if (now - it.ts > it.maxAge * 3600e3 || it.ts - now > 3600e3) return false;
   const words = it.mode === 'lite' ? LITE_BLOCK_WORDS : BLOCK_WORDS;
   const text = it.mode === 'lite' ? it.title : `${it.title} ${it.desc}`;
   if (words.some(w => text.includes(w))) return false;
@@ -130,6 +131,6 @@ if (!picked.length) {
   console.warn('가져온 기사가 없어 기존 파일을 그대로 둡니다.');
   process.exit(0);
 }
-const items = picked.map(({ mode, ...it }, i) => ({ id: `${new Date(now).toISOString().slice(0, 10)}-${i}`, ...it }));
+const items = picked.map(({ mode, maxAge, ...it }, i) => ({ id: `${new Date(now).toISOString().slice(0, 10)}-${i}`, ...it }));
 fs.writeFileSync(OUT, JSON.stringify({ updated: new Date(now).toISOString(), items }, null, 1) + '\n');
 console.log(`저장 완료: ${items.length}건 → ${OUT}`);

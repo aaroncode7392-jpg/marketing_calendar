@@ -7,10 +7,10 @@
   const DATA_URL = 'assets/news-data.json';
   const READ_KEY = 'newsRead';
   const STALE_DAYS = 3;
-  const CATS = ['전체', '건강', '문화·생활', '스포츠', '정치', '경제', '기독교'];
+  const CATS = ['전체', '건강', '반려동물', '문화·생활', '스포츠', '정치', '경제', '기독교'];
   const VIDEO_URL = 'assets/youtube-data.json';
   const VCATS = ['전체', '건강', '지식·시사', '추억·예능', '요리'];
-  const CAT_COLOR = { '건강': '#2FA28E', '문화·생활': '#D9779B', '스포츠': '#EE7B5B', '정치': '#3F6FB5', '경제': '#B7791F', '기독교': '#6B5B95', '지식·시사': '#3F6FB5', '추억·예능': '#D9779B', '요리': '#B7791F' };
+  const CAT_COLOR = { '건강': '#2FA28E', '문화·생활': '#D9779B', '스포츠': '#EE7B5B', '정치': '#3F6FB5', '경제': '#B7791F', '기독교': '#6B5B95', '반려동물': '#6E9E3F', '지식·시사': '#3F6FB5', '추억·예능': '#D9779B', '요리': '#B7791F' };
 
   let cache = null, vcache = null;
 
@@ -66,20 +66,28 @@
 
   function injectStyle() {
     if (document.getElementById('newsStyle')) return;
+    if (!document.getElementById('tdsFont')) {
+      const l = document.createElement('link');
+      l.id = 'tdsFont'; l.rel = 'stylesheet';
+      l.href = 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css';
+      document.head.appendChild(l);
+    }
     const st = document.createElement('style');
     st.id = 'newsStyle';
     st.textContent = `
+      :root{--tds:'Pretendard','Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;}
       .nw-paper{background:#fff;border:2px solid var(--line);border-radius:18px;box-shadow:0 6px 18px rgba(0,0,0,.08);overflow:hidden;margin-bottom:14px;}
       .nw-mast{position:relative;padding:14px 16px 10px;border-bottom:4px double var(--ink);text-align:center;}
-      .nw-back{position:absolute;left:12px;top:12px;border:2px solid var(--line);background:#fff;font-family:'Jua';font-size:18px;border-radius:12px;padding:8px 12px;cursor:pointer;color:var(--ink);}
+      .nw-back{position:absolute;left:12px;top:12px;border:0;background:#F2F4F6;font-family:var(--tds);font-weight:700;font-size:17px;border-radius:12px;padding:10px 14px;cursor:pointer;color:#4E5968;}
+      .nw-back:active,.nw-chip:active,.nw-tab:active{transform:scale(.96);}
       .nw-logo{font-family:'Jua';font-size:34px;line-height:1.1;letter-spacing:2px;padding-top:36px;white-space:nowrap;}
       .nw-date{font-size:16px;color:var(--ink-soft);margin-top:4px;}
-      .nw-tabs{display:flex;border-bottom:2px solid var(--line);}
-      .nw-tab{flex:1;border:0;background:#fff;font-family:'Jua';font-size:21px;padding:12px 0;color:var(--ink-soft);cursor:pointer;border-bottom:4px solid transparent;margin-bottom:-2px;}
-      .nw-tab.on{color:var(--ink);border-bottom-color:var(--ink);}
-      .nw-chips{display:flex;flex-wrap:wrap;justify-content:center;gap:0 4px;padding:2px 8px 0;border-bottom:1px solid var(--line);}
-      .nw-chip{flex:0 0 auto;border:0;background:none;font-family:'Jua';font-size:18px;padding:10px 12px;color:var(--ink-soft);cursor:pointer;border-bottom:3px solid transparent;}
-      .nw-chip.on{color:var(--ink);border-bottom-color:#E8635B;}
+      .nw-tabs{display:flex;gap:4px;margin:14px 14px 4px;padding:4px;background:#F2F4F6;border-radius:18px;}
+      .nw-tab{flex:1;border:0;background:transparent;font-family:var(--tds);font-weight:700;font-size:19px;height:52px;border-radius:14px;color:#8B95A1;cursor:pointer;transition:background .15s,color .15s,transform .1s;}
+      .nw-tab.on{background:#fff;color:#191F28;box-shadow:0 2px 8px rgba(0,0,0,.12);}
+      .nw-chips{display:flex;flex-wrap:wrap;gap:8px;padding:10px 14px 6px;}
+      .nw-chip{flex:0 0 auto;border:0;background:#F2F4F6;color:#4E5968;font-family:var(--tds);font-weight:600;font-size:18px;height:46px;padding:0 18px;border-radius:999px;cursor:pointer;transition:background .15s,color .15s,transform .1s;}
+      .nw-chip.on{background:#191F28;color:#fff;}
       .nw-body{padding:4px 14px 14px;}
       .nw-card{display:block;text-decoration:none;color:var(--ink);}
       .nw-lead{position:relative;min-height:150px;display:flex;align-items:flex-end;margin:12px -2px 4px;border-radius:14px;overflow:hidden;background:#3A2E28;}
@@ -97,28 +105,29 @@
       .nw-meta{font-size:15px;color:var(--ink-soft);}
       .nw-card.read .nw-title{color:#A29688;}
       .nw-card.read .nw-thumb,.nw-card.read .nw-img{opacity:.55;}
-      .nw-play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:56px;height:56px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;font-size:26px;display:flex;align-items:center;justify-content:center;padding-left:4px;pointer-events:none;}
-      .nw-lead .nw-play{top:42%;width:68px;height:68px;font-size:32px;}
-      .nw-tw{position:relative;flex:0 0 120px;width:120px;height:68px;align-self:center;}
-      .nw-tw .nw-thumb{width:120px;height:68px;flex-basis:120px;}
-      .nw-tw .nw-play{width:34px;height:34px;font-size:16px;padding-left:2px;}
+      .nw-play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:64px;height:64px;border-radius:50%;background:rgba(0,0,0,.62);color:#fff;font-size:30px;display:flex;align-items:center;justify-content:center;padding-left:5px;pointer-events:none;}
+      .nw-vcard{display:block;margin:16px 0 20px;}
+      .nw-vthumb{position:relative;aspect-ratio:16/9;border-radius:18px;overflow:hidden;background:#EFE6D3;}
+      .nw-vthumb img{width:100%;height:100%;object-fit:cover;display:block;}
+      .nw-vtxt{padding:10px 2px 0;}
       .nw-video{background:#111;}
       .nw-vbar{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#111;}
-      .nw-vbar button,.nw-vbar a{font-family:'Jua';font-size:18px;padding:10px 14px;border-radius:12px;border:0;background:#fff;color:var(--ink);text-decoration:none;cursor:pointer;white-space:nowrap;}
+      .nw-vbar button,.nw-vbar a{font-family:var(--tds);font-weight:700;font-size:17px;padding:11px 16px;border-radius:12px;border:0;background:#333D4B;color:#fff;text-decoration:none;cursor:pointer;white-space:nowrap;}
       .nw-vbar .sp{flex:1;min-width:0;font-size:14px;color:#ccc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
       .nw-vframe{width:100%;aspect-ratio:16/9;border:0;background:#000;display:block;}
       .nw-vinfo{flex:1;overflow:auto;background:#fff;padding:16px;}
       .nw-vinfo .nw-title{font-size:23px;-webkit-line-clamp:unset;display:block;}
-      .nw-vbtn{display:block;text-align:center;font-family:'Jua';font-size:22px;background:#E8635B;color:#fff;border-radius:14px;padding:16px;margin-top:14px;text-decoration:none;}
+      .nw-vbtn{display:block;text-align:center;font-family:var(--tds);font-weight:700;font-size:20px;background:#3182F6;color:#fff;border-radius:16px;padding:16px;margin-top:14px;text-decoration:none;}
       .nw-note{text-align:center;color:var(--ink-soft);font-size:16px;padding:12px 0 4px;}
-      .nw-hint{display:block;width:100%;text-align:center;color:var(--ink);font-size:19px;margin:2px 0 12px;padding:12px 10px;font-family:'Jua';background:#fff;border:2px solid var(--line);border-radius:16px;box-shadow:0 4px 10px rgba(0,0,0,.06);cursor:pointer;}
-      .nw-hint small{display:block;font-family:'Gowun Dodum',sans-serif;font-size:15px;color:var(--ink-soft);margin-top:2px;}
+      .nw-hint{display:block;width:100%;text-align:center;color:#fff;font-size:20px;margin:2px 0 12px;padding:14px 10px;font-family:var(--tds);font-weight:700;background:#3182F6;border:0;border-radius:18px;box-shadow:0 6px 14px rgba(49,130,246,.35);cursor:pointer;}
+      .nw-hint:active{transform:scale(.98);}
+      .nw-hint small{display:block;font-family:var(--tds);font-weight:500;font-size:15px;color:rgba(255,255,255,.85);margin-top:2px;}
       .nw-from-r{animation:nwInR .3s ease both;} .nw-from-l{animation:nwInL .3s ease both;}
       @keyframes nwInR{from{opacity:0;transform:translateX(60px);}to{opacity:1;transform:none;}}
       @keyframes nwInL{from{opacity:0;transform:translateX(-60px);}to{opacity:1;transform:none;}}
       .nw-reader{position:fixed;inset:0;z-index:300;background:#fff;display:flex;flex-direction:column;animation:nwInR .25s ease both;}
       .nw-bar{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:2px solid var(--line);background:var(--cream);}
-      .nw-bar button,.nw-bar a{font-family:'Jua';font-size:18px;padding:10px 14px;border-radius:12px;border:2px solid var(--line);background:#fff;color:var(--ink);text-decoration:none;cursor:pointer;white-space:nowrap;}
+      .nw-bar button,.nw-bar a{font-family:var(--tds);font-weight:700;font-size:17px;padding:11px 16px;border-radius:12px;border:0;background:#F2F4F6;color:#333D4B;text-decoration:none;cursor:pointer;white-space:nowrap;}
       .nw-bar .sp{flex:1;min-width:0;font-size:14px;color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
       .nw-frame{flex:1;width:100%;border:0;background:#fff;}
       .nw-tip{font-size:14px;color:var(--ink-soft);text-align:center;padding:6px 10px;background:var(--cream);}
@@ -129,18 +138,24 @@
   const tagHtml = it => `<span class="nw-tag" style="background:${CAT_COLOR[it.cat] || '#7A6A5E'}">${esc(it.cat)}</span>`;
   const metaHtml = (it, isRead) => `${esc(it.src)} · ${esc(ago(it.ts))}${isRead ? ' · 읽음' : ''}`;
 
-  function leadHtml(it, isRead, video) {
+  function leadHtml(it, isRead) {
     return `<a class="nw-card nw-lead${isRead ? ' read' : ''}" draggable="false" data-id="${esc(it.id)}" href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener noreferrer">
       <img class="nw-img" draggable="false" src="${esc(it.img)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">
-      ${video ? '<span class="nw-play">▶</span>' : ''}<div class="nw-ov">${tagHtml(it)}<div class="nw-title">${esc(it.title)}</div><div class="nw-meta">${metaHtml(it, isRead)}</div></div>
+      <div class="nw-ov">${tagHtml(it)}<div class="nw-title">${esc(it.title)}</div><div class="nw-meta">${metaHtml(it, isRead)}</div></div>
     </a>`;
   }
-  function rowHtml(it, isRead, video) {
+  function rowHtml(it, isRead) {
     const img = it.img ? `<img class="nw-thumb" draggable="false" src="${esc(it.img)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : '';
-    const thumb = video && img ? `<div class="nw-tw">${img}<span class="nw-play">▶</span></div>` : img;
     return `<a class="nw-card nw-row${isRead ? ' read' : ''}" draggable="false" data-id="${esc(it.id)}" href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener noreferrer">
       <div class="nw-txt"><div class="nw-meta">${tagHtml(it)}</div><div class="nw-title">${esc(it.title)}</div><div class="nw-meta">${metaHtml(it, isRead)}</div></div>
-      ${thumb}
+      ${img}
+    </a>`;
+  }
+
+  function videoHtml(it) {
+    return `<a class="nw-card nw-vcard" draggable="false" data-id="${esc(it.id)}" href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener noreferrer">
+      <div class="nw-vthumb"><img draggable="false" src="${esc(it.img)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()"><span class="nw-play">▶</span></div>
+      <div class="nw-vtxt"><div class="nw-meta">${tagHtml(it)}${esc(it.src)} · ${esc(ago(it.ts))}</div><div class="nw-title">${esc(it.title)}</div></div>
     </a>`;
   }
 
@@ -163,7 +178,7 @@
           <div class="nw-logo">오늘의 소식</div>
           <div class="nw-date">${esc(todayText())}</div>
         </div>
-        <div class="nw-tabs"><button class="nw-tab on" data-t="news">📰 뉴스</button><button class="nw-tab" data-t="video">▶ 영상</button><button class="nw-tab" data-t="radio">📻 라디오</button></div>
+        <div class="nw-tabs"><button class="nw-tab on" data-t="news">📰 뉴스</button><button class="nw-tab" data-t="radio">📻 라디오</button><button class="nw-tab" data-t="video">▶ 영상</button></div>
         <div class="nw-chips" id="nwChips"></div>
         <div class="nw-body" id="nwList"><div class="nw-note">불러오는 중이에요…</div></div>
       </div>
@@ -179,9 +194,9 @@
     const cats = { news: '전체', video: '전체' };
     const failNote = what => `<div class="nw-note">지금은 ${what}을 불러올 수 없어요.<br>잠시 뒤에 다시 눌러 주세요.</div>`;
 
-    const listHtml = (items, video) => {
+    const listHtml = items => {
       const leadIdx = items.findIndex(it => it.img);
-      const html = items.map((it, i) => (i === leadIdx ? leadHtml(it, !video && read.has(it.id), video) : rowHtml(it, !video && read.has(it.id), video)));
+      const html = items.map((it, i) => (i === leadIdx ? leadHtml(it, read.has(it.id)) : rowHtml(it, read.has(it.id))));
       if (leadIdx > 0) html.unshift(html.splice(leadIdx, 1)[0]);
       return html.join('');
     };
@@ -190,13 +205,13 @@
       const items = cats.news === '전체' ? interleave(data.items) : data.items.filter(it => it.cat === cats.news);
       const stale = Date.now() - Date.parse(data.updated) > STALE_DAYS * 86400e3;
       list.innerHTML = (stale ? '<div class="nw-note">⚠️ 며칠째 새 소식이 오지 않았어요.</div>' : '')
-        + (items.length ? listHtml(items, false) : '<div class="nw-note">지금은 보여드릴 소식이 없어요.</div>')
+        + (items.length ? listHtml(items) : '<div class="nw-note">지금은 보여드릴 소식이 없어요.</div>')
         + '<div class="nw-note">누르면 앱 안에서 기사가 열려요. 소식은 매일 아침 새로 바뀌어요.</div>';
     };
     const paintVideos = () => {
       if (!vdata) return;
       const items = cats.video === '전체' ? interleave(vdata.items, 'src', [...new Set(vdata.items.map(v => v.src))]) : vdata.items.filter(it => it.cat === cats.video);
-      list.innerHTML = (items.length ? listHtml(items, true) : '<div class="nw-note">지금은 보여드릴 영상이 없어요.</div>')
+      list.innerHTML = (items.length ? items.map(videoHtml).join('') : '<div class="nw-note">지금은 보여드릴 영상이 없어요.</div>')
         + '<div class="nw-note">누르면 앱 안에서 영상이 재생돼요.</div>';
     };
     const paint = () => {
@@ -343,7 +358,7 @@
     const hint = document.createElement('button');
     hint.type = 'button';
     hint.className = 'nw-hint';
-    hint.innerHTML = '📰 소식 · ▶ 영상 · 📻 라디오<small>눌러도 되고, 옆으로 밀어도 열려요</small>';
+    hint.innerHTML = '📰 뉴스 · 📻 라디오 · ▶ 영상<small>눌러도 되고, 옆으로 밀어도 열려요</small>';
     hint.addEventListener('click', () => openFeed('right'));
     anchor.parentNode.insertBefore(hint, anchor);
   }

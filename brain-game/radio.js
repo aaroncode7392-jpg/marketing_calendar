@@ -135,18 +135,18 @@
     st.textContent = `
       .rd-group{font-family:'Jua';font-size:20px;margin:18px 2px 8px;color:var(--ink);}
       .rd-card{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:#fff;border:2px solid var(--line);border-radius:16px;padding:14px;margin-bottom:10px;cursor:pointer;font-family:inherit;color:var(--ink);}
-      .rd-card.on{border-color:#2FA28E;background:#EAF7F3;}
+      .rd-card.on{border-color:#3182F6;background:#EBF3FE;}
       .rd-card.err{border-color:#E8635B;background:#FFF1EF;}
       .rd-emoji{font-size:30px;flex:0 0 auto;width:40px;text-align:center;}
       .rd-txt{flex:1;min-width:0;}
       .rd-txt b{display:block;font-family:'Jua';font-size:21px;font-weight:400;}
       .rd-txt small{display:block;font-size:16px;color:var(--ink-soft);margin-top:2px;}
-      .rd-btn{flex:0 0 auto;font-family:'Jua';font-size:18px;min-width:76px;text-align:center;padding:10px 12px;border-radius:12px;background:#2FA28E;color:#fff;}
-      .rd-card.on .rd-btn{background:#E8635B;}
+      .rd-btn{flex:0 0 auto;font-family:'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif;font-weight:700;font-size:17px;min-width:84px;text-align:center;padding:12px 14px;border-radius:14px;background:#3182F6;color:#fff;}
+      .rd-card.on .rd-btn{background:#F04452;}
       .rd-card.err .rd-btn{background:#D9952A;}
       .rd-mini{position:fixed;left:0;right:0;bottom:0;z-index:250;display:flex;align-items:center;gap:10px;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:#2F2A26;color:#fff;box-shadow:0 -4px 16px rgba(0,0,0,.2);}
       .rd-mini .t{flex:1;min-width:0;font-family:'Jua';font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-      .rd-mini button{font-family:'Jua';font-size:18px;border:0;border-radius:12px;padding:10px 16px;background:#E8635B;color:#fff;cursor:pointer;}
+      .rd-mini button{font-family:'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif;font-weight:700;font-size:17px;border:0;border-radius:12px;padding:11px 18px;background:#F04452;color:#fff;cursor:pointer;}
       @keyframes rdBeat{0%,100%{opacity:1;}50%{opacity:.35;}}
       .rd-live{display:inline-block;animation:rdBeat 1.2s infinite;}
     `;
