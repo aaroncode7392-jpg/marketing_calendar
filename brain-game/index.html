@@ -4142,6 +4142,7 @@ async function renderHome(isNew=false){
   if(window.BM) BM.injectHomeCard(v);
   if(window.COOP) COOP.injectHomeButton(v);
   if(window.RECALL) RECALL.injectHomeCard(v);
+  if(window.NEWS) NEWS.injectHomeCard(v);
 
   // 6시간 슬롯 기준 첫 접속 시 자동 팝업
   setTimeout(()=>{ showVerseCard(false); }, 350);
@@ -4684,5 +4685,6 @@ function clearBackground() {
 <script src="benchmark.js?v=2"></script>
 <script src="coop.js?v=3"></script>
 <script src="recall.js?v=1"></script>
+<script src="news.js?v=1"></script>
 </body>
 </html>
