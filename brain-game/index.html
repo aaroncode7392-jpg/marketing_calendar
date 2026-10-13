@@ -4621,6 +4621,7 @@ async function renderMemberDetail(member){
   if(window.BM) BM.injectAdminPanel(v, member);
   if(window.COOP) COOP.injectAdminPanel(v, member);
   if(window.RECALL) RECALL.injectAdminPanel(v, member);
+  if(window.GLASS) GLASS.injectAdminPanel(v, member);
   v.querySelector('#back').addEventListener('click',renderAdminDashboard);
   v.querySelector('#back2').addEventListener('click',renderAdminDashboard);
 }
@@ -4686,7 +4687,8 @@ function clearBackground() {
 <script src="coop.js?v=3"></script>
 <script src="recall.js?v=1"></script>
 <script src="radio.js?v=2"></script>
-<script src="glass.js?v=1"></script>
-<script src="news.js?v=8"></script>
+<script src="glass.js?v=2"></script>
+<script src="weather.js?v=1"></script>
+<script src="news.js?v=9"></script>
 </body>
 </html>

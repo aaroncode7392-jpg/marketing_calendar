@@ -1,5 +1,5 @@
 // ==========================================================
-// 오늘의 소식 (신문처럼 보는 뉴스 + 라디오)
+// 오늘의 소식 (신문처럼 보는 뉴스 + 라디오 + 유튜브 + 날씨)
 // 매일 아침 GitHub Actions가 assets/news-data.json 한 파일을 통째로 덮어쓰므로 어제 기사는 저절로 사라진다.
 // 기기에는 "읽은 기사 표시"만 오늘 기사 번호 기준으로 잠깐 저장하고, 날이 바뀌면 같이 지워진다.
 // ==========================================================
@@ -8,11 +8,15 @@
   const READ_KEY = 'newsRead';
   const STALE_DAYS = 3;
   const CATS = ['전체', '건강', '반려동물', '문화·생활', '스포츠', '정치', '경제', '기독교'];
+  // 회원별로 맨 앞에 두고 먼저 보여줄 뉴스 분야
+  const FIRST_CAT_BY_MEMBER = { '691105': '반려동물' };
   const VIDEO_URL = 'assets/youtube-data.json';
+  const TABS = [['news', '📰', '뉴스'], ['radio', '📻', '라디오'], ['video', '▶️', '유튜브'], ['weather', '☀️', '날씨']];
   const VCATS = ['전체', '건강', '지식·시사', '추억·예능', '요리'];
   const CAT_COLOR = { '건강': '#2FA28E', '문화·생활': '#D9779B', '스포츠': '#EE7B5B', '정치': '#3F6FB5', '경제': '#B7791F', '기독교': '#6B5B95', '반려동물': '#6E9E3F', '지식·시사': '#3F6FB5', '추억·예능': '#D9779B', '요리': '#B7791F' };
 
-  let cache = null, vcache = null;
+  const CACHE_TTL = 3600e3;
+  let cache = null, vcache = null; // { data, at }
 
   const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -28,22 +32,22 @@
   }
 
   async function load() {
-    if (cache) return cache;
+    if (cache && Date.now() - cache.at < CACHE_TTL) return cache.data;
     const res = await fetch(`${DATA_URL}?r=${Math.floor(Date.now() / 3600e3)}`, { cache: 'no-cache' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     if (!data || !Array.isArray(data.items)) throw new Error('뉴스 형식 오류');
-    cache = data;
+    cache = { data, at: Date.now() };
     return data;
   }
 
   async function loadVideos() {
-    if (vcache) return vcache;
+    if (vcache && Date.now() - vcache.at < CACHE_TTL) return vcache.data;
     const res = await fetch(`${VIDEO_URL}?r=${Math.floor(Date.now() / 3600e3)}`, { cache: 'no-cache' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     if (!data || !Array.isArray(data.items)) throw new Error('영상 형식 오류');
-    vcache = data;
+    vcache = { data, at: Date.now() };
     return data;
   }
 
@@ -83,7 +87,8 @@
       .nw-logo{font-family:'Jua';font-size:34px;line-height:1.1;letter-spacing:2px;padding-top:36px;white-space:nowrap;}
       .nw-date{font-size:16px;color:var(--ink-soft);margin-top:4px;}
       .nw-tabs{display:flex;gap:4px;margin:14px 14px 4px;padding:4px;background:#F2F4F6;border-radius:18px;}
-      .nw-tab{flex:1;border:0;background:transparent;font-family:var(--tds);font-weight:700;font-size:19px;height:52px;border-radius:14px;color:#8B95A1;cursor:pointer;transition:background .15s,color .15s,transform .1s;}
+      .nw-tab{flex:1;min-width:0;border:0;background:transparent;font-family:var(--tds);font-weight:700;font-size:16px;height:62px;border-radius:14px;color:#8B95A1;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;transition:background .15s,color .15s,transform .1s;}
+      .nw-tab .ic{font-size:22px;line-height:1;}
       .nw-tab.on{background:#fff;color:#191F28;box-shadow:0 2px 8px rgba(0,0,0,.12);}
       .nw-chips{display:flex;flex-wrap:wrap;gap:8px;padding:10px 14px 6px;}
       .nw-chip{flex:0 0 auto;border:0;background:#F2F4F6;color:#4E5968;font-family:var(--tds);font-weight:600;font-size:18px;height:46px;padding:0 18px;border-radius:999px;cursor:pointer;transition:background .15s,color .15s,transform .1s;}
@@ -124,9 +129,9 @@
       .nw-hint.ready{background:linear-gradient(135deg,#FF9F1C,#F04452);box-shadow:0 6px 18px rgba(240,68,82,.45);animation:nwGlow 1.4s ease-in-out infinite;}
       @keyframes nwGlow{0%,100%{transform:scale(1);}50%{transform:scale(1.03);}}
       .nw-hint small{display:block;font-family:var(--tds);font-weight:500;font-size:15px;color:rgba(255,255,255,.85);margin-top:2px;}
-      .nw-from-r{animation:nwInR .3s ease both;} .nw-from-l{animation:nwInL .3s ease both;}
-      @keyframes nwInR{from{opacity:0;transform:translateX(60px);}to{opacity:1;transform:none;}}
-      @keyframes nwInL{from{opacity:0;transform:translateX(-60px);}to{opacity:1;transform:none;}}
+      .nw-from-r{animation:nwInR .34s cubic-bezier(.2,.8,.2,1) both;} .nw-from-l{animation:nwInL .34s cubic-bezier(.2,.8,.2,1) both;}
+      @keyframes nwInR{from{opacity:.2;transform:translateX(42%);}to{opacity:1;transform:none;}}
+      @keyframes nwInL{from{opacity:.2;transform:translateX(-42%);}to{opacity:1;transform:none;}}
       .nw-reader{position:fixed;inset:0;z-index:300;background:#fff;display:flex;flex-direction:column;animation:nwInR .25s ease both;}
       .nw-bar{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:2px solid var(--line);background:var(--cream);}
       .nw-bar button,.nw-bar a{font-family:var(--tds);font-weight:700;font-size:17px;padding:11px 16px;border-radius:12px;border:0;background:#F2F4F6;color:#333D4B;text-decoration:none;cursor:pointer;white-space:nowrap;}
@@ -161,17 +166,26 @@
     </a>`;
   }
 
-  function leaveFeed() {
+  // 들어온 방향의 반대쪽으로 밀면 홈으로 돌아간다. dir: 홈 화면이 들어올 방향
+  let feedDir = 'right';
+  function leaveFeed(dir) {
     if (window.RADIO) RADIO.stop();
-    renderHome();
+    closeReader();
+    document.querySelectorAll('.gl-pane').forEach(p => p.remove());
+    const from = dir || (feedDir === 'right' ? 'left' : 'right');
+    Promise.resolve(renderHome()).then(() => {
+      const v = document.getElementById('app').firstElementChild;
+      if (v) v.classList.add(from === 'right' ? 'nw-from-r' : 'nw-from-l');
+    });
   }
 
   function openFeed(dir, startTab) {
     injectStyle();
     const root = document.getElementById('app');
     root.innerHTML = '';
+    feedDir = dir === 'left' ? 'left' : 'right';
     const wrap = document.createElement('div');
-    wrap.className = dir === 'left' ? 'nw-from-l' : 'nw-from-r';
+    wrap.className = feedDir === 'left' ? 'nw-from-l' : 'nw-from-r';
     wrap.style.paddingBottom = '70px';
     wrap.innerHTML = `
       <div class="nw-paper">
@@ -180,21 +194,23 @@
           <div class="nw-logo">오늘의 소식</div>
           <div class="nw-date">${esc(todayText())}</div>
         </div>
-        <div class="nw-tabs"><button class="nw-tab on" data-t="news">📰 뉴스</button><button class="nw-tab" data-t="radio">📻 라디오</button><button class="nw-tab" data-t="video">▶ 영상</button></div>
+        <div class="nw-tabs">${TABS.map(([t, ic, label]) => `<button class="nw-tab${t === 'news' ? ' on' : ''}" data-t="${t}"><span class="ic">${ic}</span>${label}</button>`).join('')}</div>
         <div class="nw-chips" id="nwChips"></div>
         <div class="nw-body" id="nwList"><div class="nw-note">불러오는 중이에요…</div></div>
       </div>
       <div id="nwMini"></div>`;
     root.appendChild(wrap);
     window.scrollTo(0, 0);
-    wrap.querySelector('#nwBack').addEventListener('click', leaveFeed);
+    wrap.querySelector('#nwBack').addEventListener('click', () => leaveFeed());
     if (window.RADIO) RADIO.mountMini(wrap.querySelector('#nwMini'));
     if (window.GLASS) GLASS.mount(wrap);
 
     const list = wrap.querySelector('#nwList');
     const chips = wrap.querySelector('#nwChips');
     let tab = 'news', data = null, vdata = null, read = new Set();
-    const cats = { news: '전체', video: '전체' };
+    const firstCat = currentMember ? FIRST_CAT_BY_MEMBER[currentMember.birthdate] : null;
+    const newsCats = firstCat ? [firstCat, ...CATS.filter(c => c !== firstCat)] : CATS;
+    const cats = { news: firstCat || '전체', video: '전체' };
     const failNote = what => `<div class="nw-note">지금은 ${what}을 불러올 수 없어요.<br>잠시 뒤에 다시 눌러 주세요.</div>`;
 
     const listHtml = items => {
@@ -219,13 +235,20 @@
     };
     const paint = () => {
       wrap.querySelectorAll('.nw-tab').forEach(x => x.classList.toggle('on', x.dataset.t === tab));
-      chips.style.display = tab === 'radio' ? 'none' : '';
-      if (tab !== 'radio') {
-        const set = tab === 'news' ? CATS : VCATS;
+      const noChips = tab === 'radio' || tab === 'weather';
+      chips.style.display = noChips ? 'none' : '';
+      if (!noChips) {
+        const set = tab === 'news' ? newsCats : VCATS;
         chips.innerHTML = set.map(c => `<button class="nw-chip${c === cats[tab] ? ' on' : ''}" data-c="${esc(c)}">${esc(c)}</button>`).join('');
       }
-      if (tab === 'radio') {
-        if (window.RADIO) RADIO.mountStations(list); else list.innerHTML = '<div class="nw-note">라디오를 불러올 수 없어요.</div>';
+      if (noChips) {
+        const mod = tab === 'radio' ? window.RADIO : window.WEATHER;
+        list.innerHTML = '';
+        const box = document.createElement('div');
+        list.appendChild(box);
+        if (!mod) box.innerHTML = '<div class="nw-note">지금은 열 수 없어요.</div>';
+        else if (tab === 'radio') mod.mountStations(box);
+        else mod.mount(box);
       } else if (tab === 'news') {
         if (data) paintNews(); else list.innerHTML = '<div class="nw-note">불러오는 중이에요…</div>';
       } else if (vdata) {
@@ -233,7 +256,7 @@
       } else {
         list.innerHTML = '<div class="nw-note">불러오는 중이에요…</div>';
         loadVideos().then(v => { vdata = v; if (tab === 'video') paintVideos(); })
-          .catch(() => { if (tab === 'video') list.innerHTML = failNote('영상'); });
+          .catch(() => { if (tab === 'video') list.innerHTML = failNote('유튜브'); });
       }
     };
 
@@ -325,32 +348,70 @@
   }
   window.addEventListener('popstate', () => closeReader());
 
-  // 첫 화면에서 좌우로 밀면 소식이 열리고, 소식에서 오른쪽으로 밀면 홈으로 돌아간다
-  const SWIPE_MIN = 70, SWIPE_MAX_Y = 60, SWIPE_MAX_MS = 700;
-  let touch = null, bound = false;
-  const onHome = () => !!document.getElementById('startBtn') && !document.querySelector('.overlay') && !document.getElementById('nwReader');
-  const onFeed = () => !!document.getElementById('nwBack') && !document.getElementById('nwReader');
+  // 첫 화면에서 좌우로 밀면 소식이 열리고, 소식에서 들어온 반대 방향으로 밀면 홈으로 돌아간다.
+  // 화면이 손가락을 따라 움직이고, 충분히 밀면 넘어가고 아니면 제자리로 돌아온다.
+  const COMMIT_RATIO = 0.25, FLICK_PX = 60, FLICK_SPEED = 0.45;
+  let drag = null, bound = false, suppressClickUntil = 0;
+  const busy = () => document.getElementById('nwReader') || document.querySelector('.gl-canvas');
+  const onHome = () => !!document.getElementById('startBtn') && !document.querySelector('.overlay') && !busy();
+  const onFeed = () => !!document.getElementById('nwBack') && !busy();
+  const allowed = dx => (onHome() ? true : onFeed() ? (feedDir === 'right' ? dx > 0 : dx < 0) : false);
+  const movers = () => [document.getElementById('app'), document.querySelector('.gl-pane')].filter(Boolean);
+  function setOffset(dx, animate) {
+    const W = window.innerWidth;
+    for (const el of movers()) {
+      el.style.transition = animate ? 'transform .28s cubic-bezier(.2,.8,.2,1), opacity .28s' : 'none';
+      el.style.transform = dx ? `translateX(${dx.toFixed(1)}px)` : '';
+      el.style.opacity = dx ? String(Math.max(0.3, 1 - (Math.abs(dx) / W) * 0.7).toFixed(3)) : '';
+    }
+  }
+  function clearOffset() { for (const el of movers()) { el.style.transition = ''; el.style.transform = ''; el.style.opacity = ''; } }
   function bindSwipe() {
     if (bound) return; bound = true;
     const begin = (x, y, target) => {
-      touch = { x, y, at: Date.now(), skip: !!(target.closest && target.closest('#nwChips, input, textarea')) };
+      drag = (onHome() || onFeed()) && !(target.closest && target.closest('input, textarea'))
+        ? { x, y, at: Date.now(), axis: null, moved: false } : null;
     };
-    function finish(cx, cy) {
-      const s0 = touch; touch = null;
-      if (!s0 || s0.skip) return;
-      const dx = cx - s0.x, dy = cy - s0.y;
-      if (Math.abs(dx) < SWIPE_MIN || Math.abs(dy) > SWIPE_MAX_Y || Math.abs(dx) < Math.abs(dy) * 1.5 || Date.now() - s0.at > SWIPE_MAX_MS) return;
-      if (onHome()) openFeed(dx < 0 ? 'right' : 'left');
-      else if (onFeed() && dx > 0) leaveFeed();
-    }
+    const move = (x, y) => {
+      if (!drag) return;
+      const dx = x - drag.x, dy = y - drag.y;
+      if (!drag.axis) {
+        if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+        drag.axis = Math.abs(dx) > Math.abs(dy) * 1.2 ? 'x' : 'y';
+      }
+      if (drag.axis !== 'x') return;
+      drag.moved = true;
+      setOffset(allowed(dx) ? dx : dx * 0.12, false); // 못 가는 방향은 살짝만 끌린다
+    };
+    const finish = (x) => {
+      const d = drag; drag = null;
+      if (!d || d.axis !== 'x') return;
+      suppressClickUntil = Date.now() + 350;
+      const dx = x - d.x, W = window.innerWidth;
+      const speed = Math.abs(dx) / Math.max(1, Date.now() - d.at);
+      const go = allowed(dx) && (Math.abs(dx) > W * COMMIT_RATIO || (Math.abs(dx) > FLICK_PX && speed > FLICK_SPEED));
+      if (!go) { setOffset(0, true); setTimeout(() => { if (!drag) clearOffset(); }, 300); return; }
+      const sign = dx > 0 ? 1 : -1;
+      const wasHome = onHome();
+      setOffset(sign * W, true);
+      setTimeout(() => {
+        clearOffset();
+        if (wasHome) openFeed(sign < 0 ? 'right' : 'left');
+        else leaveFeed(sign < 0 ? 'right' : 'left');
+      }, 190);
+    };
     document.addEventListener('touchstart', e => {
-      if (e.touches.length !== 1) { touch = null; return; }
+      if (e.touches.length !== 1) { drag = null; return; }
       begin(e.touches[0].clientX, e.touches[0].clientY, e.target);
     }, { passive: true });
-    document.addEventListener('touchend', e => { if (e.changedTouches.length) finish(e.changedTouches[0].clientX, e.changedTouches[0].clientY); }, { passive: true });
-    document.addEventListener('touchcancel', () => { touch = null; }, { passive: true });
-    document.addEventListener('mousedown', e => begin(e.clientX, e.clientY, e.target));
-    document.addEventListener('mouseup', e => finish(e.clientX, e.clientY));
+    document.addEventListener('touchmove', e => { if (e.touches.length === 1) move(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+    document.addEventListener('touchend', e => { if (e.changedTouches.length) finish(e.changedTouches[0].clientX); }, { passive: true });
+    document.addEventListener('touchcancel', () => { if (drag && drag.moved) setOffset(0, true); drag = null; }, { passive: true });
+    document.addEventListener('mousedown', e => { if (e.button === 0) begin(e.clientX, e.clientY, e.target); });
+    document.addEventListener('mousemove', e => { if (drag && e.buttons & 1) move(e.clientX, e.clientY); });
+    document.addEventListener('mouseup', e => finish(e.clientX));
+    // 마우스로 끌고 놓았을 때 그 자리 버튼이 눌리지 않게
+    document.addEventListener('click', e => { if (Date.now() < suppressClickUntil) { e.stopPropagation(); e.preventDefault(); } }, true);
   }
 
   function injectHomeCard(homeView) {
@@ -363,8 +424,8 @@
     hint.type = 'button';
     hint.className = `nw-hint${gate === 'ready' ? ' ready' : ''}`;
     hint.innerHTML = gate === 'ready'
-      ? '🎁 두뇌운동 완료! 유리를 깨 보세요<small>뉴스 · 라디오 · 영상이 기다려요</small>'
-      : `📰 뉴스 · 📻 라디오 · ▶ 영상<small>${gate === 'locked' ? '🔒 두뇌운동을 마치면 열려요' : '눌러도 되고, 옆으로 밀어도 열려요'}</small>`;
+      ? '🎁 두뇌운동 완료! 유리를 깨 보세요<small>뉴스 · 라디오 · 유튜브 · 날씨가 기다려요</small>'
+      : `📰 뉴스 · 📻 라디오 · ▶️ 유튜브 · ☀️ 날씨<small>${gate === 'locked' ? '🔒 두뇌운동을 마치면 열려요' : '눌러도 되고, 옆으로 밀어도 열려요'}</small>`;
     hint.addEventListener('click', () => openFeed('right'));
     anchor.parentNode.insertBefore(hint, anchor);
   }

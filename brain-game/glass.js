@@ -2,43 +2,46 @@
 // 유리막 잠금: 오늘의 두뇌운동을 한 번 마치면 뉴스·라디오·영상이 열린다.
 //  - 운동 전: 소식 화면이 반투명한 유리막으로 막혀 있고, 누르면 두뇌운동을 하라고 안내한다.
 //  - 운동 후: 유리막을 탭하면 산산조각으로 깨지며(금, 파편, 충격파, 소리, 진동) 소식이 열린다.
-// 하루에 한 번만 깨며, 다음 날에는 다시 유리막이 생긴다.
+// 하루에 한 번만 깨며, 매일 오전 6시에 다시 유리막이 생긴다.
 // ==========================================================
 (function () {
-  const GATE_START = '2026-10-15'; // 이 날짜부터 잠금이 적용된다 (그 전에는 모두 열려 있다)
+  const GATE_START = '2026-10-15'; // 이 날(오전 6시)부터 잠금이 적용된다 (그 전에는 모두 열려 있다)
+  const DAY_START_HOUR = 6;         // 하루의 시작: 오전 6시
   const CRACK_MS = 140;
   const TOTAL_MS = 3200;
 
   const pad = n => String(n).padStart(2, '0');
   const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  const today = () => ymd(new Date());
+  // 오전 6시 전은 전날로 친다
+  const dayOf = t => ymd(new Date(new Date(t).getTime() - DAY_START_HOUR * 3600e3));
+  const today = () => dayOf(Date.now());
   const rand = (a, b) => a + Math.random() * (b - a);
-  const memberKey = () => `glassDay:${(currentMember && currentMember.birthdate) || 'guest'}`;
+  const memberKey = m => `glassDay:${(m && m.birthdate) || 'guest'}`;
 
   const api = { gateStart: GATE_START };
 
-  function brokenToday() {
-    if (currentMember && currentMember.glassDay === today()) return true;
-    try { return localStorage.getItem(memberKey()) === today(); } catch (e) { return false; }
+  function brokenToday(m = currentMember) {
+    if (m && m.glassDay === today()) return true;
+    try { return localStorage.getItem(memberKey(m)) === today(); } catch (e) { return false; }
   }
   function markBroken() {
-    try { localStorage.setItem(memberKey(), today()); } catch (e) { /* 저장소를 못 쓰면 서버 기록만 사용 */ }
+    try { localStorage.setItem(memberKey(currentMember), today()); } catch (e) { /* 저장소를 못 쓰면 서버 기록만 사용 */ }
     if (currentMember) {
       currentMember.glassDay = today();
       if (typeof saveMember === 'function') saveMember();
     }
   }
-  function sessionDoneToday() {
-    if (!currentMember) return false;
+  function sessionDoneToday(m = currentMember) {
+    if (!m) return false;
     const t = today();
-    const hit = ts => { const d = new Date(ts); return !Number.isNaN(d.getTime()) && ymd(d) === t; };
-    return (currentMember.scoreLog || []).some(s => hit(s.ts)) || (currentMember.completedLog || []).some(hit);
+    const hit = ts => { const ms = new Date(ts).getTime(); return Number.isFinite(ms) && dayOf(ms) === t; };
+    return (m.scoreLog || []).some(s => hit(s.ts)) || (m.completedLog || []).some(hit);
   }
   // 'open' 열림 · 'locked' 두뇌운동 전 · 'ready' 두뇌운동 끝, 유리를 깰 차례
-  function state() {
+  function state(m = currentMember) {
     if (today() < api.gateStart) return 'open';
-    if (brokenToday()) return 'open';
-    return sessionDoneToday() ? 'ready' : 'locked';
+    if (brokenToday(m)) return 'open';
+    return sessionDoneToday(m) ? 'ready' : 'locked';
   }
 
   // ---------------- 소리 ----------------
@@ -156,6 +159,7 @@
     const W = window.innerWidth, H = window.innerHeight;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const cv = document.createElement('canvas');
+    cv.className = 'gl-canvas';
     cv.width = Math.floor(W * dpr); cv.height = Math.floor(H * dpr);
     cv.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;z-index:290;pointer-events:all;';
     document.body.appendChild(cv);
@@ -302,26 +306,18 @@
     setTimeout(() => t.remove(), 3000);
   }
 
-  // 소식 화면(wrap)에 유리막을 씌운다
-  function mount(wrap) {
-    const st = state();
-    if (st === 'open' || !wrap) return;
+  // 유리막 하나를 만든다. opts: { paper, homeLabel, onHome, onGo, onBroken, demo }
+  function createPane(mode, opts) {
     injectStyle();
     document.querySelectorAll('.gl-pane').forEach(p => p.remove());
-    const paper = wrap.querySelector('.nw-paper');
-    if (paper) paper.classList.add('gl-blur');
     const pane = document.createElement('div');
     pane.className = 'gl-pane';
-    pane.innerHTML = '<button class="gl-home" type="button">← 홈</button><div class="gl-center"></div>';
+    pane.innerHTML = `<button class="gl-home" type="button">${opts.homeLabel || '← 홈'}</button><div class="gl-center"></div>`;
     document.body.appendChild(pane);
     const center = pane.querySelector('.gl-center');
-    const goHome = () => { if (window.NEWS && NEWS.leave) NEWS.leave(); };
-    pane.querySelector('.gl-home').addEventListener('click', e => { e.stopPropagation(); goHome(); });
+    pane.querySelector('.gl-home').addEventListener('click', e => { e.stopPropagation(); opts.onHome(); });
 
-    // 화면을 떠나면 유리막도 함께 치운다
-    const timer = setInterval(() => { if (!wrap.isConnected) { pane.remove(); clearInterval(timer); } }, 300);
-
-    if (st === 'locked') {
+    if (mode === 'locked') {
       center.innerHTML = '<div class="gl-lock">🔒</div><div class="gl-sub">유리막으로 잠겨 있어요<br>탭해 보세요</div>';
       let asked = false;
       pane.addEventListener('click', () => {
@@ -331,33 +327,91 @@
         asked = true;
         center.innerHTML = `<div class="gl-card">
           <h3>🧠 두뇌운동을 먼저 해 주세요!</h3>
-          <p>오늘의 두뇌운동을 한 번만 마치면<br>뉴스·라디오·영상이 열려요.</p>
+          <p>오늘의 두뇌운동을 한 번만 마치면<br>뉴스·라디오·유튜브·날씨가 열려요.</p>
           <button class="gl-btn" id="glGo" type="button">두뇌운동 하러 가기</button>
           <button class="gl-btn sub" id="glBack" type="button">다음에 할게요</button>
         </div>`;
-        center.querySelector('#glGo').addEventListener('click', e => { e.stopPropagation(); clearInterval(timer); pane.remove(); if (typeof window.startSession === 'function') window.startSession(); });
-        center.querySelector('#glBack').addEventListener('click', e => { e.stopPropagation(); goHome(); });
+        center.querySelector('#glGo').addEventListener('click', e => { e.stopPropagation(); opts.onGo(); });
+        center.querySelector('#glBack').addEventListener('click', e => { e.stopPropagation(); opts.onHome(); });
       });
     } else {
       center.innerHTML = '<div class="gl-title">✨ 두뇌운동 완료!</div><div class="gl-tap">유리를 탭해서 깨 보세요!</div><span class="gl-hand">👆</span>';
       let broken = false;
-      const hit = e => {
+      pane.addEventListener('click', e => {
         if (broken) return;
         broken = true;
-        clearInterval(timer);
-        const pt = e.touches && e.touches[0] ? e.touches[0] : e;
-        const ix = Number.isFinite(pt.clientX) ? pt.clientX : window.innerWidth / 2;
-        const iy = Number.isFinite(pt.clientY) ? pt.clientY : window.innerHeight / 2;
-        markBroken();
+        const ix = Number.isFinite(e.clientX) ? e.clientX : window.innerWidth / 2;
+        const iy = Number.isFinite(e.clientY) ? e.clientY : window.innerHeight / 2;
+        if (opts.onBroken) opts.onBroken();
         center.style.display = 'none';
-        shatter(ix, iy, pane, paper, () => { if (paper) paper.classList.remove('gl-reveal'); toast('🔓 열렸어요! 마음껏 즐기세요'); });
-      };
-      pane.addEventListener('click', hit);
+        pane.querySelector('.gl-home').style.display = 'none';
+        shatter(ix, iy, pane, opts.paper, () => {
+          if (opts.paper) opts.paper.classList.remove('gl-reveal');
+          toast(opts.demo ? '🧪 테스트 완료! 기록은 남지 않았어요' : '🔓 열렸어요! 마음껏 즐기세요');
+        });
+      });
     }
+    return pane;
+  }
+
+  // 소식 화면(wrap)에 유리막을 씌운다
+  function mount(wrap) {
+    const st = state();
+    if (st === 'open' || !wrap) return;
+    const paper = wrap.querySelector('.nw-paper');
+    if (paper) paper.classList.add('gl-blur');
+    let timer = null;
+    const pane = createPane(st, {
+      paper,
+      onHome: () => { if (window.NEWS && NEWS.leave) NEWS.leave(); },
+      onGo: () => { clearInterval(timer); pane.remove(); if (typeof window.startSession === 'function') window.startSession(); },
+      onBroken: () => { clearInterval(timer); markBroken(); },
+    });
+    // 화면을 떠나면 유리막도 함께 치운다
+    timer = setInterval(() => { if (!wrap.isConnected) { pane.remove(); clearInterval(timer); } }, 300);
+  }
+
+  // 관리자용: 두뇌게임 없이 지금 화면 위에서 유리막을 띄워 본다 (기록은 남기지 않는다)
+  function demo(mode) {
+    const pane = createPane(mode, {
+      demo: true,
+      homeLabel: '✕ 닫기',
+      onHome: () => pane.remove(),
+      onGo: () => { pane.remove(); toast('미리보기라서 이동하지 않아요'); },
+    });
+  }
+
+  const STATE_TEXT = { open: '🔓 열림', locked: '🔒 두뇌운동 전 (잠김)', ready: '🎁 두뇌운동 완료, 유리 깰 차례' };
+  function injectAdminPanel(detailView, member) {
+    const before = today() < api.gateStart;
+    const panel = document.createElement('div');
+    panel.className = 'admin-panel';
+    panel.innerHTML = `
+      <div class="section-title">🧊 유리막 잠금 (매일 오전 6시에 새로 잠겨요)</div>
+      <div style="font-size:15px;margin-bottom:12px;line-height:1.6;">
+        ${before ? `${api.gateStart} 오전 6시부터 적용돼요. 지금은 모두 열려 있어요.<br>` : ''}
+        오늘 상태: <b>${STATE_TEXT[state(member)]}</b>${member.glassDay === today() ? ' · 오늘 깸' : ''}
+      </div>
+      <button class="btn" data-gl="ready" style="margin:0 0 8px;font-size:17px;padding:12px;">🧪 유리 깨기 테스트 (두뇌게임 없이)</button>
+      <button class="btn btn-ghost" data-gl="locked" style="margin:0 0 8px;font-size:16px;padding:11px;">🔒 잠긴 화면 미리보기</button>
+      ${member.glassDay === today() ? '<button class="btn btn-ghost" data-gl="reset" style="margin:0;font-size:16px;padding:11px;">🔄 이 회원 오늘 유리 다시 씌우기</button>' : ''}`;
+    panel.addEventListener('click', async e => {
+      const b = e.target.closest('[data-gl]'); if (!b) return;
+      if (b.dataset.gl !== 'reset') { demo(b.dataset.gl); return; }
+      member.glassDay = null;
+      try { localStorage.removeItem(memberKey(member)); } catch (err) { /* 무시 */ }
+      if (currentMember && currentMember.birthdate === member.birthdate) currentMember.glassDay = null;
+      try { await saveMemberRaw(member); b.textContent = '✅ 다시 씌웠어요'; b.disabled = true; } catch (err) { b.textContent = '저장 실패, 다시 눌러 주세요'; }
+    });
+    const anchor = detailView.querySelector('#back2');
+    if (anchor) anchor.parentNode.insertBefore(panel, anchor); else detailView.appendChild(panel);
   }
 
   api.state = state;
   api.mount = mount;
+  api.demo = demo;
+  api.injectAdminPanel = injectAdminPanel;
   api.todayDone = sessionDoneToday;
+  api.today = today;
   window.GLASS = api;
 })();
