@@ -8,9 +8,11 @@
   const READ_KEY = 'newsRead';
   const STALE_DAYS = 3;
   const CATS = ['전체', '건강', '문화·생활', '스포츠', '정치', '경제', '기독교'];
-  const CAT_COLOR = { '건강': '#2FA28E', '문화·생활': '#D9779B', '스포츠': '#EE7B5B', '정치': '#3F6FB5', '경제': '#B7791F', '기독교': '#6B5B95' };
+  const VIDEO_URL = 'assets/youtube-data.json';
+  const VCATS = ['전체', '건강', '지식·시사', '추억·예능', '요리'];
+  const CAT_COLOR = { '건강': '#2FA28E', '문화·생활': '#D9779B', '스포츠': '#EE7B5B', '정치': '#3F6FB5', '경제': '#B7791F', '기독교': '#6B5B95', '지식·시사': '#3F6FB5', '추억·예능': '#D9779B', '요리': '#B7791F' };
 
-  let cache = null;
+  let cache = null, vcache = null;
 
   const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -35,6 +37,16 @@
     return data;
   }
 
+  async function loadVideos() {
+    if (vcache) return vcache;
+    const res = await fetch(`${VIDEO_URL}?r=${Math.floor(Date.now() / 3600e3)}`, { cache: 'no-cache' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (!data || !Array.isArray(data.items)) throw new Error('영상 형식 오류');
+    vcache = data;
+    return data;
+  }
+
   function ago(ts) {
     const m = Math.max(0, Math.round((Date.now() - ts) / 60000));
     if (m < 60) return `${Math.max(1, m)}분 전`;
@@ -45,8 +57,8 @@
   const todayText = () => new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' });
 
   // 전체 보기에서는 분야가 골고루 보이도록 한 분야씩 번갈아 섞는다
-  function interleave(items) {
-    const groups = CATS.slice(1).map(c => items.filter(it => it.cat === c));
+  function interleave(items, key = 'cat', keys = CATS.slice(1)) {
+    const groups = keys.map(k => items.filter(it => it[key] === k));
     const out = [];
     for (let i = 0; groups.some(g => g[i]); i++) for (const g of groups) if (g[i]) out.push(g[i]);
     return out;
@@ -85,6 +97,19 @@
       .nw-meta{font-size:15px;color:var(--ink-soft);}
       .nw-card.read .nw-title{color:#A29688;}
       .nw-card.read .nw-thumb,.nw-card.read .nw-img{opacity:.55;}
+      .nw-play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:56px;height:56px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;font-size:26px;display:flex;align-items:center;justify-content:center;padding-left:4px;pointer-events:none;}
+      .nw-lead .nw-play{top:42%;width:68px;height:68px;font-size:32px;}
+      .nw-tw{position:relative;flex:0 0 120px;width:120px;height:68px;align-self:center;}
+      .nw-tw .nw-thumb{width:120px;height:68px;flex-basis:120px;}
+      .nw-tw .nw-play{width:34px;height:34px;font-size:16px;padding-left:2px;}
+      .nw-video{background:#111;}
+      .nw-vbar{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#111;}
+      .nw-vbar button,.nw-vbar a{font-family:'Jua';font-size:18px;padding:10px 14px;border-radius:12px;border:0;background:#fff;color:var(--ink);text-decoration:none;cursor:pointer;white-space:nowrap;}
+      .nw-vbar .sp{flex:1;min-width:0;font-size:14px;color:#ccc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+      .nw-vframe{width:100%;aspect-ratio:16/9;border:0;background:#000;display:block;}
+      .nw-vinfo{flex:1;overflow:auto;background:#fff;padding:16px;}
+      .nw-vinfo .nw-title{font-size:23px;-webkit-line-clamp:unset;display:block;}
+      .nw-vbtn{display:block;text-align:center;font-family:'Jua';font-size:22px;background:#E8635B;color:#fff;border-radius:14px;padding:16px;margin-top:14px;text-decoration:none;}
       .nw-note{text-align:center;color:var(--ink-soft);font-size:16px;padding:12px 0 4px;}
       .nw-hint{display:block;width:100%;text-align:center;color:var(--ink);font-size:19px;margin:2px 0 12px;padding:12px 10px;font-family:'Jua';background:#fff;border:2px solid var(--line);border-radius:16px;box-shadow:0 4px 10px rgba(0,0,0,.06);cursor:pointer;}
       .nw-hint small{display:block;font-family:'Gowun Dodum',sans-serif;font-size:15px;color:var(--ink-soft);margin-top:2px;}
@@ -104,17 +129,18 @@
   const tagHtml = it => `<span class="nw-tag" style="background:${CAT_COLOR[it.cat] || '#7A6A5E'}">${esc(it.cat)}</span>`;
   const metaHtml = (it, isRead) => `${esc(it.src)} · ${esc(ago(it.ts))}${isRead ? ' · 읽음' : ''}`;
 
-  function leadHtml(it, isRead) {
+  function leadHtml(it, isRead, video) {
     return `<a class="nw-card nw-lead${isRead ? ' read' : ''}" draggable="false" data-id="${esc(it.id)}" href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener noreferrer">
       <img class="nw-img" draggable="false" src="${esc(it.img)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">
-      <div class="nw-ov">${tagHtml(it)}<div class="nw-title">${esc(it.title)}</div><div class="nw-meta">${metaHtml(it, isRead)}</div></div>
+      ${video ? '<span class="nw-play">▶</span>' : ''}<div class="nw-ov">${tagHtml(it)}<div class="nw-title">${esc(it.title)}</div><div class="nw-meta">${metaHtml(it, isRead)}</div></div>
     </a>`;
   }
-  function rowHtml(it, isRead) {
+  function rowHtml(it, isRead, video) {
     const img = it.img ? `<img class="nw-thumb" draggable="false" src="${esc(it.img)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : '';
+    const thumb = video && img ? `<div class="nw-tw">${img}<span class="nw-play">▶</span></div>` : img;
     return `<a class="nw-card nw-row${isRead ? ' read' : ''}" draggable="false" data-id="${esc(it.id)}" href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener noreferrer">
       <div class="nw-txt"><div class="nw-meta">${tagHtml(it)}</div><div class="nw-title">${esc(it.title)}</div><div class="nw-meta">${metaHtml(it, isRead)}</div></div>
-      ${img}
+      ${thumb}
     </a>`;
   }
 
@@ -137,8 +163,8 @@
           <div class="nw-logo">오늘의 소식</div>
           <div class="nw-date">${esc(todayText())}</div>
         </div>
-        <div class="nw-tabs"><button class="nw-tab on" data-t="news">📰 뉴스</button><button class="nw-tab" data-t="radio">📻 라디오</button></div>
-        <div class="nw-chips" id="nwChips">${CATS.map((c, i) => `<button class="nw-chip${i ? '' : ' on'}" data-c="${esc(c)}">${esc(c)}</button>`).join('')}</div>
+        <div class="nw-tabs"><button class="nw-tab on" data-t="news">📰 뉴스</button><button class="nw-tab" data-t="video">▶ 영상</button><button class="nw-tab" data-t="radio">📻 라디오</button></div>
+        <div class="nw-chips" id="nwChips"></div>
         <div class="nw-body" id="nwList"><div class="nw-note">불러오는 중이에요…</div></div>
       </div>
       <div id="nwMini"></div>`;
@@ -149,26 +175,47 @@
 
     const list = wrap.querySelector('#nwList');
     const chips = wrap.querySelector('#nwChips');
-    let tab = 'news', cat = '전체', data = null, read = new Set();
+    let tab = 'news', data = null, vdata = null, read = new Set();
+    const cats = { news: '전체', video: '전체' };
+    const failNote = what => `<div class="nw-note">지금은 ${what}을 불러올 수 없어요.<br>잠시 뒤에 다시 눌러 주세요.</div>`;
 
+    const listHtml = (items, video) => {
+      const leadIdx = items.findIndex(it => it.img);
+      const html = items.map((it, i) => (i === leadIdx ? leadHtml(it, !video && read.has(it.id), video) : rowHtml(it, !video && read.has(it.id), video)));
+      if (leadIdx > 0) html.unshift(html.splice(leadIdx, 1)[0]);
+      return html.join('');
+    };
     const paintNews = () => {
       if (!data) return;
-      const items = cat === '전체' ? interleave(data.items) : data.items.filter(it => it.cat === cat);
+      const items = cats.news === '전체' ? interleave(data.items) : data.items.filter(it => it.cat === cats.news);
       const stale = Date.now() - Date.parse(data.updated) > STALE_DAYS * 86400e3;
-      const leadIdx = items.findIndex(it => it.img);
-      const html = items.map((it, i) => (i === leadIdx ? leadHtml(it, read.has(it.id)) : rowHtml(it, read.has(it.id))));
-      if (leadIdx > 0) html.unshift(html.splice(leadIdx, 1)[0]);
       list.innerHTML = (stale ? '<div class="nw-note">⚠️ 며칠째 새 소식이 오지 않았어요.</div>' : '')
-        + (items.length ? html.join('') : '<div class="nw-note">지금은 보여드릴 소식이 없어요.</div>')
+        + (items.length ? listHtml(items, false) : '<div class="nw-note">지금은 보여드릴 소식이 없어요.</div>')
         + '<div class="nw-note">누르면 앱 안에서 기사가 열려요. 소식은 매일 아침 새로 바뀌어요.</div>';
     };
+    const paintVideos = () => {
+      if (!vdata) return;
+      const items = cats.video === '전체' ? interleave(vdata.items, 'src', [...new Set(vdata.items.map(v => v.src))]) : vdata.items.filter(it => it.cat === cats.video);
+      list.innerHTML = (items.length ? listHtml(items, true) : '<div class="nw-note">지금은 보여드릴 영상이 없어요.</div>')
+        + '<div class="nw-note">누르면 앱 안에서 영상이 재생돼요.</div>';
+    };
     const paint = () => {
-      chips.style.display = tab === 'news' ? '' : 'none';
       wrap.querySelectorAll('.nw-tab').forEach(x => x.classList.toggle('on', x.dataset.t === tab));
+      chips.style.display = tab === 'radio' ? 'none' : '';
+      if (tab !== 'radio') {
+        const set = tab === 'news' ? CATS : VCATS;
+        chips.innerHTML = set.map(c => `<button class="nw-chip${c === cats[tab] ? ' on' : ''}" data-c="${esc(c)}">${esc(c)}</button>`).join('');
+      }
       if (tab === 'radio') {
         if (window.RADIO) RADIO.mountStations(list); else list.innerHTML = '<div class="nw-note">라디오를 불러올 수 없어요.</div>';
+      } else if (tab === 'news') {
+        if (data) paintNews(); else list.innerHTML = '<div class="nw-note">불러오는 중이에요…</div>';
+      } else if (vdata) {
+        paintVideos();
       } else {
-        paintNews();
+        list.innerHTML = '<div class="nw-note">불러오는 중이에요…</div>';
+        loadVideos().then(v => { vdata = v; if (tab === 'video') paintVideos(); })
+          .catch(() => { if (tab === 'video') list.innerHTML = failNote('영상'); });
       }
     };
 
@@ -178,25 +225,59 @@
     });
     chips.addEventListener('click', e => {
       const b = e.target.closest('.nw-chip'); if (!b) return;
-      cat = b.dataset.c;
+      cats[tab] = b.dataset.c;
       chips.querySelectorAll('.nw-chip').forEach(x => x.classList.toggle('on', x === b));
-      paintNews();
+      if (tab === 'news') paintNews(); else paintVideos();
     });
     list.addEventListener('click', e => {
-      const a = e.target.closest('.nw-card'); if (!a || !data) return;
+      const a = e.target.closest('.nw-card'); if (!a) return;
+      if (tab === 'video') {
+        e.preventDefault();
+        openVideo(vdata && vdata.items.find(it => it.id === a.dataset.id));
+        return;
+      }
+      if (!data) return;
       e.preventDefault();
       read.add(a.dataset.id); markRead(data.updated, read);
       a.classList.add('read');
       openReader(data.items.find(it => it.id === a.dataset.id));
     });
 
-    if (startTab === 'radio') { tab = 'radio'; paint(); }
+    paint();
+    if (startTab && startTab !== 'news') { tab = startTab; paint(); }
     load().then(d => {
       data = d; read = readSet(d.updated);
       if (tab === 'news') paintNews();
     }).catch(() => {
-      if (tab === 'news') list.innerHTML = '<div class="nw-note">지금은 소식을 불러올 수 없어요.<br>잠시 뒤에 다시 눌러 주세요.</div>';
+      if (tab === 'news') list.innerHTML = failNote('소식');
     });
+  }
+
+  // 영상을 앱 안에서 재생 (채널이 앱 안 재생을 막아 둔 영상은 유튜브 링크로 안내)
+  function openVideo(it) {
+    if (!it || document.getElementById('nwReader')) return;
+    if (window.RADIO) RADIO.stop();
+    const r = document.createElement('div');
+    r.id = 'nwReader';
+    r.className = 'nw-reader nw-video';
+    r.innerHTML = `
+      <div class="nw-vbar">
+        <button id="nwClose">← 닫기</button>
+        <div class="sp">${esc(it.src)}</div>
+        <a href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener noreferrer">유튜브 ↗</a>
+      </div>
+      ${it.embed ? '<iframe class="nw-vframe" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>' : ''}
+      <div class="nw-vinfo">
+        <div class="nw-meta">${tagHtml(it)} ${esc(it.src)} · ${esc(ago(it.ts))}</div>
+        <div class="nw-title">${esc(it.title)}</div>
+        ${it.embed ? '' : `<div class="nw-note">이 영상은 앱 안에서 볼 수 없어요.</div><a class="nw-vbtn" href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener noreferrer">▶ 유튜브에서 보기</a>`}
+      </div>`;
+    document.body.appendChild(r);
+    const f = r.querySelector('iframe');
+    if (f) f.src = `https://www.youtube.com/embed/${encodeURIComponent(it.id)}?autoplay=1&playsinline=1&rel=0`;
+    document.body.style.overflow = 'hidden';
+    history.pushState({ nwReader: 1 }, '');
+    r.querySelector('#nwClose').addEventListener('click', () => { if (history.state && history.state.nwReader) history.back(); else closeReader(); });
   }
 
   // 기사를 앱 안에서 열기 (뒤로가기 버튼으로도 닫힘)
@@ -262,7 +343,7 @@
     const hint = document.createElement('button');
     hint.type = 'button';
     hint.className = 'nw-hint';
-    hint.innerHTML = '📰 오늘의 소식 · 📻 라디오<small>눌러도 되고, 옆으로 밀어도 열려요</small>';
+    hint.innerHTML = '📰 소식 · ▶ 영상 · 📻 라디오<small>눌러도 되고, 옆으로 밀어도 열려요</small>';
     hint.addEventListener('click', () => openFeed('right'));
     anchor.parentNode.insertBefore(hint, anchor);
   }

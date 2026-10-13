@@ -25,14 +25,16 @@ jobs:
           node-version: 20
       - name: 뉴스 가져오기 (어제 데이터는 통째로 덮어씀)
         run: node brain-game/tools/fetch-news.mjs
+      - name: 유튜브 최신 영상 가져오기 (마찬가지로 통째로 덮어씀)
+        run: node brain-game/tools/fetch-youtube.mjs
       - name: 바뀐 경우에만 커밋
         run: |
-          if git diff --quiet -- brain-game/assets/news-data.json; then
+          if git diff --quiet -- brain-game/assets/news-data.json brain-game/assets/youtube-data.json; then
             echo "변경 없음"; exit 0
           fi
           git config user.name "news-bot"
           git config user.email "news-bot@users.noreply.github.com"
-          git add brain-game/assets/news-data.json
+          git add brain-game/assets/news-data.json brain-game/assets/youtube-data.json
           git commit -m "chore: 오늘의 소식 갱신"
           git pull --rebase origin "${GITHUB_REF_NAME}"
           git push
