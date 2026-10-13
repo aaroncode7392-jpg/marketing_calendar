@@ -4,7 +4,13 @@
 // 보안 규칙상 새 컬렉션을 쓸 수 없어 members 컬렉션 안의 'coop-설명자-맞히는사람' 문서를 방으로 쓴다.
 // ==========================================================
 (function () {
-  const PAIRS = [{ describer: '610708', guesser: '691105' }];
+  // 설명하는 사람(말하기)은 610708·941128, 맞히는 사람은 691105·941128. 941128은 두 분 각각과 짝이 될 수 있다.
+  const PAIRS = [
+    { describer: '610708', guesser: '691105' },
+    { describer: '610708', guesser: '941128' },
+    { describer: '941128', guesser: '691105' },
+  ];
+  const CALL = { '610708': '아빠', '691105': '엄마', '941128': '아들' };
   const ROUNDS = 5;
   const START_OPTIONS = 3, MIN_OPTIONS = 2, MAX_OPTIONS = 6;
   const MAX_WRONG = 2;
@@ -29,11 +35,10 @@
   const shuffleArr = a => { const b = a.slice(); for (let i = b.length - 1; i > 0; i--) { const j = rand(i + 1); [b[i], b[j]] = [b[j], b[i]]; } return b; };
   const fmtBd = bd => (typeof fmtBirthdate === 'function' ? fmtBirthdate(bd) : bd);
 
-  function myPair() {
+  function myPairs() {
     const bd = currentMember && currentMember.birthdate;
-    const pair = PAIRS.find(p => p.describer === bd || p.guesser === bd);
-    if (!pair) return null;
-    return { ...pair, role: pair.describer === bd ? 'describer' : 'guesser', partner: pair.describer === bd ? pair.guesser : pair.describer };
+    return PAIRS.filter(p => p.describer === bd || p.guesser === bd)
+      .map(p => ({ ...p, role: p.describer === bd ? 'describer' : 'guesser', partner: p.describer === bd ? p.guesser : p.describer }));
   }
   const roomId = pair => `coop-${pair.describer}-${pair.guesser}`;
   const isOnline = (room, bd) => {
@@ -76,7 +81,7 @@
         <div style="font-size:48px;">📱📱</div>
         <div style="font-family:'Jua';font-size:22px;margin:10px 0;">짝꿍을 기다리는 중이에요</div>
         <div style="font-size:16px;color:var(--ink-soft);line-height:1.6;">${fmtBd(pair.partner)}님도 <b>자기 폰</b>으로<br>'둘이 함께 맞히기'를 눌러주세요.</div>
-        <div style="font-family:'Jua';font-size:21px;line-height:1.5;margin-top:16px;padding:14px;background:#FFF3F7;border-radius:16px;color:#C2456E;">${pair.role === 'describer' ? '엄마' : '아빠'}에게도<br>합동게임을 누르라고 해보세요 💕</div>`);
+        <div style="font-family:'Jua';font-size:21px;line-height:1.5;margin-top:16px;padding:14px;background:#FFF3F7;border-radius:16px;color:#C2456E;">${CALL[pair.partner] || fmtBd(pair.partner) + '님'}에게도<br>합동게임을 누르라고 해보세요 💕</div>`);
     }
     if (pair.role === 'describer') {
       return panel(`
@@ -203,8 +208,7 @@
   }
 
   // ---------- 진입 ----------
-  async function open() {
-    const pair = myPair();
+  async function open(pair) {
     const db = typeof initFirebase === 'function' ? initFirebase() : null;
     if (!pair) return;
     if (typeof setGameBackground === 'function') setGameBackground(null);
@@ -265,18 +269,44 @@
   }
 
   // ---------- 홈 버튼 / 관리자 ----------
+  // 짝이 둘 이상인 사람(941128, 그리고 그 짝이 된 부모님)은 누구와 할지 먼저 고른다
+  function choosePartner(pairs) {
+    const v = render(`
+      <div class="topbar"><div class="brand" style="font-size:22px;">👫 둘이 함께 맞히기</div><button class="iconbtn" id="coopExit">✕</button></div>
+      ${panel(`<div style="font-family:'Jua';font-size:22px;margin-bottom:14px;">누구와 함께 할까요?</div>
+        ${pairs.map((p, i) => `<button class="btn btn-primary" data-pair="${i}" style="margin-top:10px;font-size:22px;padding:18px;">${CALL[p.partner] || fmtBd(p.partner)}와 함께 <span style="font-size:15px;opacity:.9;">(${p.role === 'describer' ? '내가 설명' : '내가 맞히기'})</span></button>`).join('')}`)}`);
+    v.querySelector('#coopExit').addEventListener('click', () => renderHome());
+    v.querySelectorAll('[data-pair]').forEach(b => b.addEventListener('click', () => open(pairs[+b.dataset.pair])));
+  }
+  function start() {
+    const pairs = myPairs();
+    if (pairs.length === 1) open(pairs[0]); else if (pairs.length > 1) choosePartner(pairs);
+  }
+  const HOST = '941128'; // 부모님 각각과 짝이 되어 함께 해보는 계정
   function injectHomeButton(homeView) {
-    const pair = myPair();
-    if (!pair) return;
+    const pairs = myPairs();
+    if (!pairs.length) return;
     const anchor = homeView.querySelector('#myCardsBtn');
     if (!anchor) return;
-    const btn = document.createElement('button');
-    btn.className = 'btn';
-    btn.id = 'coopOpen';
-    btn.style.cssText = 'font-size:22px;padding:18px;margin-top:12px;background:#E86A92;color:#FFF;box-shadow:0 6px 0 #B84A6E;';
-    btn.innerHTML = `👫 둘이 함께 맞히기 <span style="font-size:15px;opacity:.9;">(${fmtBd(pair.partner)}님과)</span>`;
-    anchor.parentNode.insertBefore(btn, anchor);
-    btn.addEventListener('click', open);
+    const label = p => CALL[p.partner] || fmtBd(p.partner) + '님';
+    const mk = (id, css, html, onClick) => {
+      const b = document.createElement('button');
+      b.className = 'btn'; b.id = id; b.style.cssText = css; b.innerHTML = html;
+      anchor.parentNode.insertBefore(b, anchor);
+      b.addEventListener('click', onClick);
+    };
+    const main = 'font-size:22px;padding:18px;margin-top:12px;background:#E86A92;color:#FFF;box-shadow:0 6px 0 #B84A6E;';
+    const sub = 'font-size:16px;padding:12px;margin-top:8px;background:#FFF;color:#C2456E;border:2px solid #F3B7CB;box-shadow:none;';
+    const bd = currentMember.birthdate;
+    if (bd === HOST) {
+      mk('coopOpen', main, `👫 둘이 함께 맞히기 <span style="font-size:15px;opacity:.9;">(짝꿍 고르기)</span>`, start);
+      return;
+    }
+    // 부모님은 기존처럼 서로 바로 연결, 아들과 하는 것은 보조 버튼
+    const primary = pairs.find(p => p.partner !== HOST) || pairs[0];
+    mk('coopOpen', main, `👫 둘이 함께 맞히기 <span style="font-size:15px;opacity:.9;">(${label(primary)}와)</span>`, () => open(primary));
+    const withHost = pairs.find(p => p.partner === HOST);
+    if (withHost) mk('coopOpenHost', sub, `👨‍👩‍👦 ${label(withHost)}과 하기 <span style="font-size:13px;opacity:.8;">(${withHost.role === 'describer' ? '내가 설명' : '내가 맞히기'})</span>`, () => open(withHost));
   }
   function injectAdminPanel(detailView, member) {
     const log = (member.coopLog || []).slice().reverse();
@@ -293,5 +323,5 @@
     if (anchor) anchor.parentNode.insertBefore(panelEl, anchor); else detailView.appendChild(panelEl);
   }
 
-  window.COOP = { PAIRS, open, injectHomeButton, injectAdminPanel };
+  window.COOP = { PAIRS, open, start, myPairs, injectHomeButton, injectAdminPanel };
 })();

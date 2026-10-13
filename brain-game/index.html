@@ -578,7 +578,9 @@ let currentMember = null;   // {birthdate, joinedAt, lastLogin, streak, lastDay,
 let cardIndex = [];          // [{id,name,mime,addedAt}]
 const ADMIN_PIN = '1128';
 // 회원(생년월일)별 통과 기준 점수 — 목록에 없는 회원은 DEFAULT_PASS_SCORE 적용
-const PASS_SCORE_BY_BIRTHDATE = { '610708': 70, '691105': 65 };
+const PASS_SCORE_BY_BIRTHDATE = { '610708': 70, '691105': 65, '941128': 70 };
+// 남/녀 비서 캐릭터를 쓰는 회원 (강아지 가이드 대신)
+const SECRETARY_USERS = ['610708', '941128'];
 const DEFAULT_PASS_SCORE = 65;
 
 // ---------- STORAGE LAYER (Claude 아티팩트 window.storage 우선, 안되면 localStorage로 자동 전환) ----------
@@ -1021,7 +1023,7 @@ const SOFT=['괜찮아요, 다시 해봐요','천천히 하셔도 돼요','거�
 
 let _secToggle = false;
 function getAvatarImg(type) {
-  if (currentMember && currentMember.birthdate === '610708') {
+  if (currentMember && SECRETARY_USERS.includes(currentMember.birthdate)) {
     return _secToggle ? 'assets/female_sec.jpg' : 'assets/male_sec.jpg';
   }
   return type === "happy" ? 'assets/guide_dog_happy.jpg' : 
@@ -1031,7 +1033,7 @@ function getAvatarImg(type) {
 
 function getGuideDogHtml() {
   let isSpecial = false;
-  if (currentMember && currentMember.birthdate === '610708') {
+  if (currentMember && SECRETARY_USERS.includes(currentMember.birthdate)) {
     _secToggle = !_secToggle;
     isSpecial = true;
   }
@@ -4680,7 +4682,7 @@ function clearBackground() {
 (function init(){ renderLoginScreen(); })();
 </script>
 <script src="benchmark.js?v=2"></script>
-<script src="coop.js?v=2"></script>
+<script src="coop.js?v=3"></script>
 <script src="recall.js?v=1"></script>
 </body>
 </html>
