@@ -75,7 +75,8 @@
       return panel(`
         <div style="font-size:48px;">📱📱</div>
         <div style="font-family:'Jua';font-size:22px;margin:10px 0;">짝꿍을 기다리는 중이에요</div>
-        <div style="font-size:16px;color:var(--ink-soft);line-height:1.6;">${fmtBd(pair.partner)}님도 <b>자기 폰</b>으로<br>'둘이 함께 맞히기'를 눌러주세요.</div>`);
+        <div style="font-size:16px;color:var(--ink-soft);line-height:1.6;">${fmtBd(pair.partner)}님도 <b>자기 폰</b>으로<br>'둘이 함께 맞히기'를 눌러주세요.</div>
+        <div style="font-family:'Jua';font-size:21px;line-height:1.5;margin-top:16px;padding:14px;background:#FFF3F7;border-radius:16px;color:#C2456E;">${pair.role === 'describer' ? '엄마' : '아빠'}에게도<br>합동게임을 누르라고 해보세요 💕</div>`);
     }
     if (pair.role === 'describer') {
       return panel(`
