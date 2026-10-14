@@ -190,7 +190,7 @@
       if (!('speechSynthesis' in window)) return;
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
-      u.lang = 'ko-KR'; u.rate = 0.9; u.pitch = 0.9;
+      u.lang = 'ko-KR'; u.rate = 0.82; u.pitch = 0.9; // 천천히 또박또박
       window.speechSynthesis.speak(u);
     } catch (e) { /* 소리가 안 나도 글로 볼 수 있다 */ }
   }

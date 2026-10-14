@@ -64,16 +64,36 @@
     const log = v1Log(member);
     return log.length ? log[log.length - 1].ts : null;
   }
+  // 측정은 매주 일요일에 한다 (같은 요일에 재야 컨디션 차이가 줄어 비교가 정확해진다)
+  const SUNDAY = 0;
+  const ymdOf = d => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
   function isDue(member) {
+    const now = new Date();
+    if (now.getDay() !== SUNDAY) return false;
     const ts = lastTs(member);
-    if (!ts) return true;
-    return Date.now() - new Date(ts).getTime() >= DUE_DAYS * 86400e3;
+    return !ts || ymdOf(new Date(ts)) !== ymdOf(now);
   }
   function nextDueDate(member) {
-    const ts = lastTs(member);
-    const base = ts ? new Date(ts).getTime() : Date.now();
-    const d = new Date(base + DUE_DAYS * 86400e3);
-    return `${d.getMonth() + 1}월 ${d.getDate()}일`;
+    const d = new Date();
+    d.setDate(d.getDate() + ((7 - d.getDay()) % 7 || (isDue(member) ? 0 : 7)));
+    return `${d.getMonth() + 1}월 ${d.getDate()}일 일요일`;
+  }
+  // 일요일에 "시작하기"를 누르면 측정부터 하고 이어서 두뇌운동으로 넘어간다. 맡았으면 true.
+  let skippedOn = null;
+  function runBeforeSession(continueFn) {
+    if (!currentMember || !isDue(currentMember) || skippedOn === ymdOf(new Date())) return false;
+    if (typeof setGameBackground === 'function') setGameBackground(null);
+    const v = render(`
+      <div class="panel" style="text-align:center;padding:30px 22px;">
+        <div style="font-size:54px;">📋</div>
+        <div style="font-family:'Jua';font-size:26px;margin:8px 0;">오늘은 일요일,<br>두뇌 건강 측정하는 날이에요</div>
+        <div style="font-size:18px;line-height:1.7;">약 5분이면 끝나요.<br>끝나면 바로 <b>오늘의 두뇌운동</b>으로 이어져요.</div>
+        <button class="btn btn-primary" id="bmGo" style="margin-top:22px;font-size:22px;padding:18px;">측정 시작하기</button>
+        <button class="footer-link" id="bmSkip" style="margin-top:14px;">오늘은 건너뛰고 두뇌운동만 할게요</button>
+      </div>`);
+    v.querySelector('#bmGo').addEventListener('click', () => start(continueFn));
+    v.querySelector('#bmSkip').addEventListener('click', () => { skippedOn = ymdOf(new Date()); continueFn(); });
+    return true;
   }
 
   // ---------- 공통 화면 ----------
@@ -244,7 +264,8 @@
   }
 
   // ---------- 전체 흐름 ----------
-  async function start() {
+  async function start(onDone) {
+    if (typeof onDone !== 'function') onDone = null;
     if (typeof setGameBackground === 'function') setGameBackground(null);
     const form = v1Log(currentMember).length % FORM_COUNT;
     const base = form * 18;
@@ -280,16 +301,30 @@
     };
     currentMember.benchmarkLog = [...(currentMember.benchmarkLog || []), record].slice(-LOG_CAP);
     if (typeof saveMember === 'function') saveMember();
-    showDone();
+    showDone(onDone);
   }
 
-  function showDone() {
+  function showDone(onDone) {
     if (typeof confetti === 'function') confetti(3);
+    if (onDone) {
+      const v = render(`
+        <div class="panel" style="text-align:center;padding:34px 22px;">
+          <div style="font-size:56px;">🎉</div>
+          <div style="font-family:'Jua';font-size:26px;margin:10px 0;">측정 끝! 수고하셨어요</div>
+          <div style="font-size:18px;line-height:1.7;">이번 주 측정이 저장됐어요.<br>이제 오늘의 두뇌운동으로 넘어가요.</div>
+          <button class="btn btn-primary" id="bmNext" style="margin-top:24px;font-size:22px;padding:18px;">두뇌운동 시작 ▶ <span id="bmCount">5</span></button>
+        </div>`);
+      let n = 5, done = false;
+      const go = () => { if (done) return; done = true; clearInterval(t); onDone(); };
+      const t = setInterval(() => { n--; const c = v.querySelector('#bmCount'); if (c) c.textContent = n; if (n <= 0) go(); }, 1000);
+      v.querySelector('#bmNext').addEventListener('click', go);
+      return;
+    }
     const v = render(`
       <div class="panel" style="text-align:center;padding:34px 22px;">
         <div style="font-size:56px;">🎉</div>
         <div style="font-family:'Jua';font-size:26px;margin:10px 0;">수고하셨어요!</div>
-        <div style="font-size:18px;line-height:1.7;color:var(--ink);">이번 달 측정이 저장됐어요.<br>다음 측정은 <b>${nextDueDate(currentMember)}</b>부터 할 수 있어요.</div>
+        <div style="font-size:18px;line-height:1.7;color:var(--ink);">이번 주 측정이 저장됐어요.<br>다음 측정은 <b>${nextDueDate(currentMember)}</b>부터 할 수 있어요.</div>
         <button class="btn btn-primary" id="bmHome" style="margin-top:24px;font-size:22px;padding:18px;">홈으로</button>
       </div>`);
     v.querySelector('#bmHome').addEventListener('click', () => renderHome());
@@ -304,8 +339,8 @@
     card.className = 'hero';
     card.style.cssText = 'padding:16px 20px;border-color:#BFDBFF;background:#F2F8FF;';
     card.innerHTML = `
-      <div style="font-family:'Jua';font-size:20px;">📋 이번 주 두뇌 건강 측정</div>
-      <div style="font-size:15px;color:var(--ink-soft);margin:4px 0 10px;line-height:1.5;">일주일에 한 번, 약 5분이에요.<br>매번 같은 방식으로 재서 변화를 살펴봐요.</div>
+      <div style="font-family:'Jua';font-size:20px;">📋 오늘은 두뇌 건강 측정하는 날 (일요일)</div>
+      <div style="font-size:15px;color:var(--ink-soft);margin:4px 0 10px;line-height:1.5;">아래 '시작하기'를 누르면 측정(약 5분)부터 하고<br>바로 두뇌운동으로 이어져요.</div>
       <button class="btn" id="bmStart" style="margin:0;background:#4A7FD4;font-size:20px;padding:14px;">측정 시작하기</button>`;
     anchor.parentNode.insertBefore(card, anchor);
     card.querySelector('#bmStart').addEventListener('click', start);
@@ -360,5 +395,5 @@
     else detailView.appendChild(panel);
   }
 
-  window.BM = { start, isDue, injectHomeCard, injectAdminPanel, VERSION: BM_VERSION };
+  window.BM = { start, isDue, runBeforeSession, injectHomeCard, injectAdminPanel, VERSION: BM_VERSION };
 })();

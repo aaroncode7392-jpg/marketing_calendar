@@ -1259,8 +1259,9 @@ function toStorableImage(file, maxDim=640){
 // ---------- DIFFICULTY ----------
 function curLevel(){return Math.min(10,Math.max(1,(currentMember&&currentMember.level)||8));}
 // 영역별 난이도 자동 조절: 같은 단계에서 2판 연속 기준 이상이면 한 단계 올리고, 2판 연속 기준 이하이면 내림
-const MAX_DOMAIN_LEVEL=12;
-const ADAPT_RULES={ speed:{up:90,down:60}, math:{up:90,down:60}, memory:{up:65,down:30} };
+const MAX_DOMAIN_LEVEL=15;
+// 짝맞추기는 기억이 완벽해도 60점 안팎이 최고라 올림 기준을 55점으로 둔다
+const ADAPT_RULES={ speed:{up:90,down:60}, math:{up:90,down:60}, memory:{up:55,down:30} };
 function domainLevel(d){
   const v=currentMember&&currentMember.domainLevels&&currentMember.domainLevels[d];
   return Math.min(MAX_DOMAIN_LEVEL,Math.max(1,typeof v==='number'?v:curLevel()));
@@ -1288,6 +1289,10 @@ function setLevel(n){
   saveMember();
 }
 function speedStart(L){
+  // 13~15단계: 12단계(6개·0.35초)를 넘긴 분을 위해 칸과 개수를 늘린다
+  if(L>=15) return{size:5,flash:400,findCount:8};
+  if(L>=14) return{size:5,flash:450,findCount:7};
+  if(L>=13) return{size:4,flash:380,findCount:7};
   const findCount=L<=2?3:L<=4?4:L<=6?5:6;
   const size=findCount<=3?3:4;
   const flash=Math.max(350,1700-L*120);
@@ -1409,6 +1414,37 @@ function renderLoginScreen(errorMsg){
 }
 // 추이 분석을 위해 기록을 넉넉히 보관 (하루 2판 기준 약 1년치)
 const LOG_CAP=800;
+// 명언 따라쓰기 단계: 1 = 보고 따라 쓰기, 2 = 외워서 쓰기
+function typingLevel(){ return Math.min(2,Math.max(1,(currentMember&&currentMember.typingLevel)||1)); }
+function adaptTypingLevel(scoreLog){
+  const cur=typingLevel();
+  const atCur=(scoreLog||[]).filter(s=>typeof s.typing==='number'&&(s.tlv||1)===cur).slice(-2).map(s=>s.typing);
+  if(atCur.length<2) return cur;
+  if(cur===1&&atCur.every(v=>v>=100)) return 2;
+  if(cur===2&&atCur.every(v=>v<=40)) return 1;
+  return cur;
+}
+// 단계가 바뀌었을 때 결과 화면에서 무엇이 달라지는지 알려준다
+function levelChangeHtml(prev, next, prevT, nextT){
+  const name={speed:'⚡ 순간 포착',math:'🔢 빠른 셈',memory:'🃏 짝 맞추기'};
+  const what={
+    speed:L=>L>=13?'칸과 찾을 그림이 늘어나요':'그림이 더 짧게 보여요',
+    math:L=>L>=15?'세 자리 수 계산이 나와요':L>=14?'세 수를 한 번에 계산해요':L>=13?'더 큰 곱셈이 나와요':L>=7?'곱셈도 나와요':'숫자가 조금 커져요',
+    memory:()=>'카드가 늘어날 수 있어요',
+  };
+  const rows=[];
+  for(const d of ['speed','math','memory']){
+    const a=prev[d], b=next[d];
+    if(typeof a!=='number'||typeof b!=='number'||a===b) continue;
+    rows.push(b>a?`<div style="margin:6px 0;">🎉 <b>${name[d]}</b> ${b}단계로 올라갔어요! <span style="color:var(--ink-soft)">${what[d](b)}</span></div>`
+               :`<div style="margin:6px 0;">💪 <b>${name[d]}</b>은 ${b}단계에서 한 번 더 연습해요</div>`);
+  }
+  if(nextT>prevT) rows.push('<div style="margin:6px 0;">🎉 <b>✍️ 명언 쓰기</b> 다음 단계! 이제 문장을 <b>외워서</b> 써요. 쓰기 시작하면 문장이 가려지고, 👀 버튼으로 다시 볼 수 있어요</div>');
+  if(nextT<prevT) rows.push('<div style="margin:6px 0;">💪 <b>✍️ 명언 쓰기</b>는 보고 따라 쓰기로 한 번 더 연습해요</div>');
+  if(!rows.length) return '';
+  return `<div class="panel" style="margin-bottom:14px;text-align:left;background:linear-gradient(135deg,#FFF8E6,#EAF4FF);border:2px solid #FFD27A;">
+    <div style="font-family:'Jua';font-size:22px;margin-bottom:4px;">🚀 다음 단계 도전!</div><div style="font-size:16px;line-height:1.6;">${rows.join('')}</div></div>`;
+}
 function pushCapped(arr, item, cap=LOG_CAP){
   const a=Array.isArray(arr)?arr.slice():[];
   a.push(item);
@@ -1465,6 +1501,10 @@ function buildStages(){
   ];
 }
 function startSession(){
+  if(window.BM && BM.runBeforeSession && BM.runBeforeSession(beginSession)) return;
+  beginSession();
+}
+function beginSession(){
   setGameBackground('assets/bg_landscape_'+(Math.floor(Math.random()*10)+1)+'.jpg');
   markPlayedToday();
   const levels={speed:domainLevel('speed'),math:domainLevel('math'),memory:domainLevel('memory')};
@@ -2565,6 +2605,10 @@ function playMath({lv, qs=10, onDone=null}={}){ setRandomBackground();
   let solveMs=0, qShownAt=0; // 정답 연출 시간은 빼고, 문제를 보고 맞힐 때까지의 시간만 합산
   let hp = 100; const dmgPerQ = 100/total;
   function makeProblem(){
+    // 13단계: 큰 곱셈 · 14단계: 세 수 계산 · 15단계: 세 자리 수
+    if(level>=15){ const a=rnd(900)+100, b=rnd(90)+10, plus=Math.random()<0.5; return plus?{text:`${a} + ${b}`,ans:a+b}:{text:`${a} − ${b}`,ans:a-b}; }
+    if(level>=14){ const a=rnd(40)+10, b=rnd(40)+10, c=rnd(a+b-2)+1; return{text:`${a} + ${b} − ${c}`,ans:a+b-c}; }
+    if(level>=13 && Math.random()<0.5){ const a=rnd(8)+5, b=rnd(8)+5; return{text:`${a} × ${b}`,ans:a*b}; }
     const big=level<=2?9:Math.min(99,level*9);
     const pool=['+']; if(level>=2) pool.push('−'); if(level>=7) pool.push('×');
     const op=pick(pool);
@@ -2997,6 +3041,17 @@ function playTyping({qs=5, onDone=null}={}){ setRandomBackground();
     const hint=v.querySelector('#typeHint');
     const boss=v.querySelector('#bossSlime');
     const quoteEl=v.querySelector('#quoteText');
+    if(typingLevel()>=2){
+      const guide=quoteEl.previousElementSibling;
+      if(guide) guide.textContent='문장을 읽고 외워서 써 보세요. 쓰기 시작하면 문장이 가려져요.';
+      const peek=el(`<button class="btn btn-ghost" type="button" style="margin:6px 0 8px;font-size:16px;padding:10px;">👀 문장 다시 보기</button>`);
+      quoteEl.after(peek);
+      let peeking=false, peekTimer=null;
+      const cover=()=>{ quoteEl.style.filter='blur(9px)'; };
+      quoteEl.style.transition='filter .25s';
+      input.addEventListener('input',()=>{ if(!peeking && input.value.length>0) cover(); });
+      peek.addEventListener('click',()=>{ peeking=true; quoteEl.style.filter=''; clearTimeout(peekTimer); peekTimer=setTimeout(()=>{ peeking=false; if(input.value.length>0) cover(); },2500); });
+    }
     input.focus();
     
     function diffHint(val){
@@ -3981,9 +4036,13 @@ function showFinalResult(){
     speed:domains.speed.score, math:domains.math.score, memory:domains.memory.score, typing:domains.typing.score,
     durations: session.domainDurations || {},
     lv: session.levels || {},
-    memPeek: session.memPeek || 0
+    memPeek: session.memPeek || 0,
+    tlv: typingLevel()
   });
+  const prevLevels={speed:domainLevel('speed'),math:domainLevel('math'),memory:domainLevel('memory')}, prevTyping=typingLevel();
   currentMember.domainLevels = adaptDomainLevels(currentMember.scoreLog);
+  currentMember.typingLevel = adaptTypingLevel(currentMember.scoreLog);
+  const levelMsg = levelChangeHtml(prevLevels, {speed:domainLevel('speed'),math:domainLevel('math'),memory:domainLevel('memory')}, prevTyping, typingLevel());
   currentMember.completedLog = pushCapped(currentMember.completedLog || [], new Date().toISOString());
   saveMember();
   const PASS_SCORE=PASS_SCORE_BY_BIRTHDATE[currentMember.birthdate] ?? DEFAULT_PASS_SCORE;
@@ -4000,6 +4059,7 @@ function showFinalResult(){
   clear();
   const v=el(`
     <div class="fade">
+      ${levelMsg}
       <div class="panel" style="margin-bottom:14px;">
         <div style="font-family:'Jua';font-size:24px;margin-bottom:4px;">오늘의 두뇌 운동 완료! 🏁</div>
         <div class="stars fx-text">${starStr}</div>
@@ -4688,14 +4748,14 @@ function clearBackground() {
 // ---------- INIT ----------
 (function init(){ renderLoginScreen(); })();
 </script>
-<script src="benchmark.js?v=2"></script>
+<script src="benchmark.js?v=3"></script>
 <script src="coop.js?v=3"></script>
 <script src="recall.js?v=1"></script>
 <script src="radio.js?v=2"></script>
 <script src="glass.js?v=2"></script>
 <script src="weather.js?v=2"></script>
 <script src="video.js?v=1"></script>
-<script src="clean.js?v=1"></script>
+<script src="clean.js?v=2"></script>
 <script src="news.js?v=10"></script>
 </body>
 </html>
