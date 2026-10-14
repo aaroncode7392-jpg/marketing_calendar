@@ -10,13 +10,11 @@
   const CATS = ['전체', '건강', '반려동물', '문화·생활', '스포츠', '정치', '경제', '기독교'];
   // 회원별로 맨 앞에 두고 먼저 보여줄 뉴스 분야
   const FIRST_CAT_BY_MEMBER = { '691105': '반려동물' };
-  const VIDEO_URL = 'assets/youtube-data.json';
   const TABS = [['news', '📰', '뉴스'], ['radio', '📻', '라디오'], ['video', '▶️', '유튜브'], ['weather', '☀️', '날씨']];
-  const VCATS = ['전체', '건강', '지식·시사', '추억·예능', '요리'];
   const CAT_COLOR = { '건강': '#2FA28E', '문화·생활': '#D9779B', '스포츠': '#EE7B5B', '정치': '#3F6FB5', '경제': '#B7791F', '기독교': '#6B5B95', '반려동물': '#6E9E3F', '지식·시사': '#3F6FB5', '추억·예능': '#D9779B', '요리': '#B7791F' };
 
   const CACHE_TTL = 3600e3;
-  let cache = null, vcache = null; // { data, at }
+  let cache = null; // { data, at }
 
   const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -38,16 +36,6 @@
     const data = await res.json();
     if (!data || !Array.isArray(data.items)) throw new Error('뉴스 형식 오류');
     cache = { data, at: Date.now() };
-    return data;
-  }
-
-  async function loadVideos() {
-    if (vcache && Date.now() - vcache.at < CACHE_TTL) return vcache.data;
-    const res = await fetch(`${VIDEO_URL}?r=${Math.floor(Date.now() / 3600e3)}`, { cache: 'no-cache' });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if (!data || !Array.isArray(data.items)) throw new Error('영상 형식 오류');
-    vcache = { data, at: Date.now() };
     return data;
   }
 
@@ -159,13 +147,6 @@
     </a>`;
   }
 
-  function videoHtml(it) {
-    return `<a class="nw-card nw-vcard" draggable="false" data-id="${esc(it.id)}" href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener noreferrer">
-      <div class="nw-vthumb"><img draggable="false" src="${esc(it.img)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()"><span class="nw-play">▶</span></div>
-      <div class="nw-vtxt"><div class="nw-meta">${tagHtml(it)}${esc(it.src)} · ${esc(ago(it.ts))}</div><div class="nw-title">${esc(it.title)}</div></div>
-    </a>`;
-  }
-
   // 들어온 방향의 반대쪽으로 밀면 홈으로 돌아간다. dir: 홈 화면이 들어올 방향
   let feedDir = 'right';
   function leaveFeed(dir) {
@@ -207,7 +188,7 @@
 
     const list = wrap.querySelector('#nwList');
     const chips = wrap.querySelector('#nwChips');
-    let tab = 'news', data = null, vdata = null, read = new Set();
+    let tab = 'news', data = null, read = new Set();
     const firstCat = currentMember ? FIRST_CAT_BY_MEMBER[currentMember.birthdate] : null;
     const newsCats = firstCat ? [firstCat, ...CATS.filter(c => c !== firstCat)] : CATS;
     const cats = { news: firstCat || '전체', video: '전체' };
@@ -227,12 +208,7 @@
         + (items.length ? listHtml(items) : '<div class="nw-note">지금은 보여드릴 소식이 없어요.</div>')
         + '<div class="nw-note">누르면 앱 안에서 기사가 열려요. 소식은 매일 아침 새로 바뀌어요.</div>';
     };
-    const paintVideos = () => {
-      if (!vdata) return;
-      const items = cats.video === '전체' ? interleave(vdata.items, 'src', [...new Set(vdata.items.map(v => v.src))]) : vdata.items.filter(it => it.cat === cats.video);
-      list.innerHTML = (items.length ? items.map(videoHtml).join('') : '<div class="nw-note">지금은 보여드릴 영상이 없어요.</div>')
-        + '<div class="nw-note">누르면 앱 안에서 영상이 재생돼요.</div>';
-    };
+    const VCATS = window.VIDEO ? VIDEO.CATS : ['전체'];
     const paint = () => {
       wrap.querySelectorAll('.nw-tab').forEach(x => x.classList.toggle('on', x.dataset.t === tab));
       const noChips = tab === 'radio' || tab === 'weather';
@@ -241,23 +217,19 @@
         const set = tab === 'news' ? newsCats : VCATS;
         chips.innerHTML = set.map(c => `<button class="nw-chip${c === cats[tab] ? ' on' : ''}" data-c="${esc(c)}">${esc(c)}</button>`).join('');
       }
-      if (noChips) {
-        const mod = tab === 'radio' ? window.RADIO : window.WEATHER;
-        list.innerHTML = '';
-        const box = document.createElement('div');
-        list.appendChild(box);
-        if (!mod) box.innerHTML = '<div class="nw-note">지금은 열 수 없어요.</div>';
-        else if (tab === 'radio') mod.mountStations(box);
-        else mod.mount(box);
-      } else if (tab === 'news') {
+      if (tab === 'news') {
         if (data) paintNews(); else list.innerHTML = '<div class="nw-note">불러오는 중이에요…</div>';
-      } else if (vdata) {
-        paintVideos();
-      } else {
-        list.innerHTML = '<div class="nw-note">불러오는 중이에요…</div>';
-        loadVideos().then(v => { vdata = v; if (tab === 'video') paintVideos(); })
-          .catch(() => { if (tab === 'video') list.innerHTML = failNote('유튜브'); });
+        return;
       }
+      // 라디오·날씨·유튜브는 탭을 열 때마다 새 상자에 그린다 (다른 탭으로 가면 이전 상자는 버려짐)
+      const mod = { radio: window.RADIO, weather: window.WEATHER, video: window.VIDEO }[tab];
+      list.innerHTML = '';
+      const box = document.createElement('div');
+      list.appendChild(box);
+      if (!mod) box.innerHTML = '<div class="nw-note">지금은 열 수 없어요.</div>';
+      else if (tab === 'radio') mod.mountStations(box);
+      else if (tab === 'video') mod.mount(box, cats.video);
+      else mod.mount(box);
     };
 
     wrap.querySelector('.nw-tabs').addEventListener('click', e => {
@@ -268,16 +240,11 @@
       const b = e.target.closest('.nw-chip'); if (!b) return;
       cats[tab] = b.dataset.c;
       chips.querySelectorAll('.nw-chip').forEach(x => x.classList.toggle('on', x === b));
-      if (tab === 'news') paintNews(); else paintVideos();
+      if (tab === 'news') paintNews(); else paint();
     });
     list.addEventListener('click', e => {
-      const a = e.target.closest('.nw-card'); if (!a) return;
-      if (tab === 'video') {
-        e.preventDefault();
-        openVideo(vdata && vdata.items.find(it => it.id === a.dataset.id));
-        return;
-      }
-      if (!data) return;
+      if (tab !== 'news') return; // 유튜브·라디오·날씨는 각자 눌림을 처리한다
+      const a = e.target.closest('.nw-card'); if (!a || !data) return;
       e.preventDefault();
       read.add(a.dataset.id); markRead(data.updated, read);
       a.classList.add('read');
@@ -292,33 +259,6 @@
     }).catch(() => {
       if (tab === 'news') list.innerHTML = failNote('소식');
     });
-  }
-
-  // 영상을 앱 안에서 재생 (채널이 앱 안 재생을 막아 둔 영상은 유튜브 링크로 안내)
-  function openVideo(it) {
-    if (!it || document.getElementById('nwReader')) return;
-    if (window.RADIO) RADIO.stop();
-    const r = document.createElement('div');
-    r.id = 'nwReader';
-    r.className = 'nw-reader nw-video';
-    r.innerHTML = `
-      <div class="nw-vbar">
-        <button id="nwClose">← 닫기</button>
-        <div class="sp">${esc(it.src)}</div>
-        <a href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener noreferrer">유튜브 ↗</a>
-      </div>
-      ${it.embed ? '<iframe class="nw-vframe" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>' : ''}
-      <div class="nw-vinfo">
-        <div class="nw-meta">${tagHtml(it)} ${esc(it.src)} · ${esc(ago(it.ts))}</div>
-        <div class="nw-title">${esc(it.title)}</div>
-        ${it.embed ? '' : `<div class="nw-note">이 영상은 앱 안에서 볼 수 없어요.</div><a class="nw-vbtn" href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener noreferrer">▶ 유튜브에서 보기</a>`}
-      </div>`;
-    document.body.appendChild(r);
-    const f = r.querySelector('iframe');
-    if (f) f.src = `https://www.youtube.com/embed/${encodeURIComponent(it.id)}?autoplay=1&playsinline=1&rel=0`;
-    document.body.style.overflow = 'hidden';
-    history.pushState({ nwReader: 1 }, '');
-    r.querySelector('#nwClose').addEventListener('click', () => { if (history.state && history.state.nwReader) history.back(); else closeReader(); });
   }
 
   // 기사를 앱 안에서 열기 (뒤로가기 버튼으로도 닫힘)
