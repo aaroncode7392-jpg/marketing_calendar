@@ -154,6 +154,8 @@
       .cl-bubble::before{content:'';position:absolute;left:-10px;top:22px;border:8px solid transparent;border-right-color:#E5E8EB;}
       .cl-bubble .who{font-family:'Jua';font-size:15px;color:#6B7684;margin-bottom:2px;}
       .cl-hint{margin-top:6px;font-size:17px;color:#F04452;font-family:'Jua';}
+      .cl-hint.strong{font-size:19px;line-height:1.5;background:#FFE8EA;border:2px solid #F04452;border-radius:12px;padding:8px 10px;color:#C8102E;animation:pop .3s ease;}
+      .cl-room.cl-shake{animation:shake .45s ease;}
       .cl-say{border:0;background:#F2F4F6;border-radius:999px;padding:6px 12px;font-size:15px;font-weight:700;color:#333D4B;cursor:pointer;margin-top:6px;}
       .cl-prog{display:flex;align-items:center;justify-content:space-between;font-family:'Jua';font-size:18px;margin:4px 2px 8px;}
       .cl-dots span{display:inline-block;width:16px;height:16px;border-radius:50%;background:#E5E8EB;margin-left:6px;}
@@ -222,7 +224,7 @@
     injectStyle();
     const L = lv || level();
     const startedAt = Date.now();
-    let round = 0, totalWrong = 0, roundScores = [];
+    let round = 0, totalWrong = 0, guidedRounds = 0, roundScores = [];
 
     function next() {
       if (round >= ROUNDS) return finish();
@@ -257,6 +259,28 @@
       v.querySelector('#clSay').addEventListener('click', () => speak(task.text));
       setTimeout(() => speak(task.text), 350);
 
+      // 틀리면: 강하게 주의 → 처음부터 다시. 한 문제에서 세 번 틀리면 선생님이 한 가지씩 같이 해 준다.
+      let guided = false, guideWrong = 0;
+      const guideLines = task.steps.map(id => phrase(id, false).cmd);
+      const resetRound = () => {
+        step = 0;
+        room.querySelectorAll('.cl-item').forEach(x => { x.classList.remove('done', 'hint'); const ck = x.querySelector('.ck'); if (ck) ck.remove(); });
+        dots.forEach(d => d.classList.remove('on'));
+        prog.textContent = `할 일 0 / ${task.steps.length}`;
+      };
+      const showGuide = () => {
+        const line = `${step + 1}번째: ${guideLines[step]}`;
+        textEl.innerHTML = `<div style="color:#6B7684;font-size:15px;">선생님이랑 하나씩 같이 해 봐요</div><b style="font-size:21px;">👉 ${esc(line)}</b>`;
+        speak(line);
+      };
+      const warn = html => {
+        hintEl.innerHTML = html; hintEl.classList.add('strong');
+        room.classList.remove('cl-shake'); void room.offsetWidth; room.classList.add('cl-shake');
+        if (typeof beep === 'function') beep(330, 0.12); // 경고는 글로만, 소리는 짧고 부드럽게 (음성 없음)
+        if (navigator.vibrate) { try { navigator.vibrate(60); } catch (err) { /* 무시 */ } }
+        try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (err) { /* 무시 */ }
+      };
+
       room.addEventListener('click', e => {
         const b = e.target.closest('.cl-item'); if (!b || lock) return;
         const id = b.dataset.id, want = task.steps[step];
@@ -267,7 +291,7 @@
           sparkleAt(room, b);
           if (typeof beep === 'function') beep(660 + step * 80, 0.12);
           dots[step].classList.add('on');
-          step++; stepWrong = 0; hintEl.textContent = '';
+          step++; guideWrong = 0; hintEl.textContent = ''; hintEl.classList.remove('strong');
           prog.textContent = `할 일 ${step} / ${task.steps.length}`;
           if (step >= task.steps.length) {
             lock = true;
@@ -275,31 +299,55 @@
             textEl.textContent = praise; teacher.classList.add('happy');
             speak(praise);
             if (typeof confetti === 'function') confetti(roundWrong ? 3 : 6);
-            roundScores.push(Math.max(40, 100 - roundWrong * 20));
+            roundScores.push(guided ? 30 : Math.max(40, 100 - roundWrong * 30));
+            if (guided) guidedRounds++;
             setTimeout(next, 2300);
+          } else if (guided) {
+            showGuide();
           }
           return;
         }
-        // 틀렸을 때: 감점은 조금, 두 번째부터는 정답을 반짝여 준다
-        roundWrong++; totalWrong++; stepWrong++;
+        roundWrong++; totalWrong++;
         b.classList.remove('wrong'); void b.offsetWidth; b.classList.add('wrong');
-        if (typeof beep === 'function') beep(220, 0.15);
-        if (id === task.distract) hintEl.textContent = `${THINGS[id].name}${hasBatchim(THINGS[id].name) ? '은' : '는'} 오늘 안 해도 된다고 했어요 😊`;
-        else if (stepWrong === 1) hintEl.textContent = `다시 한 번 읽어 볼까요? 지금은 ${step + 1}번째 일이에요.`;
-        else {
-          hintEl.textContent = '반짝이는 곳을 눌러 보세요 👉';
-          const t = room.querySelector(`[data-id="${want}"]`); if (t) t.classList.add('hint');
+        lock = true;
+        if (guided) {
+          // 같이 하는 중에는 처음으로 돌리지 않고, 두 번 틀리면 자리를 반짝여 준다
+          guideWrong++;
+          const name = THINGS[want].name;
+          warn(`✋ 아무 곳이나 누르면 안 돼요!<br>'${esc(name)}'을(를) 찾아서 눌러 주세요.`);
+          setTimeout(() => {
+            lock = false;
+            if (guideWrong >= 2) { const t = room.querySelector(`[data-id="${want}"]`); if (t) t.classList.add('hint'); }
+          }, 2000);
+          return;
         }
+        const isDistract = id === task.distract;
+        const dname = THINGS[id].name;
+        warn(`${isDistract ? `✋ ${esc(dname)}${hasBatchim(dname) ? '은' : '는'} 오늘 안 해도 된다고 했어요!` : '✋ 앗! 아무 곳이나 누르면 안 돼요!'}<br>선생님 말을 끝까지 잘 듣고 눌러 주세요.<br><b>처음부터 다시 해요.</b>`);
+        setTimeout(() => {
+          resetRound();
+          hintEl.classList.remove('strong');
+          if (roundWrong >= 3) {
+            guided = true;
+            hintEl.textContent = '';
+            showGuide();
+          } else {
+            hintEl.textContent = `다시 잘 들어 보세요 👂 (${roundWrong + 1}번째 도전)`;
+            speak(task.text);
+          }
+          lock = false;
+        }, 3600);
       });
     }
 
     function finish() {
       const score = Math.round(roundScores.reduce((a, b) => a + b, 0) / Math.max(1, roundScores.length));
       if (currentMember) {
-        const nextLv = totalWrong === 0 ? Math.min(MAX_LV, L + 1) : totalWrong >= 4 ? Math.max(1, L - 1) : L;
+        // 한 번도 안 틀리면 올리고, 같이 하기까지 갔거나 세 번 이상 틀리면 내린다
+        const nextLv = totalWrong === 0 ? Math.min(MAX_LV, L + 1) : (guidedRounds > 0 || totalWrong >= 3) ? Math.max(1, L - 1) : L;
         currentMember.cleanLevel = nextLv;
         const log = currentMember.cleanLog || [];
-        currentMember.cleanLog = [...log, { ts: new Date().toISOString(), lv: L, wrong: totalWrong, score, sec: Math.round((Date.now() - startedAt) / 1000) }].slice(-LOG_CAP);
+        currentMember.cleanLog = [...log, { ts: new Date().toISOString(), lv: L, wrong: totalWrong, guided: guidedRounds, score, sec: Math.round((Date.now() - startedAt) / 1000) }].slice(-LOG_CAP);
         if (typeof saveMember === 'function') saveMember();
       }
       try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) { /* 무시 */ }
@@ -316,7 +364,7 @@
     const panel = document.createElement('div');
     panel.className = 'admin-panel';
     panel.innerHTML = `<div class="section-title">🧹 청소 심부름 (${log.length}회 · 지금 ${Math.min(MAX_LV, Math.max(1, member.cleanLevel || 1))}단계)</div>
-      ${log.length ? log.slice(0, 12).map(r => `<div style="padding:6px 0;border-bottom:1px solid var(--line);font-size:14px;display:flex;justify-content:space-between;"><span>${d(r.ts)} · ${r.lv}단계 · ${r.sec}초</span><span>${r.wrong === 0 ? '⭕ 한 번도 안 틀림' : `틀림 ${r.wrong}번`} · ${r.score}점</span></div>`).join('')
+      ${log.length ? log.slice(0, 12).map(r => `<div style="padding:6px 0;border-bottom:1px solid var(--line);font-size:14px;display:flex;justify-content:space-between;"><span>${d(r.ts)} · ${r.lv}단계 · ${r.sec}초</span><span>${r.wrong === 0 ? '⭕ 한 번도 안 틀림' : `틀림 ${r.wrong}번`}${r.guided ? ` · 같이 하기 ${r.guided}` : ''} · ${r.score}점</span></div>`).join('')
         : '<div style="font-size:14px;color:var(--ink-soft);">아직 기록이 없어요</div>'}`;
     const anchor = detailView.querySelector('#back2');
     if (anchor) anchor.parentNode.insertBefore(panel, anchor); else detailView.appendChild(panel);

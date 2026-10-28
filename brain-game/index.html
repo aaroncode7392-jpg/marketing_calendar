@@ -1568,6 +1568,7 @@ function showTransition(prevStage, prevScore, isFirst){
         </button>` : ''}
       </div>`);
     app.appendChild(v);
+    if(window.GLASS) GLASS.injectSessionTip(v, idx, total, isFirst);
 
     const btn = v.querySelector('#malaNextBtn');
     const malaImg = v.querySelector('#malaImg');
@@ -1709,6 +1710,7 @@ function showTransition(prevStage, prevScore, isFirst){
       </div>
     </div>`);
   app.appendChild(v);
+  if(window.GLASS) GLASS.injectSessionTip(v, idx, total, isFirst);
   let clicked = false;
   v.querySelector('#goNext').addEventListener('click',()=> {
     if (clicked) return;
@@ -4079,6 +4081,7 @@ function showFinalResult(){
       ${passed?`<div class="btn-row" style="margin-top:10px;"><button class="btn btn-ghost" id="home">홈으로</button></div>`:''}
     </div>`);
   app.appendChild(v);
+  if(window.GLASS) GLASS.injectResultButton(v);
   let chestTimer = null;
   const onRetry = () => {
     if (chestTimer) clearTimeout(chestTimer);
@@ -4748,14 +4751,14 @@ function clearBackground() {
 // ---------- INIT ----------
 (function init(){ renderLoginScreen(); })();
 </script>
-<script src="benchmark.js?v=3"></script>
+<script src="benchmark.js?v=4"></script>
 <script src="coop.js?v=3"></script>
 <script src="recall.js?v=1"></script>
-<script src="radio.js?v=2"></script>
-<script src="glass.js?v=2"></script>
+<script src="radio.js?v=3"></script>
+<script src="glass.js?v=3"></script>
 <script src="weather.js?v=2"></script>
-<script src="video.js?v=1"></script>
-<script src="clean.js?v=2"></script>
-<script src="news.js?v=10"></script>
+<script src="video.js?v=2"></script>
+<script src="clean.js?v=3"></script>
+<script src="news.js?v=11"></script>
 </body>
 </html>

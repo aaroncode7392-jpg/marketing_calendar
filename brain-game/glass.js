@@ -44,6 +44,18 @@
     return sessionDoneToday(m) ? 'ready' : 'locked';
   }
 
+  // ---------------- 사용 기록 (소식·라디오·유튜브를 실제로 쓰는지 보기 위함) ----------------
+  const USAGE_CAP = 300;
+  const lastTrack = {};
+  function track(ev) {
+    if (!currentMember || !ev) return;
+    const now = Date.now();
+    if (lastTrack[ev] && now - lastTrack[ev] < 60e3) return; // 같은 일은 1분에 한 번만
+    lastTrack[ev] = now;
+    currentMember.usageLog = [...(currentMember.usageLog || []), { ts: new Date(now).toISOString(), ev }].slice(-USAGE_CAP);
+    if (typeof saveMember === 'function') saveMember();
+  }
+
   // ---------------- 소리 ----------------
   function playBreakSound() {
     try {
@@ -325,6 +337,7 @@
         if (navigator.vibrate) { try { navigator.vibrate(35); } catch (e) { /* 진동 미지원 */ } }
         if (asked) return;
         asked = true;
+        if (!opts.demo) track('glass_locked_tap');
         center.innerHTML = `<div class="gl-card">
           <h3>🧠 두뇌운동을 먼저 해 주세요!</h3>
           <p>오늘의 두뇌운동을 한 번만 마치면<br>뉴스·라디오·유튜브·날씨가 열려요.</p>
@@ -358,6 +371,7 @@
   function mount(wrap) {
     const st = state();
     if (st === 'open' || !wrap) return;
+    track(st === 'ready' ? 'glass_seen_ready' : 'glass_seen_locked');
     const paper = wrap.querySelector('.nw-paper');
     if (paper) paper.classList.add('gl-blur');
     let timer = null;
@@ -365,7 +379,7 @@
       paper,
       onHome: () => { if (window.NEWS && NEWS.leave) NEWS.leave(); },
       onGo: () => { clearInterval(timer); pane.remove(); if (typeof window.startSession === 'function') window.startSession(); },
-      onBroken: () => { clearInterval(timer); markBroken(); },
+      onBroken: () => { clearInterval(timer); markBroken(); track('glass_break'); },
     });
     // 화면을 떠나면 유리막도 함께 치운다
     timer = setInterval(() => { if (!wrap.isConnected) { pane.remove(); clearInterval(timer); } }, 300);
@@ -381,6 +395,40 @@
     });
   }
 
+  // 두뇌운동 중 안내: 처음과 마지막 스테이지 앞에서 "하루 한 번 유리를 깨서 보세요"
+  function injectSessionTip(view, idx, total, isFirst) {
+    if (!view || state() === 'open') return;
+    if (!isFirst && idx !== total - 1) return;
+    const tip = document.createElement('div');
+    tip.style.cssText = 'margin:14px auto 0;max-width:420px;background:linear-gradient(135deg,#FFF3D6,#FFE1E4);border:2px solid #FFC56B;border-radius:16px;padding:12px 14px;font-family:Jua,sans-serif;font-size:18px;line-height:1.5;color:#3A2E28;text-align:center;';
+    tip.innerHTML = isFirst
+      ? '💡 오늘 두뇌운동을 끝까지 하면<br><b>뉴스·라디오·유튜브를 막은 유리</b>를 깰 수 있어요.<br>하루에 한 번 꼭 깨서 보세요!'
+      : '🎁 마지막 스테이지예요!<br>끝나면 <b>유리를 깨고</b> 오늘의 뉴스·라디오·유튜브를 보세요.';
+    const btn = view.querySelector('#malaNextBtn, #goNext');
+    if (btn && btn.parentNode) btn.parentNode.insertBefore(tip, btn); else view.appendChild(tip);
+  }
+  // 결과 화면 맨 위에 "유리 깨러 가기" 버튼
+  function injectResultButton(view) {
+    if (!view || state() !== 'ready' || !(window.NEWS && NEWS.openFeed)) return;
+    const b = document.createElement('button');
+    b.className = 'btn';
+    b.type = 'button';
+    b.style.cssText = 'margin:0 0 14px;font-size:22px;padding:18px;background:linear-gradient(135deg,#FF9F1C,#F04452);color:#fff;border:0;box-shadow:0 6px 18px rgba(240,68,82,.45);animation:nwGlow 1.4s ease-in-out infinite;';
+    b.innerHTML = '🎁 유리 깨러 가기<br><span style="font-size:16px;opacity:.9;">오늘의 뉴스 · 라디오 · 유튜브</span>';
+    b.addEventListener('click', () => { track('glass_btn_result'); document.querySelectorAll('.overlay,.reward-overlay').forEach(o => o.remove()); NEWS.openFeed('right'); });
+    view.insertBefore(b, view.firstChild);
+  }
+
+  const EV_TEXT = { feed_open: '소식 화면 열기', glass_seen_locked: '잠긴 유리 봄', glass_locked_tap: '잠긴 유리 누름', glass_seen_ready: '깰 수 있는 유리 봄', glass_break: '유리 깸', glass_btn_result: '결과화면 유리 버튼', article: '기사 읽기', video_play: '유튜브 영상', radio_play: '라디오 듣기', tab_weather: '날씨 보기' };
+  function usageHtml(member) {
+    const since = Date.now() - 7 * 86400e3;
+    const recent = (member.usageLog || []).filter(r => new Date(r.ts).getTime() >= since);
+    if (!recent.length) return '<div style="font-size:14px;color:var(--ink-soft);margin-bottom:10px;">최근 7일 사용 기록이 없어요 (10/29부터 기록)</div>';
+    const cnt = {};
+    for (const r of recent) cnt[r.ev] = (cnt[r.ev] || 0) + 1;
+    return `<div style="font-size:14px;margin-bottom:10px;line-height:1.7;"><b>최근 7일 사용</b><br>${Object.keys(EV_TEXT).filter(k => cnt[k]).map(k => `${EV_TEXT[k]} ${cnt[k]}회`).join(' · ')}</div>`;
+  }
+
   const STATE_TEXT = { open: '🔓 열림', locked: '🔒 두뇌운동 전 (잠김)', ready: '🎁 두뇌운동 완료, 유리 깰 차례' };
   function injectAdminPanel(detailView, member) {
     const before = today() < api.gateStart;
@@ -392,6 +440,7 @@
         ${before ? `${api.gateStart} 오전 6시부터 적용돼요. 지금은 모두 열려 있어요.<br>` : ''}
         오늘 상태: <b>${STATE_TEXT[state(member)]}</b>${member.glassDay === today() ? ' · 오늘 깸' : ''}
       </div>
+      ${usageHtml(member)}
       <button class="btn" data-gl="ready" style="margin:0 0 8px;font-size:17px;padding:12px;">🧪 유리 깨기 테스트 (두뇌게임 없이)</button>
       <button class="btn btn-ghost" data-gl="locked" style="margin:0 0 8px;font-size:16px;padding:11px;">🔒 잠긴 화면 미리보기</button>
       ${member.glassDay === today() ? '<button class="btn btn-ghost" data-gl="reset" style="margin:0;font-size:16px;padding:11px;">🔄 이 회원 오늘 유리 다시 씌우기</button>' : ''}`;
@@ -408,6 +457,9 @@
   }
 
   api.state = state;
+  api.track = track;
+  api.injectSessionTip = injectSessionTip;
+  api.injectResultButton = injectResultButton;
   api.mount = mount;
   api.demo = demo;
   api.injectAdminPanel = injectAdminPanel;

@@ -98,6 +98,7 @@
     const a = getAudio();
     detach();
     set({ id, status: 'loading' });
+    if (window.GLASS) GLASS.track('radio_play');
     a.src = SILENCE;
     a.play().catch(() => { /* 무음 재생 실패는 무시 */ });
     try {

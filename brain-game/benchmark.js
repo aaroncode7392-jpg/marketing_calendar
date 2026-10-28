@@ -145,9 +145,27 @@
         else { picked.add(w); b.classList.add('right'); }
         tap(520);
       }));
+      // 하나도 안 고르고 넘기면 한 번 더 확인한다 (건너뛴 것과 정말 기억이 안 난 것을 구분)
+      let confirmedNone = false;
       v.querySelector('#bmDone').addEventListener('click', () => {
         const hit = targets.filter(w => picked.has(w)).length;
         const fa = distractors.filter(w => picked.has(w)).length;
+        if (picked.size === 0 && !confirmedNone) {
+          const box = document.createElement('div');
+          box.className = 'overlay';
+          box.style.zIndex = '95';
+          box.innerHTML = `<div class="modal fade" style="text-align:center;">
+            <div style="font-size:44px;">🤔</div>
+            <div style="font-family:'Jua';font-size:24px;margin:8px 0;">하나도 안 고르셨어요</div>
+            <div style="font-size:18px;line-height:1.6;margin-bottom:16px;">조금이라도 본 것 같은 단어가 있으면<br>눌러 주세요. 틀려도 괜찮아요.</div>
+            <button class="btn btn-primary" id="bmAgain" style="font-size:21px;padding:16px;">다시 골라 볼게요</button>
+            <button class="btn btn-ghost" id="bmNone" style="font-size:17px;padding:13px;">정말 하나도 기억이 안 나요</button>
+          </div>`;
+          document.body.appendChild(box);
+          box.querySelector('#bmAgain').addEventListener('click', () => box.remove());
+          box.querySelector('#bmNone').addEventListener('click', () => { box.remove(); confirmedNone = true; resolve({ hit: 0, fa: 0, none: true }); });
+          return;
+        }
         resolve({ hit, fa });
       });
     });
@@ -190,8 +208,10 @@
       ok.addEventListener('click', () => { if (typed.length === len) resolve(typed); });
     });
   }
+  let tries = [];
   async function digitSpan(rand) {
     let best = 0;
+    tries = [];
     for (let len = SPAN_START; len <= SPAN_MAX; len++) {
       let anyCorrect = false;
       for (let t = 0; t < TRIALS_PER_SPAN; t++) {
@@ -205,6 +225,7 @@
           await wait(DIGIT_GAP_MS);
         }
         const answer = await askDigits(len);
+        tries.push(`${seq}/${answer}`);
         if (answer === seq) { anyCorrect = true; best = len; }
       }
       if (!anyCorrect) break;
@@ -296,7 +317,7 @@
 
     const record = {
       ts: new Date().toISOString(), v: BM_VERSION, form,
-      wordImm, digitSpan: digitSpanResult, speed, wordDel,
+      wordImm, digitSpan: digitSpanResult, spanTries: tries.slice(0, 12), speed, wordDel,
       durationSec: Math.round((Date.now() - startedAt) / 1000),
     };
     currentMember.benchmarkLog = [...(currentMember.benchmarkLog || []), record].slice(-LOG_CAP);
@@ -348,16 +369,18 @@
 
   // ---------- 관리자 회원 상세: 측정 결과 + 훈련 난이도 ----------
   const fmtDate = iso => { const d = new Date(iso); return `${d.getFullYear() % 100}.${d.getMonth() + 1}.${d.getDate()}`; };
+  // 하나도 안 고른 기록: 확인 후 '기억 안 남'이면 0/6, 확인 전(10/29 이전) 기록은 '안 고름'으로 따로 표시
+  const wordCell = w => (w.hit === 0 && !w.fa ? (w.none ? '0/6 (기억 안 남)' : '<span style="color:var(--ink-soft)">안 고름</span>') : `${w.hit}/6${w.fa ? ` <span style="color:var(--warn)">(-${w.fa})</span>` : ''}`);
   const cmp = (a, b) => (a > b ? '▲' : a < b ? '▼' : '=');
   function injectAdminPanel(detailView, member) {
     const log = v1Log(member);
     const rows = log.slice().reverse().map(r => `
       <tr>
         <td>${fmtDate(r.ts)}</td>
-        <td>${r.wordImm.hit}/6${r.wordImm.fa ? ` <span style="color:var(--warn)">(-${r.wordImm.fa})</span>` : ''}</td>
+        <td>${wordCell(r.wordImm)}</td>
         <td>${r.digitSpan}자리</td>
         <td>${r.speed.correct}개</td>
-        <td>${r.wordDel.hit}/6${r.wordDel.fa ? ` <span style="color:var(--warn)">(-${r.wordDel.fa})</span>` : ''}</td>
+        <td>${wordCell(r.wordDel)}</td>
       </tr>`).join('');
     let change = '';
     if (log.length >= 2) {

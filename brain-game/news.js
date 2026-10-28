@@ -184,7 +184,7 @@
     window.scrollTo(0, 0);
     wrap.querySelector('#nwBack').addEventListener('click', () => leaveFeed());
     if (window.RADIO) RADIO.mountMini(wrap.querySelector('#nwMini'));
-    if (window.GLASS) GLASS.mount(wrap);
+    if (window.GLASS) { GLASS.track('feed_open'); GLASS.mount(wrap); }
 
     const list = wrap.querySelector('#nwList');
     const chips = wrap.querySelector('#nwChips');
@@ -235,6 +235,7 @@
     wrap.querySelector('.nw-tabs').addEventListener('click', e => {
       const b = e.target.closest('.nw-tab'); if (!b || b.dataset.t === tab) return;
       tab = b.dataset.t; paint();
+      if (window.GLASS && tab === 'weather') GLASS.track('tab_weather');
     });
     chips.addEventListener('click', e => {
       const b = e.target.closest('.nw-chip'); if (!b) return;
@@ -249,6 +250,7 @@
       read.add(a.dataset.id); markRead(data.updated, read);
       a.classList.add('read');
       openReader(data.items.find(it => it.id === a.dataset.id));
+      if (window.GLASS) GLASS.track('article');
     });
 
     paint();

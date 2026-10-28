@@ -169,6 +169,7 @@
         const it = pool.find(x => x.id === a.dataset.vid);
         if (!it) return;
         remember(it);
+        if (window.GLASS) GLASS.track('video_play');
         a.classList.add('read');
         open(it);
       });
