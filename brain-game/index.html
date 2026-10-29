@@ -1489,7 +1489,7 @@ function buildStages(){
   const lv2=d=>Math.min(MAX_DOMAIN_LEVEL,domainLevel(d)+1);
   return [
     {type:'speed', label:'⚡ 순간 포착', domain:'speed', lv:lv('speed')},
-    {type:'why',   label:'💬 왜? 물어보기', domain:'reason'},
+    {type:'why',   label:'💼 원인 알아 오기', domain:'reason'},
     {type:'math',  label:'🔢 빠른 셈',   domain:'math',  lv:lv('math')},
     {type:'memory',label:'🃏 짝 맞추기', domain:'memory',lv:lv('memory')},
     {type:'speed', label:'⚡ 순간 포착', domain:'speed', lv:lv2('speed')},
@@ -4186,7 +4186,7 @@ async function renderHome(isNew=false){
           <button class="btn btn-ghost practice-btn" data-type="mathhard" style="margin:0;font-size:13px;padding:12px 4px;line-height:1.5;">🧮<br>심화계산</button>
           <button class="btn btn-ghost practice-btn" data-type="typing" style="margin:0;font-size:13px;padding:12px 4px;line-height:1.5;">✍️<br>명언쓰기</button>
           <button class="btn btn-ghost practice-btn" data-type="clean" style="margin:0;font-size:13px;padding:12px 4px;line-height:1.5;grid-column:1/-1;">🧹 청소 심부름 (말 알아듣고 순서대로)</button>
-          <button class="btn btn-ghost practice-btn" data-type="why" style="margin:0;font-size:13px;padding:12px 4px;line-height:1.5;grid-column:1/-1;">💬 왜? 물어보기 (이유를 직접 물어보는 대화)</button>
+          <button class="btn btn-ghost practice-btn" data-type="why" style="margin:0;font-size:13px;padding:12px 4px;line-height:1.5;grid-column:1/-1;">💼 원인 알아 오기 (얼버무리는 후배에게 끝까지 물어보기)</button>
         </div>
       </div>
       <button class="btn btn-ghost" id="myCardsBtn" style="font-size:18px;">📚 라이브러리</button>
@@ -4229,7 +4229,7 @@ function playPractice(type){ setRandomBackground();
   else if(type==='why' && window.WHY) WHY.play({onDone});
 }
 function showPracticeResult(type,score){
-  const labels={speed:'⚡ 순간 포착',seq:'🎵 순서 기억',math:'🔢 빠른 셈',memory:'🃏 짝 맞추기',mathhard:'🧮 심화 계산',typing:'✍️ 명언 따라쓰기',clean:'🧹 청소 심부름',why:'💬 왜? 물어보기'};
+  const labels={speed:'⚡ 순간 포착',seq:'🎵 순서 기억',math:'🔢 빠른 셈',memory:'🃏 짝 맞추기',mathhard:'🧮 심화 계산',typing:'✍️ 명언 따라쓰기',clean:'🧹 청소 심부름',why:'💼 원인 알아 오기'};
   const noScore=(type==='seq');
   clear();
   const v=el(`
@@ -4762,8 +4762,8 @@ function clearBackground() {
 <script src="glass.js?v=3"></script>
 <script src="weather.js?v=2"></script>
 <script src="video.js?v=2"></script>
-<script src="clean.js?v=3"></script>
-<script src="why.js?v=1"></script>
+<script src="clean.js?v=4"></script>
+<script src="why.js?v=2"></script>
 <script src="news.js?v=11"></script>
 </body>
 </html>

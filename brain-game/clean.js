@@ -2,7 +2,7 @@
 // 🧹 청소 심부름 (말 알아듣고 순서대로 하기 = 국어 이해 + 추론)
 // 선생님이 "칠판을 닦기 전에 창문부터 열어 주세요"처럼 3~5가지 일을 말하면, 교실 지도에서 순서대로 누른다.
 // 단계가 오를수록 순서를 뒤집는 말(~하기 전에), 맨 마지막, 위치로 찾는 책상(3번 책상 바로 뒤), 안 해도 되는 일이 섞인다.
-// 틀려도 감점만 조금 있고, 두 번 틀리면 정답을 살짝 알려줘서 끝까지 해낼 수 있게 한다.
+// 틀리면 처음부터 다시, 세 번 틀리면 선생님이 하나씩 같이 해 준다. 음성은 쓰지 않는다(글로만 보여 준다).
 // ==========================================================
 (function () {
   const ROUNDS = 3, MAX_LV = 6, LOG_CAP = 200;
@@ -156,7 +156,6 @@
       .cl-hint{margin-top:6px;font-size:17px;color:#F04452;font-family:'Jua';}
       .cl-hint.strong{font-size:19px;line-height:1.5;background:#FFE8EA;border:2px solid #F04452;border-radius:12px;padding:8px 10px;color:#C8102E;animation:pop .3s ease;}
       .cl-room.cl-shake{animation:shake .45s ease;}
-      .cl-say{border:0;background:#F2F4F6;border-radius:999px;padding:6px 12px;font-size:15px;font-weight:700;color:#333D4B;cursor:pointer;margin-top:6px;}
       .cl-prog{display:flex;align-items:center;justify-content:space-between;font-family:'Jua';font-size:18px;margin:4px 2px 8px;}
       .cl-dots span{display:inline-block;width:16px;height:16px;border-radius:50%;background:#E5E8EB;margin-left:6px;}
       .cl-dots span.on{background:#2FA28E;}
@@ -185,16 +184,6 @@
       @keyframes clSpark{from{opacity:1;transform:translate(0,0) scale(.6);}to{opacity:0;transform:translate(var(--dx),var(--dy)) scale(1.3);}}
     `;
     document.head.appendChild(st);
-  }
-
-  function speak(text) {
-    try {
-      if (!('speechSynthesis' in window)) return;
-      window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = 'ko-KR'; u.rate = 0.82; u.pitch = 0.9; // 천천히 또박또박
-      window.speechSynthesis.speak(u);
-    } catch (e) { /* 소리가 안 나도 글로 볼 수 있다 */ }
   }
 
   function sparkleAt(room, item) {
@@ -244,7 +233,7 @@
           <div class="panel" style="padding:14px;">
             <div class="cl-top">
               <div class="cl-teacher" id="clT">${TEACHER_SVG}</div>
-              <div class="cl-bubble"><div class="who">선생님</div><div id="clText">${esc(task.text)}</div><div class="cl-hint" id="clHint"></div><button class="cl-say" id="clSay" type="button">🔊 다시 듣기</button></div>
+              <div class="cl-bubble"><div class="who">선생님</div><div id="clText">${esc(task.text)}</div><div class="cl-hint" id="clHint"></div></div>
             </div>
             <div class="cl-prog"><span id="clProg">할 일 0 / ${task.steps.length}</span><span class="cl-dots">${task.steps.map(() => '<span></span>').join('')}</span></div>
             <div class="cl-room" id="clRoom">
@@ -256,8 +245,6 @@
       const room = v.querySelector('#clRoom'), hintEl = v.querySelector('#clHint'), prog = v.querySelector('#clProg');
       const dots = [...v.querySelectorAll('.cl-dots span')];
       const textEl = v.querySelector('#clText'), teacher = v.querySelector('#clT');
-      v.querySelector('#clSay').addEventListener('click', () => speak(task.text));
-      setTimeout(() => speak(task.text), 350);
 
       // 틀리면: 강하게 주의 → 처음부터 다시. 한 문제에서 세 번 틀리면 선생님이 한 가지씩 같이 해 준다.
       let guided = false, guideWrong = 0;
@@ -271,14 +258,12 @@
       const showGuide = () => {
         const line = `${step + 1}번째: ${guideLines[step]}`;
         textEl.innerHTML = `<div style="color:#6B7684;font-size:15px;">선생님이랑 하나씩 같이 해 봐요</div><b style="font-size:21px;">👉 ${esc(line)}</b>`;
-        speak(line);
       };
       const warn = html => {
         hintEl.innerHTML = html; hintEl.classList.add('strong');
         room.classList.remove('cl-shake'); void room.offsetWidth; room.classList.add('cl-shake');
-        if (typeof beep === 'function') beep(330, 0.12); // 경고는 글로만, 소리는 짧고 부드럽게 (음성 없음)
+        if (typeof beep === 'function') beep(330, 0.12); // 경고는 글로만, 소리는 짧고 부드럽게
         if (navigator.vibrate) { try { navigator.vibrate(60); } catch (err) { /* 무시 */ } }
-        try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (err) { /* 무시 */ }
       };
 
       room.addEventListener('click', e => {
@@ -297,7 +282,6 @@
             lock = true;
             const praise = pickOne(PRAISE);
             textEl.textContent = praise; teacher.classList.add('happy');
-            speak(praise);
             if (typeof confetti === 'function') confetti(roundWrong ? 3 : 6);
             roundScores.push(guided ? 30 : Math.max(40, 100 - roundWrong * 30));
             if (guided) guidedRounds++;
@@ -333,7 +317,6 @@
             showGuide();
           } else {
             hintEl.textContent = `다시 잘 들어 보세요 👂 (${roundWrong + 1}번째 도전)`;
-            speak(task.text);
           }
           lock = false;
         }, 3600);
@@ -350,7 +333,6 @@
         currentMember.cleanLog = [...log, { ts: new Date().toISOString(), lv: L, wrong: totalWrong, guided: guidedRounds, score, sec: Math.round((Date.now() - startedAt) / 1000) }].slice(-LOG_CAP);
         if (typeof saveMember === 'function') saveMember();
       }
-      try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) { /* 무시 */ }
       if (onDone) onDone(score);
     }
 
