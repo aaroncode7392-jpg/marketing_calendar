@@ -1,130 +1,155 @@
 // ==========================================================
-// 💼 원인 알아 오기 (말의 문맥을 붙잡고 끝까지 물어서 진짜 원인을 찾는 연습)
-// 상사가 "왜 그랬는지 정확히 알아 와요"라고 시키면, 실수한 후배에게 가서 물어본다.
-// 후배는 얼버무리고, 그냥 "왜 그랬어요?"만 물으면 같은 핑계만 되풀이한다(답답한 상황).
-// 후배가 방금 한 말을 붙잡고 구체적으로 물어야 한 겹씩 이유가 나온다. 혼내거나 몰아가면 입을 닫는다.
-// 언제든 상사에게 보고할 수 있지만, 진짜 원인이 아니면 상사에게 혼나고 다시 물으러 가야 한다.
+// 💼 원인 알아 오기 ("왜?"라고 물어보는 게 왜 중요한지 몸으로 배우는 대화 연습)
+// 윗사람이 "왜 그랬는지 알아 와요"라고 시키면, 실수한 사람에게 가서 "왜?"를 거듭 물어 진짜 원인을 찾는다.
+// "왜?"라고 물으면 한 겹씩 이유가 나온다. 나쁜 대답은 "알겠어요", "다음부턴 조심해 줘요"처럼 대충 넘어가는 말이다.
+// 대충 넘어가면 같은 실수가 더 크게 되풀이되고, 손해가 이어져 내 월급·알바비·회비까지 영향을 주는 과정을 보여 준다.
+// 그런 뒤 그때로 돌아가 다시 물어볼 수 있다. 진짜 원인을 찾으면 보고하고, 막을 방법까지 고른다.
 // 음성은 쓰지 않는다(글로만 보여 준다).
 // ==========================================================
 (function () {
   const PER_GAME = 2, MAX_LV = 3, LOG_CAP = 200;
-  const PENALTY = { ask: 10, report: 15, fix: 10 }, MIN_SCORE = 30;
+  const PENALTY = { brush: 15, report: 10, fix: 10 }, MIN_SCORE = 30;
+  const LOSS_STEP_MS = 800;
 
-  // 각 일: 상사(boss)가 시키고, 후배(jr)가 얼버무린다(open). layers를 차례로 물어야 마지막에 진짜 원인이 나온다.
-  // fact = 보고할 때 고를 수 있는 말, no = 그걸 보고하면 상사가 하는 꾸중
+  // 각 일: 윗사람(boss)이 시키고, 실수한 사람(jr)이 얼버무린다(open). layers를 차례로 물어야 마지막에 진짜 원인이 나온다.
+  // fact = 보고할 때 고를 수 있는 말, no = 그걸 보고하면 듣는 꾸중
+  // repeat = 대충 넘어갔을 때 다시 벌어지는 일, loss = 손해가 내 돈까지 이어지는 과정
   const S = [
-    { boss: ['김 부장님', '👨‍💼'], jr: ['신입 민수 씨', '🧑'],
-      order: '오늘 거래처에 보낸 주문서 수량이 틀렸대요. 민수 씨가 왜 그랬는지 정확히 알아 와요.',
+    { place: '회사', boss: ['김 부장님', '👨‍💼'], jr: ['신입 민수 씨', '🧑'],
+      order: '오늘 거래처에 보낸 주문서 수량이 틀렸대요. 민수 씨가 왜 그랬는지 알아 와요.',
       open: '아… 그게… 제가 좀 정신이 없어서요…',
       openFact: ['정신이 없었대요', '정신없는 건 이유가 아니에요! 뭐가 어떻게 된 건지 알아 와요.'],
-      dodge: ['그냥… 정신이 없어서요…', '저도 잘 모르겠어요… 아무튼 죄송해요.', '그러니까… 그냥 그렇게 됐어요…'],
       layers: [
-        { q: '뭐 하느라 정신이 없었어요?', a: '그날 오전에 주문서 두 개를 같이 쓰고 있었어요.', fact: '주문서 두 개를 한꺼번에 쓰고 있었대요', no: '두 개를 같이 쓴 건 알겠어요. 그래서 뭐가 어떻게 틀렸는데요?' },
-        { q: '두 개를 같이 쓰다가 뭐가 잘못됐어요?', a: '음… 숫자를 잘못 넣은 것 같아요.', fact: '숫자를 잘못 넣었대요', no: '숫자가 틀린 건 나도 알아요! 왜 틀렸는지를 알아 오라니까요.' },
-        { q: '그 숫자는 어디서 가져다 넣었어요?', a: '다른 거래처 파일에서 복사해 왔어요. 파일 이름이 비슷해서 헷갈렸고… 보내기 전에 다시 확인도 안 했어요.', fact: '이름이 비슷한 다른 거래처 파일에서 숫자를 복사했고, 보내기 전에 확인을 안 했대요' },
+        { q: '왜 그렇게 정신이 없었어요?', a: '그날 오전에 주문서 두 개를 같이 쓰고 있었어요.', fact: '주문서 두 개를 한꺼번에 쓰고 있었대요', no: '두 개를 같이 쓴 건 알겠어요. 그래서 왜 틀렸는데요?' },
+        { q: '같이 쓰다가 왜 수량이 틀렸어요?', a: '숫자를 다른 파일에서 복사해 왔는데, 그게 잘못된 것 같아요.', fact: '다른 파일에서 숫자를 복사해 왔대요', no: '복사한 건 알겠어요. 왜 잘못된 걸 가져왔는지가 중요해요.' },
+        { q: '왜 잘못된 파일에서 복사했어요?', a: '다른 거래처 파일과 이름이 비슷해서 헷갈렸어요. 보내기 전에 다시 확인도 안 했고요…', fact: '이름이 비슷한 파일을 헷갈렸고, 보내기 전에 확인을 안 했대요' },
       ],
+      repeat: '한 달 뒤, 민수 씨가 또 다른 거래처 숫자를 붙여서 보냈어요. 이번엔 100개가 아니라 1,000개로요!',
+      loss: ['물건 900개가 잘못 만들어졌어요', '회사 손해 900만 원', '회사 돈이 모자라요', '부장님: "이번 달 성과급은 없어요…"'],
+      pay: '내 성과급이 없어졌어요',
       fix: ['그럼 앞으로 어떻게 하면 될까요?', '보내기 전에 숫자를 한 번 더 확인한다', ['일을 더 빨리 한다', '주문서를 아예 안 쓴다']] },
-    { boss: ['이 부장님', '👩‍💼'], jr: ['신입 지영 씨', '👩'],
-      order: '아침 회의 자료가 10분이나 늦게 왔어요. 지영 씨가 왜 늦었는지 정확히 알아 와요.',
+    { place: '회사', boss: ['이 부장님', '👩‍💼'], jr: ['신입 지영 씨', '👩'],
+      order: '아침 회의 자료가 10분이나 늦게 왔어요. 지영 씨가 왜 늦었는지 알아 와요.',
       open: '죄송해요… 아침에 일이 좀 꼬여서요…',
       openFact: ['아침에 일이 꼬였대요', '일이 꼬였다는 건 이유가 아니죠. 뭐가 꼬였는지 알아 와요.'],
-      dodge: ['그게… 그냥 좀 꼬였어요…', '저도 정신이 없어서요… 죄송해요.', '이것저것 하다 보니까요…'],
       layers: [
-        { q: '아침에 뭐가 꼬였어요?', a: '자료를 뽑으려는데 복사기가 안 됐어요.', fact: '복사기가 안 됐대요', no: '복사기는 안 될 수도 있죠. 그런데 왜 10분이나 늦었는지를 알아 와야죠.' },
-        { q: '복사기가 왜 안 됐어요?', a: '종이가 떨어졌어요. 창고에 가지러 갔는데 열쇠가 어디 있는지 몰라서 헤맸어요.', fact: '종이가 떨어졌는데 창고 열쇠를 못 찾아서 헤맸대요', no: '열쇠를 왜 몰랐는지가 중요해요. 그것까지 알아 와요.' },
-        { q: '창고 열쇠 자리를 왜 몰랐어요?', a: '들어온 지 일주일이라 아무도 알려 준 적이 없어요. 그리고 자료도 회의 바로 전에 뽑기 시작했어요.', fact: '아무도 열쇠 자리를 알려 주지 않았고, 자료를 회의 바로 전에야 뽑기 시작했대요' },
+        { q: '왜 일이 꼬였어요?', a: '자료를 뽑으려는데 복사기가 안 됐어요.', fact: '복사기가 안 됐대요', no: '복사기는 안 될 수도 있죠. 그런데 왜 그렇게 늦었는지 알아 와야죠.' },
+        { q: '복사기가 왜 안 됐어요?', a: '종이가 떨어졌어요. 창고에 가지러 갔는데 열쇠가 어디 있는지 몰라서 헤맸어요.', fact: '종이가 떨어졌는데 창고 열쇠를 못 찾았대요', no: '열쇠를 왜 몰랐는지가 중요해요. 그것까지 알아 와요.' },
+        { q: '창고 열쇠 자리를 왜 몰랐어요?', a: '들어온 지 일주일이라 아무도 알려 준 적이 없어요. 자료도 회의 바로 전에 뽑기 시작했고요.', fact: '아무도 열쇠 자리를 안 알려 줬고, 자료를 회의 바로 전에 뽑기 시작했대요' },
       ],
+      repeat: '다음 주, 큰 거래처 앞에서 발표하는 날 또 자료가 늦었어요. 거래처 사람들이 30분을 기다렸어요.',
+      loss: ['거래처가 "준비가 안 된 회사네요" 하며 계약을 미뤘어요', '들어올 돈 2,000만 원이 사라졌어요', '회사 돈이 모자라요', '부장님: "올해 월급 인상은 어렵겠어요…"'],
+      pay: '내 월급이 안 올라요',
       fix: ['그럼 앞으로 어떻게 하면 될까요?', '신입에게 물건 자리를 알려 주고, 자료는 전날 미리 뽑는다', ['복사기를 새로 산다', '회의를 없앤다']] },
-    { boss: ['최 사장님', '👨‍🍳'], jr: ['직원 수진 씨', '🧑‍🍳'],
+    { place: '음식점', boss: ['최 사장님', '👨‍🍳'], jr: ['직원 수진 씨', '🧑‍🍳'],
       order: '3번 상 손님이 화가 나셨어요. 매운 걸 못 드신다고 했는데 매운 찌개가 나갔대요. 수진 씨한테 왜 그랬는지 알아 와요.',
       open: '아… 제가 바빠서 깜빡했나 봐요…',
-      openFact: ['바빠서 깜빡했대요', '점심때는 다 바빠요! 뭘 왜 깜빡했는지 정확히 알아 와요.'],
-      dodge: ['그냥… 바빠서요…', '정신이 없어서 기억이 잘 안 나요…', '죄송해요… 깜빡했어요…'],
+      openFact: ['바빠서 깜빡했대요', '점심때는 다 바빠요! 왜 깜빡했는지 정확히 알아 와요.'],
       layers: [
-        { q: '맵지 않게 해 달라는 말, 어디에 적었어요?', a: '그게… 안 적고 머리로만 외웠어요.', fact: '주문을 적지 않고 외웠대요', no: '외웠다는 건 알겠고, 그래서 왜 틀렸는데요?' },
-        { q: '외운 걸 주방에 말할 때 어떻게 됐어요?', a: '그사이에 다른 상 주문이 세 개나 들어와서, 주방에 "덜 맵게"를 빼먹었어요.', fact: '주문이 몰려서 주방에 "덜 맵게"를 빼먹었대요', no: '빼먹은 건 알겠어요. 그런데 애초에 왜 안 적었는지 알아 와요.' },
-        { q: '그 바쁜 때 왜 적지 않고 외웠어요?', a: '주문 적는 수첩이 다 떨어졌는데, 바빠서 새로 못 받았어요.', fact: '주문 수첩이 떨어져서 외우다가, 주문이 몰려 "덜 맵게"를 빼먹었대요' },
+        { q: '왜 깜빡했어요?', a: '주문을 안 적고 머리로만 외웠어요.', fact: '주문을 적지 않고 외웠대요', no: '외웠다는 건 알겠고, 그래서 왜 틀렸는데요?' },
+        { q: '외웠는데 왜 주방에 제대로 못 전했어요?', a: '그사이에 다른 상 주문이 세 개나 들어와서 "덜 맵게"를 빼먹었어요.', fact: '주문이 몰려서 "덜 맵게"를 빼먹었대요', no: '빼먹은 건 알겠어요. 애초에 왜 안 적었는지 알아 와요.' },
+        { q: '그 바쁜 때 왜 적지 않았어요?', a: '주문 적는 수첩이 다 떨어졌는데, 바빠서 새로 못 받았어요.', fact: '주문 수첩이 떨어져서 외우다가, 주문이 몰려 빼먹었대요' },
       ],
+      repeat: '다음 날, 땅콩을 빼 달라던 손님 음식에 또 땅콩이 들어갔어요! 손님이 병원에 가셨어요.',
+      loss: ['병원비 50만 원을 물어 드렸어요', '"이 식당 조심하세요" 후기가 올라왔어요', '한 달 동안 손님이 절반으로 줄었어요', '사장님: "월세 내기도 빠듯해서 월급을 반만 줄 수 있어요…"'],
+      pay: '내 월급이 반으로 줄었어요',
       fix: ['그럼 앞으로 어떻게 하면 될까요?', '수첩을 넉넉히 두고, 주문은 꼭 적어서 주방에 전한다', ['매운 메뉴를 없앤다', '손님을 덜 받는다']] },
-    { boss: ['정 사장님', '👩‍💼'], jr: ['직원 현우 씨', '🧑'],
-      order: '어제 보낸 택배가 엉뚱한 집으로 갔대요. 현우 씨한테 왜 그랬는지 알아 와요.',
-      open: '아… 주소가 좀 이상하게 됐나 봐요…',
-      openFact: ['주소가 이상하게 됐대요', '주소가 왜 이상해졌는지 알아 오라는 거예요!'],
-      dodge: ['저도 잘 모르겠어요… 주소가 그냥 그렇게 됐어요.', '음… 컴퓨터가 이상했나…?', '제가 실수했나 봐요…'],
-      layers: [
-        { q: '주소는 어떻게 옮겨 적었어요?', a: '손님 주문 화면에서 복사해서 택배 종이에 붙였어요.', fact: '주문 화면에서 주소를 복사해 붙였대요', no: '복사해서 붙이는 건 평소랑 같잖아요. 뭐가 달랐는지 알아 와요.' },
-        { q: '복사해서 붙였는데 왜 다른 주소가 들어갔어요?', a: '아… 그 손님이 주소를 바꿔 달라고 문자를 보냈는데, 저는 바뀌기 전 주소를 붙였어요.', fact: '손님이 바꾼 주소 말고 예전 주소를 붙였대요', no: '예전 주소를 붙였다… 그럼 바뀐 주소는 왜 못 봤대요?' },
-        { q: '주소 바꿔 달라는 문자는 왜 못 봤어요?', a: '그 문자가 가게 폰으로 왔는데, 가게 폰은 사장님만 보셔서 저한테 전달이 안 됐어요.', fact: '주소를 바꿔 달라는 문자가 가게 폰으로만 와서 전달을 못 받았대요' },
-      ],
-      praise: '아… 내 폰으로 왔었구나. 원인을 정확히 알아 왔네요. 고마워요.',
-      fix: ['그럼 앞으로 어떻게 하면 될까요?', '주소 바꿔 달라는 문자는 바로 담당자에게 전해 준다', ['택배를 안 보낸다', '현우 씨를 크게 혼낸다']] },
-    { boss: ['박 부장님', '👨‍💼'], jr: ['신입 태호 씨', '🧑'],
-      order: '오늘 거래처 만남에 태호 씨가 30분이나 늦었대요. 왜 늦었는지 정확히 알아 와요.',
-      open: '죄송합니다… 길이 좀 막혀서요…',
-      openFact: ['길이 막혔대요', '길은 원래 막혀요! 진짜 이유를 알아 와요.'],
-      dodge: ['그냥… 차가 많았어요…', '오늘따라 이상하게 막혔어요…', '죄송합니다… 길이…'],
-      layers: [
-        { q: '몇 시에 출발했어요?', a: '두 시 반이요. 약속이 세 시인 줄 알았거든요.', fact: '약속이 세 시인 줄 알고 두 시 반에 출발했대요', no: '세 시인 줄 알았다고요? 약속은 두 시 반이었어요. 왜 시간을 잘못 알았는지 알아 와요.' },
-        { q: '약속이 세 시라고 왜 생각했어요?', a: '제 달력에 세 시로 적혀 있었어요.', fact: '달력에 세 시로 적혀 있었대요', no: '달력이 틀렸다면, 왜 틀리게 적혀 있었는지 알아 와야죠.' },
-        { q: '달력에는 왜 세 시로 적혀 있었어요?', a: '거래처에서 두 시 반으로 바꾸자는 메일이 왔는데, 제가 그 메일을 못 보고 처음 시간을 그대로 뒀어요.', fact: '두 시 반으로 바뀌었다는 메일을 못 봐서, 달력에 예전 시간이 그대로 있었대요' },
-      ],
-      fix: ['그럼 앞으로 어떻게 하면 될까요?', '약속 전날 메일과 시간을 한 번 더 확인한다', ['차를 새로 산다', '거래처를 안 만난다']] },
-    { boss: ['관리소장님', '👨‍💼'], jr: ['김 주임', '👷'],
-      order: '오늘 엘리베이터 점검인데 안내문이 안 붙어서 주민들 항의가 많아요. 김 주임한테 왜 그랬는지 알아 와요.',
-      open: '그게… 붙이려고 했는데요…',
-      openFact: ['붙이려고 했었대요', '붙이려고 했다는 건 이유가 아니죠! 왜 못 붙였는지 알아 와요.'],
-      dodge: ['진짜 붙이려고 했어요…', '어쩌다 보니 그렇게 됐어요…', '제가 좀 늦었어요… 죄송해요.'],
-      layers: [
-        { q: '붙이려고 했는데 왜 못 붙였어요?', a: '안내문을 아직 못 뽑았어요.', fact: '안내문을 아직 못 뽑았대요', no: '못 뽑았으면 왜 못 뽑았는지까지 알아 와야죠.' },
-        { q: '안내문은 왜 아직 못 뽑았어요?', a: '점검 날짜를 어제 저녁에야 들었어요.', fact: '점검 날짜를 어제 저녁에야 들었대요', no: '어제 저녁에 들었다… 왜 그렇게 늦게 들었는지 알아 와요.' },
-        { q: '점검 날짜를 왜 어제 저녁에야 들었어요?', a: '점검 회사가 일주일 전에 팩스를 보냈는데, 팩스기 옆에 쌓인 종이에 묻혀서 아무도 못 봤어요.', fact: '일주일 전에 온 점검 팩스가 쌓인 종이에 묻혀서 아무도 못 봤대요' },
-      ],
-      fix: ['그럼 앞으로 어떻게 하면 될까요?', '팩스는 매일 확인해서 바로 담당자에게 준다', ['엘리베이터 점검을 안 한다', '주민들에게 계단만 쓰라고 한다']] },
-    { boss: ['빵집 사장님', '👩‍🍳'], jr: ['직원 은지 씨', '👧'],
+    { place: '빵집', boss: ['빵집 사장님', '👩‍🍳'], jr: ['직원 은지 씨', '👧'],
       order: '생일 케이크 찾으러 오신 손님이 계신데 케이크가 없대요! 은지 씨한테 왜 그랬는지 알아 와요.',
       open: '어… 그 케이크 오늘 아닌 줄 알았어요…',
       openFact: ['오늘이 아닌 줄 알았대요', '오늘이 아닌 줄 알았다는 건 알겠어요. 왜 그렇게 알았는지 알아 와요.'],
-      dodge: ['그냥… 오늘이 아닌 줄 알았어요…', '저도 왜 그랬는지 모르겠어요…', '죄송해요… 헷갈렸어요…'],
       layers: [
-        { q: '예약은 어디에 적었어요?', a: '예약 공책에 적었어요.', fact: '예약 공책에 적었대요', no: '공책에 적었는데 왜 틀렸는지를 알아 와야죠.' },
-        { q: '공책에 날짜를 뭐라고 적었어요?', a: '"토요일"이라고만 적었어요. 날짜는 안 적었어요.', fact: '날짜 없이 "토요일"이라고만 적었대요', no: '오늘이 토요일인데, 왜 오늘이 아니라고 생각했는지 알아 와요.' },
-        { q: '오늘이 토요일인데 왜 오늘이 아니라고 생각했어요?', a: '손님이 어제 전화로 "토요일"이라고 하셔서 다음 주 토요일인 줄 알았어요. 손님은 오늘을 말씀하신 거였어요.', fact: '날짜 없이 "토요일"이라고만 적어서, 어느 토요일인지 헷갈렸대요' },
+        { q: '왜 오늘이 아닌 줄 알았어요?', a: '예약 공책에 "토요일"이라고만 적어 놨어요.', fact: '공책에 "토요일"이라고만 적었대요', no: '토요일이라고 적었으면 오늘이잖아요. 왜 헷갈렸는지 알아 와요.' },
+        { q: '왜 "토요일"이라고만 적었어요?', a: '손님이 전화로 "토요일"이라고만 하셔서 그대로 적었어요.', fact: '손님이 "토요일"이라고만 말씀하셨대요', no: '손님 탓을 하면 안 되죠. 왜 오늘이 아니라고 생각했는지 알아 와요.' },
+        { q: '왜 다음 주 토요일이라고 생각했어요?', a: '어제 온 전화라 당연히 다음 주인 줄 알았어요. 날짜를 여쭤보지 않았어요.', fact: '날짜를 여쭤보지 않고 요일만 적어서 어느 토요일인지 헷갈렸대요' },
       ],
+      repeat: '다음 달, 또 요일만 적었다가 돌잔치 떡케이크 50개를 하루 늦게 만들었어요.',
+      loss: ['돌잔치 손님께 100만 원을 돌려 드렸어요', '만든 케이크 50개는 다 버렸어요', '빵집이 이번 달 적자예요', '사장님: "이번 달 월급은 조금 늦게 줄게요…"'],
+      pay: '내 월급이 밀렸어요',
       fix: ['그럼 앞으로 어떻게 하면 될까요?', '예약은 요일만 말고 날짜까지 꼭 적는다', ['케이크를 미리 많이 만든다', '예약을 안 받는다']] },
-    { boss: ['마트 점장님', '👨‍💼'], jr: ['직원 동민 씨', '🧑'],
+    { place: '편의점 알바', boss: ['편의점 점장님', '👨‍💼'], jr: ['알바 지훈 씨', '🧑'],
+      order: '손님이 날짜 지난 삼각김밥을 사 가셨대요. 지훈 씨한테 왜 그랬는지 알아 와요.',
+      open: '아… 제가 못 봤나 봐요…',
+      openFact: ['못 봤대요', '못 봤다는 건 이유가 아니에요. 왜 못 봤는지 알아 와요.'],
+      layers: [
+        { q: '왜 못 봤어요?', a: '새벽에 물건을 정리할 때 날짜를 확인 안 했어요.', fact: '정리할 때 날짜를 확인 안 했대요', no: '확인 안 한 건 알겠어요. 왜 안 했는지까지 알아 와요.' },
+        { q: '정리할 때 왜 날짜를 확인 안 했어요?', a: '새 물건을 앞에 놓기 바빠서요.', fact: '새 물건을 앞에 놓기 바빴대요', no: '새 물건을 앞에 놓았다고요? 왜 그렇게 했는지 알아 와요.' },
+        { q: '새 물건을 왜 앞에 놓았어요?', a: '옛날 물건을 앞에, 새 물건을 뒤에 놓는 건지 몰랐어요. 아무도 안 알려 줬어요. 그래서 뒤에 옛날 게 남아 있었어요.', fact: '옛날 물건을 앞에 두는 법을 아무도 안 알려 줘서, 날짜 지난 게 뒤에 남아 있었대요' },
+      ],
+      repeat: '일주일 뒤, 날짜 지난 우유를 드신 손님이 배탈이 났어요.',
+      loss: ['본사에 신고가 들어갔어요', '벌금 100만 원에 버린 물건 30만 원', '가게가 이번 달 적자예요', '점장님: "알바 시간을 줄여야겠어요…"'],
+      pay: '내 알바비가 줄었어요',
+      fix: ['그럼 앞으로 어떻게 하면 될까요?', '새 알바에게 옛날 물건을 앞에 두는 법을 알려 준다', ['삼각김밥을 안 판다', '지훈 씨를 크게 혼낸다']] },
+    { place: '카페 알바', boss: ['카페 매니저님', '👩‍💼'], jr: ['알바 소연 씨', '👧'],
+      order: '아침에 와 보니 냉동고 문이 열려서 아이스크림이 다 녹았어요. 소연 씨한테 왜 그랬는지 알아 와요.',
+      open: '어… 분명 닫은 것 같은데요…',
+      openFact: ['닫은 것 같대요', '닫은 것 같다니요! 왜 열려 있었는지 알아 와요.'],
+      layers: [
+        { q: '닫았는데 왜 열려 있었을까요?', a: '마지막에 얼음을 꺼내고… 문을 끝까지 안 밀었나 봐요.', fact: '문을 끝까지 안 밀었대요', no: '안 민 건 알겠어요. 왜 그랬는지 알아 와요.' },
+        { q: '왜 문을 끝까지 안 밀었어요?', a: '그 문은 끝까지 눌러야 닫히는데, 저는 몰랐어요.', fact: '끝까지 눌러야 닫히는 걸 몰랐대요', no: '몰랐다고요? 왜 몰랐는지까지 알아 와요.' },
+        { q: '그걸 왜 몰랐어요?', a: '마감을 처음 혼자 했어요. 마감할 때 할 일 목록이 없어서 그냥 했어요.', fact: '처음 혼자 마감했는데, 마감할 일 목록이 없었대요' },
+      ],
+      repeat: '다음 주, 소연 씨 혼자 마감한 날 이번엔 커피 기계를 안 껐어요. 밤새 기계가 타 버렸어요.',
+      loss: ['기계 고치는 데 300만 원', '사흘 동안 장사를 못 했어요', '가게 돈이 바닥났어요', '매니저: "이번 달 알바비는 다음 달에 줄게요…"'],
+      pay: '내 알바비가 밀렸어요',
+      fix: ['그럼 앞으로 어떻게 하면 될까요?', '마감할 일 목록을 만들어 붙이고 하나씩 확인한다', ['냉동고를 없앤다', '아이스크림을 안 판다']] },
+    { place: '산악회', boss: ['산악회 회장님', '🧓'], jr: ['총무 미경 씨', '👩'],
+      order: '오늘 가을 산행인데 버스가 안 왔어요! 회원 30명이 길에서 기다려요. 미경 씨한테 왜 그랬는지 알아 와요.',
+      open: '어머… 예약은 분명히 했는데요…',
+      openFact: ['예약은 했었대요', '예약을 했는데 왜 안 왔는지 알아 와야죠!'],
+      layers: [
+        { q: '예약했는데 왜 버스가 안 왔을까요?', a: '버스 회사에 전화해 보니 예약이 다음 주로 되어 있대요.', fact: '예약이 다음 주로 되어 있었대요', no: '다음 주로 됐다고요? 왜 그렇게 됐는지 알아 와요.' },
+        { q: '왜 다음 주로 되어 있었어요?', a: '제가 "셋째 주 토요일"이라고 했는데, 그쪽에서 다르게 알아들었나 봐요.', fact: '"셋째 주 토요일"을 다르게 알아들었대요', no: '남 탓만 하지 말고, 왜 틀어졌는지 끝까지 알아 와요.' },
+        { q: '왜 틀린 걸 미리 몰랐어요?', a: '날짜를 숫자로 말하지 않았고, 예약 확인 문자도 안 받아 봤어요.', fact: '날짜를 숫자로 말하지 않았고, 예약 확인 문자도 안 받아 봤대요' },
+      ],
+      repeat: '봄 산행 날, 이번엔 산장이 다른 날짜로 예약돼 있었어요. 30명이 잘 곳이 없었어요.',
+      loss: ['급하게 비싼 숙소를 잡았어요 (150만 원 더)', '취소 수수료도 물었어요', '모아 둔 회비가 바닥났어요', '회장님: "모자란 돈은 임원들이 나눠 내야겠어요…"'],
+      pay: '내 돈이 나갔어요',
+      fix: ['그럼 앞으로 어떻게 하면 될까요?', '예약은 날짜를 숫자로 말하고, 확인 문자를 꼭 받는다', ['산행을 안 간다', '버스 회사를 바꾼다']] },
+    { place: '탁구 동호회', boss: ['동호회 회장님', '👨‍🦳'], jr: ['막내 회원 성훈 씨', '🧑'],
+      order: '이번 시 대회 명단에 우리 동호회가 빠졌대요! 성훈 씨한테 왜 그랬는지 알아 와요.',
+      open: '아… 신청서를 보내긴 했는데요…',
+      openFact: ['신청서를 보내긴 했대요', '보냈는데 왜 빠졌는지를 알아 와야죠!'],
+      layers: [
+        { q: '보냈는데 왜 명단에 빠졌을까요?', a: '대회 쪽에 물어보니 신청서를 못 받았대요.', fact: '대회 쪽에서 신청서를 못 받았대요', no: '못 받았다고요? 왜 못 받았는지 알아 와요.' },
+        { q: '왜 못 받았대요?', a: '제가 메일 주소를 하나 틀리게 적어서 보냈더라고요.', fact: '메일 주소를 틀리게 적었대요', no: '틀린 건 알겠어요. 왜 몰랐는지 알아 와요.' },
+        { q: '틀린 걸 왜 몰랐어요?', a: '마감 날 밤에 급하게 보냈어요. 잘 받았는지 확인 전화도 안 했고요.', fact: '마감 날 밤에 급하게 보냈고, 잘 받았는지 확인도 안 했대요' },
+      ],
+      repeat: '다음 대회 때 성훈 씨가 또 마감 날 밤에 급하게 보냈다가, 이번엔 참가비 입금이 빠졌어요.',
+      loss: ['대회에 또 못 나갔어요', '후원하던 가게가 후원을 끊었어요 (1년 60만 원)', '회비가 모자라 체육관을 못 빌려요', '회장님: "이번 달부터 회비를 두 배로 올려야겠어요…"'],
+      pay: '내 회비가 두 배가 됐어요',
+      fix: ['그럼 앞으로 어떻게 하면 될까요?', '신청은 며칠 전에 보내고, 잘 받았는지 꼭 확인한다', ['대회에 안 나간다', '성훈 씨를 내보낸다']] },
+    { place: '마트', boss: ['마트 점장님', '👨‍💼'], jr: ['직원 동민 씨', '🧑'],
       order: '우유 칸이 텅 비어서 손님들이 그냥 가셨어요. 동민 씨한테 왜 그랬는지 알아 와요.',
       open: '아… 우유가 좀 늦게 왔어요…',
       openFact: ['우유가 늦게 왔대요', '늦게 왔으면 왜 늦게 왔는지 알아 와야죠!'],
-      dodge: ['그냥 늦게 왔어요…', '원래 오는 시간에 안 왔어요…', '저도 잘 모르겠어요…'],
       layers: [
-        { q: '우유 업체에는 왜 늦었는지 물어봤어요?', a: '네, 물어보니까 주문이 안 들어와서 못 보냈대요.', fact: '업체에 주문이 안 들어갔대요', no: '주문이 안 들어갔다고요? 왜 안 들어갔는지 알아 와요.' },
-        { q: '주문은 누가 넣기로 했어요?', a: '원래 제가 매일 저녁에 넣는데, 어제는 영식 씨가 넣기로 했어요.', fact: '어제는 영식 씨가 주문을 넣기로 했대요', no: '영식 씨한테 넘겼다면, 왜 주문이 빠졌는지까지 알아 와요.' },
-        { q: '영식 씨한테는 어떻게 부탁했어요?', a: '퇴근하면서 말로만 "우유 주문 좀 해 줘" 했는데, 영식 씨는 못 들었대요.', fact: '말로만 부탁해서 영식 씨가 못 들었고, 그래서 주문이 빠졌대요' },
+        { q: '우유가 왜 늦게 왔어요?', a: '업체에 물어보니 주문이 안 들어와서 못 보냈대요.', fact: '업체에 주문이 안 들어갔대요', no: '주문이 안 들어갔다고요? 왜 안 들어갔는지 알아 와요.' },
+        { q: '주문이 왜 안 들어갔어요?', a: '원래 제가 넣는데, 어제는 영식 씨가 넣기로 했어요.', fact: '어제는 영식 씨가 넣기로 했대요', no: '영식 씨한테 넘겼다면, 왜 빠졌는지까지 알아 와요.' },
+        { q: '영식 씨는 왜 주문을 안 넣었을까요?', a: '퇴근하면서 말로만 "우유 주문 좀 해 줘" 했는데, 영식 씨는 못 들었대요.', fact: '말로만 부탁해서 영식 씨가 못 들었대요' },
       ],
+      repeat: '설 명절 대목에 또 말로만 부탁했다가, 이번엔 고기 주문이 빠졌어요.',
+      loss: ['명절 손님들이 다 옆 마트로 갔어요', '하루 매출 500만 원이 날아갔어요', '마트가 이번 달 적자예요', '점장님: "명절 보너스는 못 드리겠어요…"'],
+      pay: '내 보너스가 없어졌어요',
       fix: ['그럼 앞으로 어떻게 하면 될까요?', '일을 넘길 때는 말로만 말고 적어서 확인받는다', ['우유를 안 판다', '영식 씨를 크게 혼낸다']] },
   ];
 
-  // 그냥 "왜?"만 되풀이하는 질문 — 후배는 같은 핑계만 댄다
-  const VAGUE = ['왜 그랬어요?', '그러니까 왜요?', '아니, 그러니까 왜 그랬냐고요?'];
-  // 혼내기 / 딴소리 / 몰아가기 — 후배가 입을 닫거나 방어만 한다
-  const SCOLD = [['또 실수했어요? 정신 좀 차려요!', '…죄송합니다. (고개를 푹 숙이고 말이 없어요)'], ['이게 몇 번째예요?', '…(아무 말도 안 해요)'], ['그걸 지금 변명이라고 해요?', '…죄송합니다…']];
-  const OFF = [['점심은 먹었어요?', '네…? 아, 네… 먹었어요.'], ['요즘 날씨 춥죠?', '네… 춥네요…'], ['주말에 뭐 했어요?', '집에 있었어요… 그런데요?']];
-  const LEAD = [['혹시 대충 한 거 아니에요?', '아니에요! 대충 한 거 아니에요…'], ['일부러 그런 거죠?', '아니에요! 그런 거 정말 아니에요…'], ['하기 싫었던 거죠?', '그런 거 아니에요… 억울해요…']];
+  // 나쁜 대답 = 원인을 묻지 않고 대충 넘어가는 말
+  const BRUSH = [
+    ['알겠어요.', '네! 감사합니다~'],
+    ['다음부턴 조심해 줘요.', '네네, 조심할게요!'],
+    ['괜찮아요, 그럴 수도 있죠.', '감사합니다! 헤헤'],
+    ['됐어요, 내가 알아서 처리할게요.', '앗, 감사합니다!'],
+  ];
   const FAKE = ['일이 너무 많아서 그랬대요', '원래 실수가 잦은 사람이래요'];
-  const FAKE_NO = '그건 짐작이잖아요! 직접 들은 진짜 원인을 알아 와요.';
-
-  const TIPS = {
-    vague: '💡 그냥 "왜?"만 물으면 똑같이 얼버무려요. 후배가 <b>방금 한 말</b>을 붙잡고 자세히 물어봐요.',
-    scold: '💡 혼내면 입을 닫아요. 차분하게 물어봐야 이야기를 해요.',
-    off: '💡 지금 알아낼 건 <b>실수한 원인</b>이에요.',
-    lead: '💡 짐작으로 몰아가면 방어만 해요. 들은 말에서 물어봐요.',
-  };
+  const FAKE_NO = '그건 직접 들은 말이 아니잖아요! 들은 대로 정확히 보고해요.';
+  const WHY_SEEN_TIP = '💡 그때 <b>"왜?"</b> 하고 물어봤다면 막을 수 있었어요.';
 
   const rnd = n => Math.floor(Math.random() * n);
   const pickOne = a => a[rnd(a.length)];
   const shuffleArr = a => { const b = a.slice(); for (let i = b.length - 1; i > 0; i--) { const j = rnd(i + 1); [b[i], b[j]] = [b[j], b[i]]; } return b; };
   const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  // 받침에 따라 이/가 ("민수 씨가", "김 주임이")
+  // 받침에 따라 이/가 ("민수 씨가", "회장님이")
   const iGa = w => { const c = w.charCodeAt(w.length - 1) - 0xAC00; return w + (c >= 0 && c <= 11171 && c % 28 ? '이' : '가'); };
 
   function level() {
@@ -136,16 +161,10 @@
     return shuffleArr(S.map((s, i) => ({ s, i, w: (recent.has(i) ? 2 : 0) + Math.random() }))).sort((a, b) => a.w - b.w).slice(0, PER_GAME);
   }
 
-  // 단계별 보기: 1단계 = 맞는 질문 + "왜?"만, 2단계 = + 혼내기나 딴소리, 3단계 = + 몰아가기(보고에도 짐작이 섞임)
-  function questionOptions(L, layer, layerIdx) {
-    const opts = [{ t: layer.q, kind: 'good' }, { t: VAGUE[layerIdx % VAGUE.length], kind: 'vague' }];
-    if (L >= 2) {
-      const kind = Math.random() < 0.5 ? 'scold' : 'off';
-      const [t, r] = pickOne(kind === 'scold' ? SCOLD : OFF);
-      opts.push({ t, r, kind });
-    }
-    if (L >= 3) { const [t, r] = pickOne(LEAD); opts.push({ t, r, kind: 'lead' }); }
-    return shuffleArr(opts);
+  // 단계별 보기: "왜?" 질문 하나 + 대충 넘어가는 말 1개(1단계) / 2개(2단계) / 3개(3단계, 보고에도 짐작이 섞임)
+  function questionOptions(L, layer) {
+    const brushes = shuffleArr(BRUSH).slice(0, L).map(([t, r]) => ({ t, r, kind: 'brush' }));
+    return shuffleArr([{ t: layer.q, kind: 'good' }, ...brushes]);
   }
 
   function injectStyle() {
@@ -153,7 +172,7 @@
     const st = document.createElement('style');
     st.id = 'whyStyle';
     st.textContent = `
-      .wy-chat{background:#B2C7DA;border-radius:18px;padding:14px 10px;min-height:240px;max-height:52vh;overflow-y:auto;}
+      .wy-chat{background:#B2C7DA;border-radius:18px;padding:14px 10px;min-height:220px;max-height:46vh;overflow-y:auto;}
       .wy-chat.shake{animation:wyShake .45s ease;}
       @keyframes wyShake{0%,100%{transform:translateX(0);}20%{transform:translateX(-9px);}40%{transform:translateX(8px);}60%{transform:translateX(-6px);}80%{transform:translateX(4px);}}
       .wy-row{display:flex;gap:8px;margin:8px 0;align-items:flex-start;}
@@ -175,9 +194,14 @@
       .wy-opt:active{transform:scale(.98);}
       .wy-opt.gone{opacity:.35;pointer-events:none;}
       .wy-report{display:block;width:100%;border:0;border-radius:16px;background:#3182F6;color:#fff;font-weight:700;font-size:19px;padding:15px;margin-top:6px;cursor:pointer;}
-      .wy-report.ghost{background:#F2F4F6;color:#333D4B;}
       .wy-report.pulse{animation:wyPulse 1.2s ease-in-out infinite;}
       @keyframes wyPulse{0%,100%{box-shadow:0 0 0 0 rgba(49,130,246,.5);}50%{box-shadow:0 0 0 8px rgba(49,130,246,0);}}
+      .wy-loss{margin-top:10px;background:#FFF6F6;border:2px solid #F04452;border-radius:16px;padding:12px 14px;text-align:left;}
+      .wy-loss-head{font-family:'Jua';font-size:19px;color:#B0202E;margin-bottom:8px;}
+      .wy-loss-repeat{font-size:18px;line-height:1.5;color:#191F28;word-break:keep-all;margin-bottom:8px;}
+      .wy-loss-step{background:#fff;border:1px solid #F7C5CA;border-radius:12px;padding:9px 12px;font-size:18px;line-height:1.45;color:#333D4B;word-break:keep-all;animation:pop .25s ease;}
+      .wy-loss-arrow{text-align:center;font-size:16px;line-height:1.3;color:#F04452;}
+      .wy-loss-step.pay{background:#F04452;border-color:#F04452;color:#fff;font-weight:700;font-size:20px;}
     `;
     document.head.appendChild(st);
   }
@@ -188,7 +212,7 @@
     const picks = pickScenarios();
     const startedAt = Date.now();
     let si = 0;
-    const tally = { ask: 0, report: 0, fix: 0 };
+    const tally = { brush: 0, report: 0, fix: 0 };
     const scores = [];
 
     const nextScenario = () => (si >= picks.length ? finish() : runScenario(picks[si++].s));
@@ -199,19 +223,20 @@
       const v = el(`
         <div class="fade">
           ${bar}
-          <div class="scoreline"><span class="pill">💼 ${si}/${picks.length} · ${L}단계</span></div>
+          <div class="scoreline"><span class="pill">💼 ${si}/${picks.length} · ${esc(sc.place)} · ${L}단계</span></div>
           <div class="panel" style="padding:14px;">
             <div class="wy-chat" id="wyChat"></div>
+            <div id="wyLoss"></div>
             <div id="wyTip"></div>
             <div id="wyArea"></div>
           </div>
         </div>`);
       app.appendChild(v);
-      const chat = v.querySelector('#wyChat'), tipEl = v.querySelector('#wyTip'), area = v.querySelector('#wyArea');
+      const chat = v.querySelector('#wyChat'), lossEl = v.querySelector('#wyLoss'), tipEl = v.querySelector('#wyTip'), area = v.querySelector('#wyArea');
       const [bossName, bossFace] = sc.boss, [jrName, jrFace] = sc.jr;
       const tallyAtStart = { ...tally };
-      const known = [{ fact: sc.openFact[0], no: sc.openFact[1] }]; // 지금까지 들은 말 = 보고할 수 있는 말
-      let layerIdx = 0, wrongHere = 0, dodgeIdx = 0;
+      const known = [{ fact: sc.openFact[0], no: sc.openFact[1] }]; // 지금까지 들은 말 = 보고할 때 고를 수 있는 말
+      let layerIdx = 0, wrongHere = 0;
       const foundRoot = () => layerIdx >= sc.layers.length;
 
       const scroll = () => { chat.scrollTop = chat.scrollHeight; };
@@ -225,7 +250,7 @@
       const move = text => { chat.insertAdjacentHTML('beforeend', `<div class="wy-move"><span>${esc(text)}</span></div>`); scroll(); };
       const tip = (html, cls) => { tipEl.innerHTML = html ? `<div class="wy-tip ${cls || ''}">${html}</div>` : ''; };
       const later = (fn, ms) => setTimeout(fn, ms);
-      const penalty = () => ['ask', 'report', 'fix'].reduce((s, k) => s + (tally[k] - tallyAtStart[k]) * PENALTY[k], 0);
+      const penalty = () => Object.keys(PENALTY).reduce((s, k) => s + (tally[k] - tallyAtStart[k]) * PENALTY[k], 0);
 
       function askStep() {
         if (foundRoot()) {
@@ -234,46 +259,75 @@
           return;
         }
         const layer = sc.layers[layerIdx];
-        const opts = questionOptions(L, layer, layerIdx);
-        area.innerHTML = `<div class="wy-ask">${esc(jrName)}에게 뭐라고 물어볼까요?</div>
-          ${opts.map((o, i) => `<button class="wy-opt" type="button" data-i="${i}">${esc(o.t)}</button>`).join('')}
-          <button class="wy-report ghost" type="button" id="wyRep">📋 이 정도면 됐어요, 보고하러 가기</button>`;
-        area.querySelectorAll('.wy-opt').forEach(b => b.addEventListener('click', () => onAsk(opts[Number(b.dataset.i)], b, layer)));
-        area.querySelector('#wyRep').addEventListener('click', report);
+        const opts = questionOptions(L, layer);
+        area.innerHTML = `<div class="wy-ask">${esc(jrName)}에게 뭐라고 할까요?</div>
+          ${opts.map((o, i) => `<button class="wy-opt" type="button" data-i="${i}">${esc(o.t)}</button>`).join('')}`;
+        area.querySelectorAll('.wy-opt').forEach(b => b.addEventListener('click', () => onAsk(opts[Number(b.dataset.i)], layer)));
       }
 
-      function onAsk(o, btn, layer) {
+      function onAsk(o, layer) {
+        area.innerHTML = '';
+        tip('');
         say('me', o.t);
-        if (o.kind === 'good') {
-          area.innerHTML = '';
-          later(() => {
-            say('jr', layer.a);
-            known.push({ fact: layer.fact, no: layer.no });
-            layerIdx++;
-            if (typeof beep === 'function') beep(660, 0.1);
-            tip(foundRoot()
-              ? '🔎 진짜 원인이 나온 것 같아요! 보고하러 가 볼까요?'
-              : '👍 한 겹 더 알아냈어요. 그런데 이게 진짜 원인일까요?', 'good');
-            later(askStep, 1100);
-          }, 600);
+        if (o.kind === 'brush') {
+          tally.brush++; wrongHere++;
+          later(() => say('jr', o.r), 500);
+          later(showLoss, 1500);
           return;
         }
-        tally.ask++; wrongHere++;
-        btn.classList.add('gone');
-        const answer = o.kind === 'vague' ? sc.dodge[dodgeIdx++ % sc.dodge.length] : o.r;
-        later(() => say('jr', answer), 500);
-        if (typeof beep === 'function') beep(330, 0.08);
-        tip(TIPS[o.kind]);
+        later(() => {
+          say('jr', layer.a);
+          known.push({ fact: layer.fact, no: layer.no });
+          layerIdx++;
+          if (typeof beep === 'function') beep(660, 0.1);
+          tip(foundRoot()
+            ? '🔎 진짜 원인이 나왔어요! 보고하러 가요.'
+            : '👍 "왜?" 하고 물으니 이유가 나왔어요! 그런데 이게 끝일까요?', 'good');
+          later(askStep, 1100);
+        }, 600);
       }
 
-      // 보고: 지금까지 들은 말 중에서 고른다. 진짜 원인이 아니면 상사에게 혼난다.
+      // 대충 넘어갔을 때: 같은 실수가 더 크게 되풀이되고, 손해가 내 돈까지 이어지는 걸 한 칸씩 보여 준다
+      function showLoss() {
+        if (typeof beep === 'function') beep(220, 0.15);
+        lossEl.innerHTML = `<div class="wy-loss">
+          <div class="wy-loss-head">📅 원인을 모른 채 넘어갔더니…</div>
+          <div class="wy-loss-repeat">${esc(sc.repeat)}</div>
+          <div id="wyLossSteps"></div>
+        </div>`;
+        const stepsEl = lossEl.querySelector('#wyLossSteps');
+        const steps = [...sc.loss.map(t => ({ t })), { t: `💸 ${sc.pay}`, pay: true }];
+        steps.forEach((s, i) => later(() => {
+          stepsEl.insertAdjacentHTML('beforeend', `${i ? '<div class="wy-loss-arrow">⬇</div>' : ''}<div class="wy-loss-step${s.pay ? ' pay' : ''}">${esc(s.t)}</div>`);
+          stepsEl.lastElementChild.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+          if (s.pay && navigator.vibrate) { try { navigator.vibrate(60); } catch (e) { /* 진동이 없는 기기 */ } }
+        }, (i + 1) * LOSS_STEP_MS));
+        later(() => {
+          tip(WHY_SEEN_TIP, 'bad');
+          area.innerHTML = `<button class="wy-report" type="button" id="wyBack">⏪ 그때로 돌아가서 다시 물어보기</button>`;
+          area.querySelector('#wyBack').addEventListener('click', () => {
+            lossEl.innerHTML = '';
+            tip('');
+            move('⏪ 그때로 돌아왔어요');
+            askStep();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          });
+          area.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }, (steps.length + 1) * LOSS_STEP_MS);
+      }
+
+      // 보고: 들은 말 중에서 진짜 원인을 고른다. 겉으로 드러난 이유를 고르면 꾸중을 듣고 다시 고른다.
       function report() {
         move(`🚶 ${bossName}께 갔어요`);
         tip('');
-        const opts = known.map((k, i) => ({ t: k.fact, no: k.no, root: foundRoot() && i === known.length - 1 }));
+        chooseReport();
+      }
+
+      function chooseReport() {
+        const opts = known.map((k, i) => ({ t: k.fact, no: k.no, root: i === known.length - 1 }));
         if (L >= 3) opts.push({ t: pickOne(FAKE), no: FAKE_NO, root: false });
         const shown = shuffleArr(opts);
-        area.innerHTML = `<div class="wy-ask">📋 뭐라고 보고할까요? "${esc(iGa(jrName))}…"</div>
+        area.innerHTML = `<div class="wy-ask">📋 진짜 원인은 뭐였나요? "${esc(iGa(jrName))}…"</div>
           ${shown.map((o, i) => `<button class="wy-opt" type="button" data-i="${i}">${esc(o.t)}</button>`).join('')}`;
         area.querySelectorAll('.wy-opt').forEach(b => b.addEventListener('click', () => onReport(shown[Number(b.dataset.i)])));
       }
@@ -283,7 +337,7 @@
         say('me', `${bossName}, ${iGa(jrName)} ${o.t}.`);
         later(() => {
           if (o.root) {
-            say('boss', sc.praise || '바로 이거예요! 원인을 정확히 알아 왔네요. 👍', 'happy');
+            say('boss', '바로 이거예요! 원인을 정확히 알아 왔네요. 👍', 'happy');
             if (typeof beep === 'function') beep(880, 0.12);
             later(askFix, 1100);
             return;
@@ -292,18 +346,13 @@
           say('boss', `😠 ${o.no}`, 'angry');
           chat.classList.remove('shake'); void chat.offsetWidth; chat.classList.add('shake');
           if (typeof beep === 'function') beep(220, 0.15);
-          if (navigator.vibrate) { try { navigator.vibrate(60); } catch (e) { /* 진동이 없는 기기 */ } }
-          tip('😓 혼났어요… 아직 진짜 원인이 아니에요. 다시 가서 더 물어봐요.', 'bad');
-          area.innerHTML = `<button class="wy-report" type="button" id="wyBack">🚶 ${esc(jrName)}에게 다시 물어보러 가기</button>`;
-          area.querySelector('#wyBack').addEventListener('click', () => {
-            move(`🚶 ${jrName}에게 다시 갔어요`);
-            tip('');
-            askStep();
-          });
+          tip('😓 그건 겉으로 보이는 이유예요. 마지막에 들은 말을 떠올려 봐요.', 'bad');
+          area.innerHTML = `<button class="wy-report" type="button" id="wyAgain">📋 다시 보고하기</button>`;
+          area.querySelector('#wyAgain').addEventListener('click', () => { tip(''); chooseReport(); });
         }, 600);
       }
 
-      // 원인을 알았으면 앞으로 어떻게 할지까지
+      // 원인을 알았으면 앞으로 어떻게 막을지까지
       function askFix() {
         const [q, a, wrongs] = sc.fix;
         say('boss', q);
@@ -321,9 +370,9 @@
           area.innerHTML = '';
           say('me', o.t);
           later(() => {
-            say('boss', '좋아요. 덕분에 같은 실수는 안 하겠네요. 수고했어요!', 'happy');
+            say('boss', '좋아요. "왜?"라고 물어봐 준 덕분에 큰 손해를 막았어요. 수고했어요!', 'happy');
             scores.push(Math.max(MIN_SCORE, 100 - penalty()));
-            tip(wrongHere === 0 ? '🎉 완벽해요! 끝까지 물어서 진짜 원인을 찾았어요.' : '👏 잘했어요! 진짜 원인을 찾아냈어요.', 'good');
+            tip(wrongHere === 0 ? '🎉 완벽해요! 끝까지 "왜?"라고 물어서 손해를 막았어요.' : '👏 잘했어요! "왜?"라고 물어서 진짜 원인을 찾았어요.', 'good');
             if (typeof confetti === 'function') confetti(wrongHere ? 2 : 5);
             area.innerHTML = `<button class="btn btn-primary" type="button" id="wyNext" style="margin-top:6px;font-size:21px;padding:16px;">${si >= picks.length ? '끝내기' : '다음 일 →'}</button>`;
             area.querySelector('#wyNext').addEventListener('click', nextScenario);
@@ -334,18 +383,18 @@
       say('boss', sc.order);
       later(() => { move(`🚶 ${jrName}에게 갔어요`); say('jr', sc.open); }, 900);
       later(() => {
-        if (L <= 2) tip(`🎯 ${esc(iGa(bossName))} 원하는 건 <b>진짜 원인</b>이에요. ${esc(iGa(jrName))} 한 말을 붙잡고 자세히 물어보세요.`);
+        if (L <= 2) tip(`🎯 <b>"왜?"</b> 하고 끝까지 물어서 진짜 원인을 알아 오세요.`);
         askStep();
       }, 1700);
     }
 
     function finish() {
       const score = Math.round(scores.reduce((a, b) => a + b, 0) / Math.max(1, scores.length));
-      const wrong = tally.ask + tally.report;
+      const wrong = tally.brush + tally.report;
       if (currentMember) {
-        currentMember.probeLevel = wrong <= 1 ? Math.min(MAX_LV, L + 1) : wrong >= 6 ? Math.max(1, L - 1) : L;
+        currentMember.probeLevel = wrong <= 1 ? Math.min(MAX_LV, L + 1) : wrong >= 5 ? Math.max(1, L - 1) : L;
         currentMember.probeLog = [...(currentMember.probeLog || []), {
-          ts: new Date().toISOString(), lv: L, ask: tally.ask, report: tally.report, fix: tally.fix, score,
+          ts: new Date().toISOString(), lv: L, brush: tally.brush, report: tally.report, fix: tally.fix, score,
           sec: Math.round((Date.now() - startedAt) / 1000), ids: picks.map(p => p.i),
         }].slice(-LOG_CAP);
         if (typeof saveMember === 'function') saveMember();
@@ -362,7 +411,7 @@
     const panel = document.createElement('div');
     panel.className = 'admin-panel';
     panel.innerHTML = `<div class="section-title">💼 원인 알아 오기 (${log.length}회 · 지금 ${Math.min(MAX_LV, Math.max(1, member.probeLevel || 1))}단계)</div>
-      ${log.length ? log.slice(0, 12).map(r => `<div style="padding:6px 0;border-bottom:1px solid var(--line);font-size:14px;display:flex;justify-content:space-between;gap:8px;"><span>${d(r.ts)} · ${r.lv}단계 · ${r.sec}초</span><span>${r.ask + r.report === 0 ? '⭕ 한 번에' : `헛질문 ${r.ask} · 혼남 ${r.report}`} · ${r.score}점</span></div>`).join('')
+      ${log.length ? log.slice(0, 12).map(r => `<div style="padding:6px 0;border-bottom:1px solid var(--line);font-size:14px;display:flex;justify-content:space-between;gap:8px;"><span>${d(r.ts)} · ${r.lv}단계 · ${r.sec}초</span><span>${(r.brush || 0) + r.report === 0 ? '⭕ 끝까지 물어봄' : `대충 넘김 ${r.brush || 0} · 보고 틀림 ${r.report}`} · ${r.score}점</span></div>`).join('')
         : '<div style="font-size:14px;color:var(--ink-soft);">아직 기록이 없어요</div>'}`;
     const anchor = detailView.querySelector('#back2');
     if (anchor) anchor.parentNode.insertBefore(panel, anchor); else detailView.appendChild(panel);
