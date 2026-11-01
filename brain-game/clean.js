@@ -1,11 +1,13 @@
 // ==========================================================
-// 🧹 청소 심부름 (말 알아듣고 순서대로 하기 = 국어 이해 + 추론)
-// 선생님이 "칠판을 닦기 전에 창문부터 열어 주세요"처럼 3~5가지 일을 말하면, 교실 지도에서 순서대로 누른다.
+// 🧹 청소 심부름 (말을 외워서 순서대로 하기 = 기억력 + 국어 이해 + 추론)
+// 선생님이 "칠판을 닦기 전에 창문부터 열어 주세요"처럼 3~5가지 일을 말하면, 읽고 외운 뒤 말씀을 가리고 교실 지도에서 순서대로 누른다.
+// 말씀은 다시 볼 수 있지만 점수가 깎이고, 그 판에서는 단계가 오르지 않는다.
 // 단계가 오를수록 순서를 뒤집는 말(~하기 전에), 맨 마지막, 위치로 찾는 책상(3번 책상 바로 뒤), 안 해도 되는 일이 섞인다.
 // 틀리면 처음부터 다시, 세 번 틀리면 선생님이 하나씩 같이 해 준다. 음성은 쓰지 않는다(글로만 보여 준다).
 // ==========================================================
 (function () {
   const ROUNDS = 3, MAX_LV = 6, LOG_CAP = 200;
+  const WRONG_PENALTY = 30, PEEK_PENALTY = 10, MIN_ROUND_SCORE = 40, GUIDED_SCORE = 30;
   const rnd = n => Math.floor(Math.random() * n);
   const pickOne = a => a[rnd(a.length)];
   const shuffleArr = a => { const b = a.slice(); for (let i = b.length - 1; i > 0; i--) { const j = rnd(i + 1); [b[i], b[j]] = [b[j], b[i]]; } return b; };
@@ -156,6 +158,10 @@
       .cl-hint{margin-top:6px;font-size:17px;color:#F04452;font-family:'Jua';}
       .cl-hint.strong{font-size:19px;line-height:1.5;background:#FFE8EA;border:2px solid #F04452;border-radius:12px;padding:8px 10px;color:#C8102E;animation:pop .3s ease;}
       .cl-room.cl-shake{animation:shake .45s ease;}
+      .cl-mem{display:block;width:100%;border:0;border-radius:14px;background:#2FA28E;color:#fff;font-family:'Jua';font-size:22px;padding:14px 10px;margin-bottom:10px;cursor:pointer;touch-action:manipulation;}
+      .cl-mem.peek{background:#F2F4F6;color:#4E5968;font-size:18px;padding:10px;}
+      .cl-mem[hidden]{display:none;}
+      .cl-room.cl-locked{filter:saturate(.55);opacity:.72;}
       .cl-prog{display:flex;align-items:center;justify-content:space-between;font-family:'Jua';font-size:18px;margin:4px 2px 8px;}
       .cl-dots span{display:inline-block;width:16px;height:16px;border-radius:50%;background:#E5E8EB;margin-left:6px;}
       .cl-dots span.on{background:#2FA28E;}
@@ -213,7 +219,7 @@
     injectStyle();
     const L = lv || level();
     const startedAt = Date.now();
-    let round = 0, totalWrong = 0, guidedRounds = 0, roundScores = [];
+    let round = 0, totalWrong = 0, totalPeeks = 0, guidedRounds = 0, roundScores = [];
 
     function next() {
       if (round >= ROUNDS) return finish();
@@ -224,7 +230,7 @@
     function runRound(task) {
       api.current = task; // 관리자 확인·테스트용 (지금 문제)
       clear();
-      let step = 0, stepWrong = 0, roundWrong = 0, lock = false;
+      let step = 0, stepWrong = 0, roundWrong = 0, roundPeeks = 0, lock = false, memorizing = true;
       const bar = typeof stageBar === 'function' && typeof session !== 'undefined' && session ? stageBar() : '';
       const v = el(`
         <div class="fade">
@@ -235,6 +241,7 @@
               <div class="cl-teacher" id="clT">${TEACHER_SVG}</div>
               <div class="cl-bubble"><div class="who">선생님</div><div id="clText">${esc(task.text)}</div><div class="cl-hint" id="clHint"></div></div>
             </div>
+            <button type="button" class="cl-mem" id="clMem"></button>
             <div class="cl-prog"><span id="clProg">할 일 0 / ${task.steps.length}</span><span class="cl-dots">${task.steps.map(() => '<span></span>').join('')}</span></div>
             <div class="cl-room" id="clRoom">
               ${LAYOUT.map(([id, x, y, w, h, kind]) => `<button type="button" class="cl-item ${kind}" data-id="${id}" style="left:${x}%;top:${y}%;width:${w}%;height:${h}%;">${THINGS[id].desk ? `${THINGS[id].desk}번` : LABEL[id]}</button>`).join('')}
@@ -244,7 +251,31 @@
       app.appendChild(v);
       const room = v.querySelector('#clRoom'), hintEl = v.querySelector('#clHint'), prog = v.querySelector('#clProg');
       const dots = [...v.querySelectorAll('.cl-dots span')];
-      const textEl = v.querySelector('#clText'), teacher = v.querySelector('#clT');
+      const textEl = v.querySelector('#clText'), teacher = v.querySelector('#clT'), memBtn = v.querySelector('#clMem');
+
+      // 외우는 동안에는 말씀을 보여 주고 교실을 잠근다. "다 외웠어요"를 누르면 말씀을 가리고 교실을 연다.
+      const showStudy = () => {
+        memorizing = true;
+        textEl.textContent = task.text;
+        memBtn.textContent = '✅ 다 외웠어요';
+        memBtn.classList.remove('peek');
+        room.classList.add('cl-locked');
+      };
+      const showRecall = () => {
+        memorizing = false;
+        textEl.innerHTML = '<b>🤔 선생님 말씀을 떠올려서<br>순서대로 눌러 주세요.</b>';
+        memBtn.textContent = '👀 말씀 다시 보기 (점수가 조금 깎여요)';
+        memBtn.classList.add('peek');
+        room.classList.remove('cl-locked');
+        hintEl.textContent = '';
+      };
+      memBtn.addEventListener('click', () => {
+        if (lock) return;
+        if (memorizing) { showRecall(); return; }
+        roundPeeks++; totalPeeks++;
+        showStudy();
+      });
+      showStudy();
 
       // 틀리면: 강하게 주의 → 처음부터 다시. 한 문제에서 세 번 틀리면 선생님이 한 가지씩 같이 해 준다.
       let guided = false, guideWrong = 0;
@@ -268,6 +299,7 @@
 
       room.addEventListener('click', e => {
         const b = e.target.closest('.cl-item'); if (!b || lock) return;
+        if (memorizing) { hintEl.textContent = "말씀을 외운 뒤 '다 외웠어요'를 눌러 주세요 😊"; return; }
         const id = b.dataset.id, want = task.steps[step];
         if (b.classList.contains('done')) { hintEl.textContent = '거기는 벌써 깨끗해요 😊'; return; }
         if (id === want) {
@@ -280,10 +312,11 @@
           prog.textContent = `할 일 ${step} / ${task.steps.length}`;
           if (step >= task.steps.length) {
             lock = true;
+            memBtn.hidden = true;
             const praise = pickOne(PRAISE);
             textEl.textContent = praise; teacher.classList.add('happy');
             if (typeof confetti === 'function') confetti(roundWrong ? 3 : 6);
-            roundScores.push(guided ? 30 : Math.max(40, 100 - roundWrong * 30));
+            roundScores.push(guided ? GUIDED_SCORE : Math.max(MIN_ROUND_SCORE, 100 - roundWrong * WRONG_PENALTY - roundPeeks * PEEK_PENALTY));
             if (guided) guidedRounds++;
             setTimeout(next, 2300);
           } else if (guided) {
@@ -307,16 +340,20 @@
         }
         const isDistract = id === task.distract;
         const dname = THINGS[id].name;
-        warn(`${isDistract ? `✋ ${esc(dname)}${hasBatchim(dname) ? '은' : '는'} 오늘 안 해도 된다고 했어요!` : '✋ 앗! 아무 곳이나 누르면 안 돼요!'}<br>선생님 말을 끝까지 잘 듣고 눌러 주세요.<br><b>처음부터 다시 해요.</b>`);
+        warn(`${isDistract ? `✋ ${esc(dname)}${hasBatchim(dname) ? '은' : '는'} 오늘 안 해도 된다고 했어요!` : '✋ 앗! 아무 곳이나 누르면 안 돼요!'}<br>선생님 말씀을 잘 기억해서 눌러 주세요.<br><b>처음부터 다시 해요.</b>`);
         setTimeout(() => {
           resetRound();
           hintEl.classList.remove('strong');
           if (roundWrong >= 3) {
             guided = true;
+            memorizing = false;
+            memBtn.hidden = true;
+            room.classList.remove('cl-locked');
             hintEl.textContent = '';
             showGuide();
           } else {
-            hintEl.textContent = `다시 잘 들어 보세요 👂 (${roundWrong + 1}번째 도전)`;
+            showStudy();
+            hintEl.textContent = `말씀을 다시 읽고 외워 보세요 👀 (${roundWrong + 1}번째 도전)`;
           }
           lock = false;
         }, 3600);
@@ -326,11 +363,11 @@
     function finish() {
       const score = Math.round(roundScores.reduce((a, b) => a + b, 0) / Math.max(1, roundScores.length));
       if (currentMember) {
-        // 한 번도 안 틀리면 올리고, 같이 하기까지 갔거나 세 번 이상 틀리면 내린다
-        const nextLv = totalWrong === 0 ? Math.min(MAX_LV, L + 1) : (guidedRounds > 0 || totalWrong >= 3) ? Math.max(1, L - 1) : L;
+        // 안 틀리고 말씀도 다시 안 봤으면 올리고, 같이 하기까지 갔거나 세 번 이상 틀리면 내린다
+        const nextLv = totalWrong === 0 && totalPeeks === 0 ? Math.min(MAX_LV, L + 1) : (guidedRounds > 0 || totalWrong >= 3) ? Math.max(1, L - 1) : L;
         currentMember.cleanLevel = nextLv;
         const log = currentMember.cleanLog || [];
-        currentMember.cleanLog = [...log, { ts: new Date().toISOString(), lv: L, wrong: totalWrong, guided: guidedRounds, score, sec: Math.round((Date.now() - startedAt) / 1000) }].slice(-LOG_CAP);
+        currentMember.cleanLog = [...log, { ts: new Date().toISOString(), lv: L, wrong: totalWrong, peeks: totalPeeks, guided: guidedRounds, score, sec: Math.round((Date.now() - startedAt) / 1000) }].slice(-LOG_CAP);
         if (typeof saveMember === 'function') saveMember();
       }
       if (onDone) onDone(score);
@@ -346,7 +383,7 @@
     const panel = document.createElement('div');
     panel.className = 'admin-panel';
     panel.innerHTML = `<div class="section-title">🧹 청소 심부름 (${log.length}회 · 지금 ${Math.min(MAX_LV, Math.max(1, member.cleanLevel || 1))}단계)</div>
-      ${log.length ? log.slice(0, 12).map(r => `<div style="padding:6px 0;border-bottom:1px solid var(--line);font-size:14px;display:flex;justify-content:space-between;"><span>${d(r.ts)} · ${r.lv}단계 · ${r.sec}초</span><span>${r.wrong === 0 ? '⭕ 한 번도 안 틀림' : `틀림 ${r.wrong}번`}${r.guided ? ` · 같이 하기 ${r.guided}` : ''} · ${r.score}점</span></div>`).join('')
+      ${log.length ? log.slice(0, 12).map(r => `<div style="padding:6px 0;border-bottom:1px solid var(--line);font-size:14px;display:flex;justify-content:space-between;"><span>${d(r.ts)} · ${r.lv}단계 · ${r.sec}초</span><span>${r.wrong === 0 ? '⭕ 한 번도 안 틀림' : `틀림 ${r.wrong}번`}${r.peeks ? ` · 다시 보기 ${r.peeks}번` : ''}${r.guided ? ` · 같이 하기 ${r.guided}` : ''} · ${r.score}점</span></div>`).join('')
         : '<div style="font-size:14px;color:var(--ink-soft);">아직 기록이 없어요</div>'}`;
     const anchor = detailView.querySelector('#back2');
     if (anchor) anchor.parentNode.insertBefore(panel, anchor); else detailView.appendChild(panel);

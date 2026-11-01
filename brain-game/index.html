@@ -1488,14 +1488,12 @@ function buildStages(){
   const lv=d=>domainLevel(d);
   const lv2=d=>Math.min(MAX_DOMAIN_LEVEL,domainLevel(d)+1);
   return [
-    {type:'speed', label:'⚡ 순간 포착', domain:'speed', lv:lv('speed')},
-    {type:'why',   label:'💼 원인 알아 오기', domain:'reason'},
-    {type:'math',  label:'🔢 빠른 셈',   domain:'math',  lv:lv('math')},
-    {type:'memory',label:'🃏 짝 맞추기', domain:'memory',lv:lv('memory')},
     {type:'speed', label:'⚡ 순간 포착', domain:'speed', lv:lv2('speed')},
+    {type:'why',   label:'💼 원인 알아 오기', domain:'reason'},
+    {type:'memory',label:'🃏 짝 맞추기', domain:'memory',lv:lv2('memory')},
+    {type:'memory',label:'🃏 짝 맞추기', domain:'memory',lv:lv('memory')},
     {type:'math',  label:'🔢 빠른 셈',   domain:'math',  lv:lv2('math')},
     {type:'clean', label:'🧹 청소 심부름', domain:'reason'},
-    {type:'memory',label:'🃏 짝 맞추기', domain:'memory',lv:lv2('memory')},
     {type:'mathhard', label:'🧮 심화 계산',   domain:'math',   lv:lv2('math')},
     {type:'typing',    label:'✍️ 명언 따라쓰기', domain:'typing', lv:lv2('math')},
   ];
@@ -1534,7 +1532,7 @@ function showTransition(prevStage, prevScore, isFirst){
   // 691105 유저 전용 로직
   if (currentMember?.birthdate === '691105') {
     const isWater = idx >= 5;
-    const progress = isWater ? (idx - 5) / 5 : idx / 5;
+    const progress = isWater ? (idx - 5) / (total - 5) : idx / 5;
     const overlayColor = isWater ? 'rgba(50, 150, 255, 0.7)' : 'transparent';
     const bowlHeight = progress * 40; // max 40px height for the fill
     
@@ -1685,7 +1683,7 @@ function showTransition(prevStage, prevScore, isFirst){
   const dots=stages.map((_,i)=>{const cls=i<idx?'done':i===idx?'current':'';return `<div class="prog-dot ${cls}"></div>`;}).join('');
   const prevHtml=isFirst?`
     <div style="font-family:'Jua';font-size:28px;margin-bottom:6px;">준비됐나요? 😊</div>
-    <div style="font-size:17px;color:var(--ink-soft);line-height:1.6;">다양한 두뇌 운동을 10스테이지로 연속해서 해봐요.<br>천천히, 즐겁게!</div>`:
+    <div style="font-size:17px;color:var(--ink-soft);line-height:1.6;">다양한 두뇌 운동을 ${total}스테이지로 연속해서 해봐요.<br>천천히, 즐겁게!</div>`:
     prevStage.domain==='seq'?`
     <div style="font-size:16px;color:var(--ink-soft);margin-bottom:4px;">스테이지 ${idx} 완료!</div>
      <div style="font-family:'Jua';font-size:21px;color:var(--ink-soft);margin-bottom:6px;">${prevStage.label}</div>
@@ -1727,7 +1725,7 @@ function runGame(stage, onDone){
   else if(stage.type==='seq') playSeq({lv:stage.lv, mode:stage.mode||'color', onDone});
   else if(stage.type==='math') playMath({lv:stage.lv, qs:6, onDone});
   else if(stage.type==='mathhard') playMathHard({qs:5, onDone});
-  else if(stage.type==='typing') playTyping({qs:5, onDone});
+  else if(stage.type==='typing') playTyping({onDone});
   else if(stage.type==='why') { if(window.WHY) WHY.play({onDone}); else playSeq({lv:domainLevel('seq'), mode:'color', onDone}); }
   else if(stage.type==='clean') { if(window.CLEAN) CLEAN.play({onDone}); else playSeq({lv:domainLevel('seq'), mode:'object', onDone}); }
 }
@@ -3010,7 +3008,7 @@ function playMathHard({qs=5, onDone=null}={}){ setRandomBackground();
 // ==========================================================
 // GAME 5: 명언 따라쓰기 (10자 이내 문장을 그대로 타이핑 — 시간 제한 없음)
 // ==========================================================
-function playTyping({qs=5, onDone=null}={}){ setRandomBackground();
+function playTyping({qs=3, onDone=null}={}){ setRandomBackground();
   let q=0,score=0; const total=qs;
   let hp=100; const dmgPerQ = 100/total;
   let startTime = Date.now();
@@ -3698,7 +3696,7 @@ function playDecompose({lv=1, bossHp=100}={}){ setRandomBackground();
 // ==========================================================
 
 /**
- * 10스테이지 완료 후 3개의 선물 상자 선택 모달 표시 (65점 이상 통과 시에만)
+ * 코스 완료 후 3개의 선물 상자 선택 모달 표시 (65점 이상 통과 시에만)
  */
 function showChestRewardModal(){
   const ov = el(`
@@ -3801,7 +3799,7 @@ function showEmptyRewardScreen(){
           아쉽게도 아무것도 안나왔습니다
         </div>
         <div style="font-size:16px;color:rgba(255,255,255,0.9);line-height:1.6;margin-bottom:16px;">
-          두뇌 운동 10스테이지를 멋지게 완료한 것만으로도<br>충분히 대단해요! 😊<br>다음 판에 또 도전해보세요!
+          두뇌 운동을 멋지게 완료한 것만으로도<br>충분히 대단해요! 😊<br>다음 판에 또 도전해보세요!
         </div>
         <div class="touch-hint">👉 화면 아무 곳이나 터치하면 닫힙니다</div>
       </div>
@@ -4158,7 +4156,7 @@ async function renderHome(isNew=false){
       </div>
       <div class="hero">
         <p class="hello">${greet} 😊</p>
-        <p class="sub">다양한 두뇌 운동을 10스테이지로<br>연속해서 해봐요.</p>
+        <p class="sub">다양한 두뇌 운동을 ${buildStages().length}스테이지로<br>연속해서 해봐요.</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">${streakHtml}${bestHtml}${cardHtml}</div>
       </div>
       <div class="hero" style="padding:16px 20px;">
@@ -4185,7 +4183,7 @@ async function renderHome(isNew=false){
           <button class="btn btn-ghost practice-btn" data-type="memory" style="margin:0;font-size:13px;padding:12px 4px;line-height:1.5;">🃏<br>짝맞추기</button>
           <button class="btn btn-ghost practice-btn" data-type="mathhard" style="margin:0;font-size:13px;padding:12px 4px;line-height:1.5;">🧮<br>심화계산</button>
           <button class="btn btn-ghost practice-btn" data-type="typing" style="margin:0;font-size:13px;padding:12px 4px;line-height:1.5;">✍️<br>명언쓰기</button>
-          <button class="btn btn-ghost practice-btn" data-type="clean" style="margin:0;font-size:13px;padding:12px 4px;line-height:1.5;grid-column:1/-1;">🧹 청소 심부름 (말 알아듣고 순서대로)</button>
+          <button class="btn btn-ghost practice-btn" data-type="clean" style="margin:0;font-size:13px;padding:12px 4px;line-height:1.5;grid-column:1/-1;">🧹 청소 심부름 (말씀 외워서 순서대로)</button>
           <button class="btn btn-ghost practice-btn" data-type="why" style="margin:0;font-size:13px;padding:12px 4px;line-height:1.5;grid-column:1/-1;">💼 원인 알아 오기 ("왜?"라고 끝까지 물어보기)</button>
         </div>
       </div>
@@ -4224,7 +4222,7 @@ function playPractice(type){ setRandomBackground();
   else if(type==='math') playMath({lv:domainLevel('math'), qs:6, onDone});
   else if(type==='memory') playMemory({lv:domainLevel('memory'), onDone});
   else if(type==='mathhard') playMathHard({qs:5, onDone});
-  else if(type==='typing') playTyping({qs:5, onDone});
+  else if(type==='typing') playTyping({onDone});
   else if(type==='clean' && window.CLEAN) CLEAN.play({onDone});
   else if(type==='why' && window.WHY) WHY.play({onDone});
 }
@@ -4762,7 +4760,7 @@ function clearBackground() {
 <script src="glass.js?v=3"></script>
 <script src="weather.js?v=2"></script>
 <script src="video.js?v=2"></script>
-<script src="clean.js?v=4"></script>
+<script src="clean.js?v=5"></script>
 <script src="why.js?v=5"></script>
 <script src="news.js?v=11"></script>
 </body>
