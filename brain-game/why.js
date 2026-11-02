@@ -5,9 +5,13 @@
 // 대충 넘어가면 같은 실수가 더 크게 되풀이되고, 손해가 이어져 내 월급·알바비·회비·용돈까지 영향을 주는 과정을 보여 준다.
 // 그런 뒤 그때로 돌아가 다시 물어볼 수 있다. 진짜 원인을 찾으면 보고하고, 막을 방법까지 고른다.
 // 음성은 쓰지 않는다(글로만 보여 준다).
+// 대화는 why-data/part-NN.json에 상황 100가지 × 대화 10개 = 1000개가 있다. 하루에 하나씩, 회원마다 다른 순서로 1000일 동안 겹치지 않게 나온다.
+// 자료를 못 불러오면 아래 S에 있는 대화로 대신한다.
 // ==========================================================
 (function () {
-  const PER_GAME = 2, MAX_LV = 3, LOG_CAP = 200;
+  const MAX_LV = 3, LOG_CAP = 200;
+  const TOTAL_DIALOGUES = 1000, PER_PART = 100, PER_CASE = 10, DATA_VERSION = 1;
+  const LEVEL_DOWN_WRONG = 3;
   const PENALTY = { brush: 15, report: 10, fix: 10 }, MIN_SCORE = 30;
   const LOSS_STEP_MS = 800;
 
@@ -272,12 +276,63 @@
     const v = currentMember && currentMember.probeLevel;
     return Math.min(MAX_LV, Math.max(1, Number.isFinite(v) ? v : 1));
   }
-  function pickScenarios() {
-    const recent = new Set(((currentMember && currentMember.probeLog) || []).slice(-3).flatMap(r => r.ids || []));
-    const ranked = S.map((s, i) => ({ s, i, w: (recent.has(i) ? 2 : 0) + Math.random() })).sort((a, b) => a.w - b.w);
-    // 한 판에 내 일(집안일·내 회사) 하나, 남의 회사·모임 일 하나
-    const isMine = p => p.s.home || p.s.owner;
-    return shuffleArr([ranked.find(isMine), ...ranked.filter(p => !isMine(p)).slice(0, PER_GAME - 1)]);
+  // ---------------- 오늘의 대화 고르기 ----------------
+  const todayKey = () => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
+  function seededOrder(seedText) {
+    let h = 0;
+    for (const ch of String(seedText)) h = Math.imul(h ^ ch.charCodeAt(0), 2654435761) >>> 0;
+    const random = () => { h = (h + 0x6D2B79F5) >>> 0; let t = h; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    const order = Array.from({ length: TOTAL_DIALOGUES }, (_, i) => i);
+    for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+    return order;
+  }
+  // 게임을 한 날마다 순서를 한 칸씩 옮긴다. 같은 날 다시 하면 같은 대화가 나온다.
+  function todaysId() {
+    if (!currentMember) return rnd(TOTAL_DIALOGUES);
+    const today = todayKey();
+    if (currentMember.probeDay !== today) {
+      currentMember.probeDay = today;
+      currentMember.probeCursor = Number.isFinite(currentMember.probeCursor) ? currentMember.probeCursor + 1 : 0;
+      if (typeof saveMember === 'function') saveMember();
+    }
+    return seededOrder(currentMember.birthdate)[currentMember.probeCursor % TOTAL_DIALOGUES];
+  }
+
+  // 자료 한 건을 게임이 쓰는 모양으로 푼다. 보고할 때는 들은 말을 그대로 전한다.
+  const quoted = line => `"${line.replace(/\.$/, '')}"라고 했어요`;
+  const REPORT_NO = ['그건 얼버무린 말이잖아요. 왜 그랬는지 알아 와요.', '그건 겉으로 보이는 이유예요. 왜 그랬는지 더 물어봐요.', '거의 다 왔어요. 거기서 한 번 더 "왜?"라고 물어봐요.'];
+  const FIX_WRONGS = ['더 조심하라고 말만 한다', '크게 화를 내고 끝낸다', '아무것도 바꾸지 않고 지켜본다', '그 사람에게 그 일을 맡기지 않는다'];
+  const FIX_ASK = { owner: '그럼 앞으로 어떻게 하실 건가요?', home: '그럼 앞으로 어떻게 하면 좋을까요?' };
+  function expand(c, d) {
+    const owner = c.kind === 'owner';
+    return {
+      place: c.place, home: c.kind === 'home', owner, boss: c.boss, jr: c.jr, order: d.o, open: d.e,
+      openFact: [quoted(d.e), REPORT_NO[0]],
+      layers: d.q.map((q, i) => ({ q, a: d.a[i], fact: quoted(d.a[i]), no: REPORT_NO[i + 1] })),
+      repeat: d.r, loss: [d.l, ...c.t], pay: c.pay,
+      praise: owner ? '아, 그런 거였군요. 원인을 정확히 알려 주시니 믿음이 가네요. 👍' : undefined,
+      closing: owner ? '좋습니다. 그렇게 막아 주시면 계속 찾아올게요!' : undefined,
+      fix: [FIX_ASK[c.kind] || '그럼 앞으로 어떻게 하면 될까요?', d.x, shuffleArr(FIX_WRONGS).slice(0, 2)],
+    };
+  }
+  async function loadDialogue(id) {
+    const part = String(Math.floor(id / PER_PART)).padStart(2, '0');
+    const res = await fetch(`why-data/part-${part}.json?v=${DATA_VERSION}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const { cases } = await res.json();
+    const inPart = id % PER_PART, c = cases[Math.floor(inPart / PER_CASE)], d = c && c.d[inPart % PER_CASE];
+    if (!d) throw new Error(`대화 ${id} 없음`);
+    return expand(c, d);
+  }
+  async function pickToday() {
+    const id = todaysId();
+    try {
+      return { s: await loadDialogue(id), i: id };
+    } catch (e) {
+      console.warn('원인 알아 오기 자료를 못 불러와 기본 대화로 진행합니다', e);
+      const fallback = rnd(S.length);
+      return { s: S[fallback], i: `기본${fallback}` };
+    }
   }
 
   // 단계별 보기: "왜?" 질문 하나 + 대충 넘어가는 말 1개(1단계) / 2개(2단계) / 3개(3단계, 보고에도 짐작이 섞임)
@@ -327,14 +382,18 @@
 
   function play({ onDone } = {}) {
     injectStyle();
+    clear();
+    const bar = typeof stageBar === 'function' && typeof session !== 'undefined' && session ? stageBar() : '';
+    app.appendChild(el(`<div class="fade">${bar}<div class="panel" style="text-align:center;padding:40px 18px;font-family:'Jua';font-size:22px;">오늘의 상황을 준비하고 있어요…</div></div>`));
+    pickToday().then(pick => run(pick, onDone));
+  }
+
+  function run(pick, onDone) {
     const L = level();
-    const picks = pickScenarios();
+    api.current = pick.s; // 테스트·관리자 확인용 (지금 대화)
     const startedAt = Date.now();
-    let si = 0;
     const tally = { brush: 0, report: 0, fix: 0 };
     const scores = [];
-
-    const nextScenario = () => (si >= picks.length ? finish() : runScenario(picks[si++].s));
 
     function runScenario(sc) {
       clear();
@@ -342,7 +401,7 @@
       const v = el(`
         <div class="fade">
           ${bar}
-          <div class="scoreline"><span class="pill">💼 ${picks.length}가지 중 ${si}번째 · ${esc(sc.place)} · ${L}단계</span></div>
+          <div class="scoreline"><span class="pill">💼 ${esc(sc.place)} · ${L}단계</span></div>
           <div class="panel" style="padding:14px;">
             <div class="wy-chat" id="wyChat"></div>
             <div id="wyLoss"></div>
@@ -494,12 +553,11 @@
             scores.push(Math.max(MIN_SCORE, 100 - penalty()));
             tip(wrongHere === 0 ? '🎉 완벽해요! 끝까지 "왜?"라고 물어서 손해를 막았어요.' : '👏 잘했어요! "왜?"라고 물어서 진짜 원인을 찾았어요.', 'good');
             if (typeof confetti === 'function') confetti(wrongHere ? 2 : 5);
-            const lastOne = si >= picks.length;
             const inCourse = typeof session !== 'undefined' && session && session.stages[session.idx] && session.stages[session.idx].type === 'why';
-            const leftNote = lastOne && inCourse ? '<div class="wy-ask">오늘은 아직 끝나지 않았어요. 게임이 더 남았어요!<br>아래 버튼을 눌러 다음 게임으로 넘어가요.</div>' : '';
-            const nextLabel = !lastOne ? '다음 상황으로 넘어가기 →' : inCourse ? '다음 게임 하러 가기 →' : '연습 마치기';
+            const leftNote = inCourse ? '<div class="wy-ask">오늘은 아직 끝나지 않았어요. 게임이 더 남았어요!<br>아래 버튼을 눌러 다음 게임으로 넘어가요.</div>' : '';
+            const nextLabel = inCourse ? '다음 게임 하러 가기 →' : '연습 마치기';
             area.innerHTML = `${leftNote}<button class="btn btn-primary" type="button" id="wyNext" style="margin-top:6px;font-size:21px;padding:16px;">${nextLabel}</button>`;
-            area.querySelector('#wyNext').addEventListener('click', nextScenario);
+            area.querySelector('#wyNext').addEventListener('click', finish);
           }, 500);
         }));
       }
@@ -517,17 +575,17 @@
       const score = Math.round(scores.reduce((a, b) => a + b, 0) / Math.max(1, scores.length));
       const wrong = tally.brush + tally.report;
       if (currentMember) {
-        currentMember.probeLevel = wrong <= 1 ? Math.min(MAX_LV, L + 1) : wrong >= 5 ? Math.max(1, L - 1) : L;
+        currentMember.probeLevel = wrong === 0 ? Math.min(MAX_LV, L + 1) : wrong >= LEVEL_DOWN_WRONG ? Math.max(1, L - 1) : L;
         currentMember.probeLog = [...(currentMember.probeLog || []), {
           ts: new Date().toISOString(), lv: L, brush: tally.brush, report: tally.report, fix: tally.fix, score,
-          sec: Math.round((Date.now() - startedAt) / 1000), ids: picks.map(p => p.i),
+          sec: Math.round((Date.now() - startedAt) / 1000), ids: [pick.i],
         }].slice(-LOG_CAP);
         if (typeof saveMember === 'function') saveMember();
       }
       if (onDone) onDone(score);
     }
 
-    nextScenario();
+    runScenario(pick.s);
   }
 
   function injectAdminPanel(detailView, member) {
@@ -542,5 +600,6 @@
     if (anchor) anchor.parentNode.insertBefore(panel, anchor); else detailView.appendChild(panel);
   }
 
-  window.WHY = { play, injectAdminPanel, SCENARIOS: S };
+  const api = { play, injectAdminPanel, SCENARIOS: S, seededOrder, current: null };
+  window.WHY = api;
 })();
