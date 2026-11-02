@@ -342,7 +342,7 @@
       const v = el(`
         <div class="fade">
           ${bar}
-          <div class="scoreline"><span class="pill">💼 ${si}/${picks.length} · ${esc(sc.place)} · ${L}단계</span></div>
+          <div class="scoreline"><span class="pill">💼 ${picks.length}가지 중 ${si}번째 · ${esc(sc.place)} · ${L}단계</span></div>
           <div class="panel" style="padding:14px;">
             <div class="wy-chat" id="wyChat"></div>
             <div id="wyLoss"></div>
@@ -490,11 +490,15 @@
           area.innerHTML = '';
           say('me', o.t);
           later(() => {
-            say('boss', sc.closing || '좋아요. "왜?"라고 물어봐 준 덕분에 큰 손해를 막았어요. 수고했어요!', 'happy');
+            say('boss', sc.closing || '좋아요. "왜?"라고 물어봐 준 덕분에 큰 손해를 막았어요.', 'happy');
             scores.push(Math.max(MIN_SCORE, 100 - penalty()));
             tip(wrongHere === 0 ? '🎉 완벽해요! 끝까지 "왜?"라고 물어서 손해를 막았어요.' : '👏 잘했어요! "왜?"라고 물어서 진짜 원인을 찾았어요.', 'good');
             if (typeof confetti === 'function') confetti(wrongHere ? 2 : 5);
-            area.innerHTML = `<button class="btn btn-primary" type="button" id="wyNext" style="margin-top:6px;font-size:21px;padding:16px;">${si >= picks.length ? '끝내기' : '다음 일 →'}</button>`;
+            const lastOne = si >= picks.length;
+            const inCourse = typeof session !== 'undefined' && session && session.stages[session.idx] && session.stages[session.idx].type === 'why';
+            const leftNote = lastOne && inCourse ? '<div class="wy-ask">오늘은 아직 끝나지 않았어요. 게임이 더 남았어요!<br>아래 버튼을 눌러 다음 게임으로 넘어가요.</div>' : '';
+            const nextLabel = !lastOne ? '다음 상황으로 넘어가기 →' : inCourse ? '다음 게임 하러 가기 →' : '연습 마치기';
+            area.innerHTML = `${leftNote}<button class="btn btn-primary" type="button" id="wyNext" style="margin-top:6px;font-size:21px;padding:16px;">${nextLabel}</button>`;
             area.querySelector('#wyNext').addEventListener('click', nextScenario);
           }, 500);
         }));

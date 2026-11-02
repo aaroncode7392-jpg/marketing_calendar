@@ -402,8 +402,8 @@
     const tip = document.createElement('div');
     tip.style.cssText = 'margin:14px auto 0;max-width:420px;background:linear-gradient(135deg,#FFF3D6,#FFE1E4);border:2px solid #FFC56B;border-radius:16px;padding:12px 14px;font-family:Jua,sans-serif;font-size:18px;line-height:1.5;color:#3A2E28;text-align:center;';
     tip.innerHTML = isFirst
-      ? '💡 오늘 두뇌운동을 끝까지 하면<br><b>뉴스·라디오·유튜브를 막은 유리</b>를 깰 수 있어요.<br>하루에 한 번 꼭 깨서 보세요!'
-      : '🎁 마지막 스테이지예요!<br>끝나면 <b>유리를 깨고</b> 오늘의 뉴스·라디오·유튜브를 보세요.';
+      ? '💡 오늘 게임을 끝까지 다 하면<br><b>뉴스·라디오·유튜브를 막은 유리</b>를 깰 수 있어요.<br>하루에 한 번 꼭 깨서 보세요!'
+      : '🎁 이제 마지막 게임이에요!<br>끝나면 <b>유리를 깨고</b> 오늘의 뉴스·라디오·유튜브를 보세요.';
     const btn = view.querySelector('#malaNextBtn, #goNext');
     if (btn && btn.parentNode) btn.parentNode.insertBefore(tip, btn); else view.appendChild(tip);
   }

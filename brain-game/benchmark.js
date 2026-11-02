@@ -120,9 +120,9 @@
   // ---------- 1·4. 단어 기억 ----------
   async function showWords(targets) {
     for (let i = 0; i < targets.length; i++) {
-      bigText(targets[i], `기억해 주세요 (${i + 1} / ${targets.length})`);
+      bigText(targets[i], `기억해 주세요 (${targets.length}개 중 ${i + 1}번째)`);
       await wait(WORD_SHOW_MS);
-      bigText('&nbsp;', `기억해 주세요 (${i + 1} / ${targets.length})`);
+      bigText('&nbsp;', `기억해 주세요 (${targets.length}개 중 ${i + 1}번째)`);
       await wait(WORD_GAP_MS);
     }
   }
@@ -331,9 +331,9 @@
       const v = render(`
         <div class="panel" style="text-align:center;padding:34px 22px;">
           <div style="font-size:56px;">🎉</div>
-          <div style="font-family:'Jua';font-size:26px;margin:10px 0;">측정 끝! 수고하셨어요</div>
-          <div style="font-size:18px;line-height:1.7;">이번 주 측정이 저장됐어요.<br>이제 오늘의 두뇌운동으로 넘어가요.</div>
-          <button class="btn btn-primary" id="bmNext" style="margin-top:24px;font-size:22px;padding:18px;">두뇌운동 시작 ▶ <span id="bmCount">5</span></button>
+          <div style="font-family:'Jua';font-size:26px;margin:10px 0;">이번 주 측정을 마쳤어요</div>
+          <div style="font-size:18px;line-height:1.7;"><b style="color:#D9480F;">아직 오늘 게임이 남았어요!</b><br>잠시 뒤에 오늘 게임으로 넘어가요.</div>
+          <button class="btn btn-primary" id="bmNext" style="margin-top:24px;font-size:22px;padding:18px;">오늘 게임 하러 가기 ▶ <span id="bmCount">5</span></button>
         </div>`);
       let n = 5, done = false;
       const go = () => { if (done) return; done = true; clearInterval(t); onDone(); };

@@ -235,14 +235,14 @@
       const v = el(`
         <div class="fade">
           ${bar}
-          <div class="scoreline"><span class="pill">🧹 ${round}/${ROUNDS} · ${L}단계</span></div>
+          <div class="scoreline"><span class="pill">🧹 ${ROUNDS}문제 중 ${round}번째 · ${L}단계</span></div>
           <div class="panel" style="padding:14px;">
             <div class="cl-top">
               <div class="cl-teacher" id="clT">${TEACHER_SVG}</div>
               <div class="cl-bubble"><div class="who">선생님</div><div id="clText">${esc(task.text)}</div><div class="cl-hint" id="clHint"></div></div>
             </div>
             <button type="button" class="cl-mem" id="clMem"></button>
-            <div class="cl-prog"><span id="clProg">할 일 0 / ${task.steps.length}</span><span class="cl-dots">${task.steps.map(() => '<span></span>').join('')}</span></div>
+            <div class="cl-prog"><span id="clProg">할 일 ${task.steps.length}개 중 0개 했어요</span><span class="cl-dots">${task.steps.map(() => '<span></span>').join('')}</span></div>
             <div class="cl-room" id="clRoom">
               ${LAYOUT.map(([id, x, y, w, h, kind]) => `<button type="button" class="cl-item ${kind}" data-id="${id}" style="left:${x}%;top:${y}%;width:${w}%;height:${h}%;">${THINGS[id].desk ? `${THINGS[id].desk}번` : LABEL[id]}</button>`).join('')}
             </div>
@@ -284,7 +284,7 @@
         step = 0;
         room.querySelectorAll('.cl-item').forEach(x => { x.classList.remove('done', 'hint'); const ck = x.querySelector('.ck'); if (ck) ck.remove(); });
         dots.forEach(d => d.classList.remove('on'));
-        prog.textContent = `할 일 0 / ${task.steps.length}`;
+        prog.textContent = `할 일 ${task.steps.length}개 중 0개 했어요`;
       };
       const showGuide = () => {
         const line = `${step + 1}번째: ${guideLines[step]}`;
@@ -309,7 +309,7 @@
           if (typeof beep === 'function') beep(660 + step * 80, 0.12);
           dots[step].classList.add('on');
           step++; guideWrong = 0; hintEl.textContent = ''; hintEl.classList.remove('strong');
-          prog.textContent = `할 일 ${step} / ${task.steps.length}`;
+          prog.textContent = `할 일 ${task.steps.length}개 중 ${step}개 했어요`;
           if (step >= task.steps.length) {
             lock = true;
             memBtn.hidden = true;

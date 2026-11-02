@@ -99,7 +99,7 @@
     const again = room.wrong > 0;
     if (pair.role === 'describer') {
       return panel(`
-        <div style="font-size:15px;color:var(--ink-soft);">${room.round} / ${room.total} · 나만 보는 화면</div>
+        <div style="font-size:15px;color:var(--ink-soft);">${room.total}문제 중 ${room.round}번째 · 나만 보는 화면</div>
         ${again ? `<div style="font-family:'Jua';font-size:18px;color:var(--warn);margin-top:6px;">짝꿍이 헷갈려해요. 한 번 더 설명해주세요!</div>` : ''}
         <div style="font-size:90px;line-height:1.2;margin-top:6px;">${EMOJI[item.w]}</div>
         <div id="coopWord" style="font-family:'Jua';font-size:32px;">${item.w}</div>
@@ -110,7 +110,7 @@
         <button class="btn btn-primary" id="coopDescribed" style="margin-top:16px;font-size:21px;padding:16px;">다 설명했어요 →</button>`);
     }
     return panel(`
-      <div style="font-size:15px;color:var(--ink-soft);">${room.round} / ${room.total}</div>
+      <div style="font-size:15px;color:var(--ink-soft);">${room.total}문제 중 ${room.round}번째</div>
       <div style="font-size:70px;margin:10px 0;">👂</div>
       <div style="font-family:'Jua';font-size:22px;line-height:1.5;">${fmtBd(pair.partner)}님 설명을<br>잘 들어보세요</div>
       <div style="font-size:15px;color:var(--ink-soft);margin-top:10px;line-height:1.6;">궁금한 건 물어봐도 돼요!<br>"무슨 색이야?" "어디에 있어?"</div>`);
@@ -120,7 +120,7 @@
     const item = room.items[room.round - 1];
     if (pair.role === 'describer') {
       return panel(`
-        <div style="font-size:15px;color:var(--ink-soft);">${room.round} / ${room.total}</div>
+        <div style="font-size:15px;color:var(--ink-soft);">${room.total}문제 중 ${room.round}번째</div>
         <div style="font-size:70px;margin:10px 0;">🤔</div>
         <div style="font-family:'Jua';font-size:22px;line-height:1.5;">${fmtBd(pair.partner)}님이<br>고르는 중이에요</div>
         <div style="font-size:15px;color:var(--ink-soft);margin-top:10px;">더 설명해도 괜찮아요</div>`);
@@ -128,7 +128,7 @@
     const removed = room.removed || [];
     const opts = item.opts.filter(w => !removed.includes(w));
     return panel(`
-      <div style="font-size:15px;color:var(--ink-soft);">${room.round} / ${room.total}</div>
+      <div style="font-size:15px;color:var(--ink-soft);">${room.total}문제 중 ${room.round}번째</div>
       <div style="font-family:'Jua';font-size:22px;margin:6px 0 14px;">설명한 것은 무엇일까요?</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
         ${opts.map(w => `<button class="choice" data-pick="${w}" style="padding:14px 0;"><div style="font-size:52px;line-height:1.1;">${EMOJI[w]}</div><div style="font-family:'Jua';font-size:20px;">${w}</div></button>`).join('')}
@@ -141,7 +141,7 @@
     const msg = n === room.total ? '완벽해요! 찰떡 호흡이에요 💕' : n >= 3 ? '잘했어요! 둘이 함께라 든든해요' : '수고했어요! 다음엔 더 잘 맞을 거예요';
     return panel(`
       <div style="font-size:56px;">🎉</div>
-      <div style="font-family:'Jua';font-size:24px;margin:8px 0;">둘이 함께 ${n} / ${room.total}개 맞혔어요!</div>
+      <div style="font-family:'Jua';font-size:24px;margin:8px 0;">둘이 함께 ${room.total}개 중 ${n}개 맞혔어요!</div>
       <div style="font-size:17px;color:var(--ink-soft);">${msg}</div>
       <div style="font-size:30px;margin:12px 0;letter-spacing:4px;">${(room.results || []).map(r => (r === 'ok' ? '⭕' : '❌')).join('')}</div>
       ${pair.role === 'describer'

@@ -481,6 +481,21 @@
   .confetti-item{position:fixed;top:-10px;font-size:22px;pointer-events:none;z-index:70;animation:fall linear forwards;}
   @keyframes fall{to{transform:translateY(105vh) rotate(360deg);opacity:.9;}}
   /* progress dots */
+  .stage-bar{flex-wrap:wrap;gap:2px 10px;}
+  .stage-bar.why-bar{background:linear-gradient(135deg,#6F9BD1,#3F6FB5);}
+  .stage-bar.clean-bar{background:linear-gradient(135deg,#55BFA9,#2FA28E);}
+  .course-status{font-family:'Jua';font-size:22px;line-height:1.45;color:var(--ink);margin:10px 0 4px;word-break:keep-all;}
+  .course-next-title{font-size:17px;color:var(--ink-soft);margin-bottom:4px;}
+  .course-next-name{font-family:'Jua';font-size:28px;line-height:1.3;}
+  .course-next-guide{font-size:18px;line-height:1.5;color:var(--ink);margin-top:4px;word-break:keep-all;}
+  .course-status b{color:#D9480F;}
+  .course-go{font-family:'Jua';font-size:18px;line-height:1.5;color:#D9480F;margin-top:10px;word-break:keep-all;}
+  .course-list{list-style:none;margin:16px 0 0;padding:0;text-align:left;}
+  .course-list-title{font-family:'Jua';font-size:18px;color:var(--ink-soft);margin-bottom:4px;}
+  .course-row{display:flex;gap:8px;align-items:center;font-family:'Jua';font-size:18px;line-height:1.3;padding:6px 10px;border-radius:10px;color:var(--ink);}
+  .course-row.done{color:var(--ink-soft);}
+  .course-row.now{background:#FFF3D6;font-size:20px;}
+  .course-mark{flex:0 0 28px;text-align:center;}
   .prog{display:flex;gap:8px;justify-content:center;margin:16px 0;align-items:center;}
   .prog-dot{width:12px;height:12px;border-radius:50%;background:var(--line);transition:all .3s;}
   .prog-dot.done{background:var(--ok);width:14px;height:14px;}
@@ -1522,6 +1537,37 @@ function onGameDone(score100, durationSec = null){
   if(session.idx>=session.stages.length) showFinalResult();
   else showTransition(stage, score100, false);
 }
+// 어르신이 지금 어디까지 했고 다음에 무엇을 하는지 바로 아시도록 쉬운 말로 풀어 쓴다
+const STAGE_GUIDE={
+  speed:'잠깐 보인 그림의 자리를 기억해서 눌러요',
+  why:'후배에게 "왜?"라고 물어서 원인을 알아 와요',
+  memory:'같은 그림 카드 두 장을 찾아요',
+  math:'계산 문제를 풀어요',
+  clean:'선생님 말씀을 외워서 순서대로 청소해요',
+  mathhard:'조금 더 어려운 계산 문제를 풀어요',
+  typing:'좋은 글귀를 보고 써요',
+};
+function courseStatusText(idx,total){
+  if(idx===0) return `오늘 할 게임은 모두 ${total}개예요.`;
+  if(idx===total-1) return `${total}개 중 ${idx}개 끝냈어요.<br><b>아직 마지막 게임 1개가 남았어요!</b>`;
+  return `${total}개 중 ${idx}개 끝냈어요.<br><b>아직 게임이 ${total-idx}개 남았어요!</b>`;
+}
+function courseNextHtml(next,idx){
+  return `<div class="trans-next">
+    <div class="course-next-title">${idx===0?'첫 번째 게임은 이거예요':'다음 게임은 이거예요'}</div>
+    <div class="course-next-name">${next.label}</div>
+    <div class="course-next-guide">${STAGE_GUIDE[next.type]||''}</div>
+    <div class="course-go">${idx===0?'아래 버튼을 누르면 시작해요.':'오늘은 아직 끝나지 않았어요.<br>아래 버튼을 눌러 다음 게임으로 넘어가요.'}</div>
+  </div>`;
+}
+function courseListHtml(stages,idx){
+  const rows=stages.map((s,i)=>{
+    const state=i<idx?'done':i===idx?'now':'';
+    const mark=i<idx?'✅':i===idx?'👉':`${i+1}.`;
+    return `<li class="course-row ${state}"><span class="course-mark">${mark}</span><span>${s.label}${i<idx?' (끝)':''}</span></li>`;
+  }).join('');
+  return `<div class="course-list"><div class="course-list-title">오늘 할 게임 순서</div><ul style="list-style:none;margin:0;padding:0;">${rows}</ul></div>`;
+}
 function showTransition(prevStage, prevScore, isFirst){
   clear();
   const {idx, stages}=session;
@@ -1547,22 +1593,26 @@ function showTransition(prevStage, prevScore, isFirst){
     }
 
     const v = el(`
-      <div class="fade" style="text-align:center; padding-top: 40px; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-        <div id="malaText" style="font-family:'Jua'; font-size:32px; color:var(--ink); margin-bottom: 20px;">
-          ${isFirst ? '문제를 풀고 두뇌를 키워봐요!' : `스테이지 ${idx} 완료!`}
+      <div class="fade" style="text-align:center; padding-top: 12px; padding-bottom: 24px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;">
+        <div id="malaText" style="font-family:'Jua'; font-size:28px; color:var(--ink); margin-bottom: 8px;">
+          ${isFirst ? '문제를 풀고 두뇌를 키워봐요!' : '잘하셨어요! 👏'}
         </div>
-        
-        <div style="position:relative; width: 300px; height: 300px; margin: 0 auto;">
+        <div class="course-status">${courseStatusText(idx,total)}</div>
+
+        <div style="height:190px; width:100%;">
+        <div style="position:relative; width: 300px; height: 300px; margin: 0 auto; transform: scale(.63); transform-origin: top center;">
           <img id="malaImg" src="assets/mala_frames/idle_0.png" style="width: 100%; height: 100%; object-fit: contain; transition: transform 0.5s ease-in-out;">
           <div id="bowlOverlay" style="position:absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 140px; height: ${bowlHeight}px; background: ${overlayColor}; border-radius: 50% 50% 10px 10px; transition: height 1s; opacity: ${isWater ? '0.9' : '1'}; pointer-events: none; mix-blend-mode: ${isWater ? 'multiply' : 'normal'}; overflow: hidden;">
              ${pelletsHtml}
           </div>
         </div>
-        
-        ${idx < total ? `
-        <button class="btn" id="malaNextBtn" style="background: #FF7A00; color: white; border: none; box-shadow: 0 4px 12px rgba(255,122,0,0.4); border-radius: 12px; cursor: pointer; margin-top:30px; font-size:24px; padding:15px 40px;">
-          ${isFirst ? '시작하기' : '다음 스테이지 →'}
-        </button>` : ''}
+        </div>
+
+        <div style="width:100%;">${courseNextHtml(next,idx)}</div>
+        <button class="btn" id="malaNextBtn" style="background: #FF7A00; color: white; border: none; box-shadow: 0 4px 12px rgba(255,122,0,0.4); border-radius: 12px; cursor: pointer; margin-top:14px; font-size:24px; padding:15px 20px;">
+          ${isFirst ? '첫 번째 게임 시작하기 →' : '다음 게임 하러 가기 →'}
+        </button>
+        <div class="panel" style="width:100%; margin-top:14px; padding:12px;">${courseListHtml(stages,idx)}</div>
       </div>`);
     app.appendChild(v);
     if(window.GLASS) GLASS.injectSessionTip(v, idx, total, isFirst);
@@ -1630,6 +1680,8 @@ function showTransition(prevStage, prevScore, isFirst){
     // 특수 이벤트 처리: 5스테이지 클리어(밥 다먹음), 10스테이지 클리어(물 다마심)
     if (idx === 5 && !isFirst) {
       if(btn) btn.style.display = 'none'; // 자동 진행이므로 숨김
+      const goText = v.querySelector('.course-go');
+      if(goText) goText.innerHTML = '오늘은 아직 끝나지 않았어요.<br>잠시 뒤에 다음 게임이 시작돼요.';
       const bowl = v.querySelector('#bowlOverlay');
       
       currentState = 'SNIFF';
@@ -1679,31 +1731,27 @@ function showTransition(prevStage, prevScore, isFirst){
   }
   
   // 일반 유저 로직
-  const dots=stages.map((_,i)=>{const cls=i<idx?'done':i===idx?'current':'';return `<div class="prog-dot ${cls}"></div>`;}).join('');
   const prevHtml=isFirst?`
     <div style="font-family:'Jua';font-size:28px;margin-bottom:6px;">준비됐나요? 😊</div>
-    <div style="font-size:17px;color:var(--ink-soft);line-height:1.6;">다양한 두뇌 운동을 ${total}스테이지로 연속해서 해봐요.<br>천천히, 즐겁게!</div>`:
+    <div class="course-status">${courseStatusText(idx,total)}</div>
+    <div style="font-size:18px;color:var(--ink-soft);line-height:1.6;">아래 순서대로 끝까지 하나씩 해 봐요.</div>`:
     prevStage.domain==='seq'?`
-    <div style="font-size:16px;color:var(--ink-soft);margin-bottom:4px;">스테이지 ${idx} 완료!</div>
-     <div style="font-family:'Jua';font-size:21px;color:var(--ink-soft);margin-bottom:6px;">${prevStage.label}</div>
-     <div style="font-family:'Jua';font-size:40px;color:var(--ok);line-height:1.1;">통과! 🎉</div>`:
-    `<div style="font-size:16px;color:var(--ink-soft);margin-bottom:4px;">스테이지 ${idx} 완료!</div>
-     <div style="font-family:'Jua';font-size:21px;color:var(--ink-soft);margin-bottom:6px;">${prevStage.label}</div>
-     <div style="font-family:'Jua';font-size:56px;color:${scoreColor(prevScore)};line-height:1.1;">${prevScore}점</div>`;
-  const colorMap={speed:'#E8633F',memory:'#1E8E7B',seq:'#D9952A',math:'#8A5BA2',mathhard:'#6B4A9E',typing:'#D45C89'};
+    <div style="font-family:'Jua';font-size:21px;color:var(--ink-soft);margin-bottom:6px;">${prevStage.label} 끝!</div>
+     <div style="font-family:'Jua';font-size:40px;color:var(--ok);line-height:1.1;">통과! 🎉</div>
+     <div class="course-status">${courseStatusText(idx,total)}</div>`:
+    `<div style="font-family:'Jua';font-size:21px;color:var(--ink-soft);margin-bottom:6px;">${prevStage.label} 끝!</div>
+     <div style="font-family:'Jua';font-size:56px;color:${scoreColor(prevScore)};line-height:1.1;">${prevScore}점</div>
+     <div class="course-status">${courseStatusText(idx,total)}</div>`;
+  const colorMap={speed:'#E8633F',memory:'#1E8E7B',seq:'#D9952A',math:'#8A5BA2',mathhard:'#6B4A9E',typing:'#D45C89',why:'#3F6FB5',clean:'#2FA28E'};
   const v=el(`
     <div class="fade">
       <div class="panel" style="text-align:center;padding:26px 20px;">
         ${prevHtml}
-        <div class="prog">${dots}</div>
-        ${idx<total?`
-        <div class="trans-next">
-          <div style="font-size:13px;color:var(--ink-soft);margin-bottom:5px;">다음 스테이지 ${idx+1}/${total}</div>
-          <div style="font-family:'Jua';font-size:22px;">${next.label}</div>
-        </div>`:''}
+        ${courseNextHtml(next,idx)}
         <button class="btn" id="goNext" style="background:${colorMap[next.type]};margin-top:16px;font-size:23px;padding:19px;">
-          ${isFirst?'시작하기':'다음 스테이지 →'}
+          ${isFirst?'첫 번째 게임 시작하기 →':'다음 게임 하러 가기 →'}
         </button>
+        ${courseListHtml(stages,idx)}
       </div>
     </div>`);
   app.appendChild(v);
@@ -1731,7 +1779,7 @@ function runGame(stage, onDone){
 function stageBar(){
   if(!session) return '';
   const {idx,stages}=session; const s=stages[idx];
-  return `<div class="stage-bar ${s.type}-bar"><span>${s.label}</span><span>스테이지 ${idx+1} / ${stages.length}</span></div>`;
+  return `<div class="stage-bar ${s.type}-bar"><span>${s.label}</span><span>${idx===0?`${stages.length}개 중 첫 번째`:`${stages.length}개 중 ${idx}개 끝냈어요`}</span></div>`;
 }
 
 // ==========================================================
@@ -1804,7 +1852,7 @@ function playSpeed({lv, rounds=5, onDone=null}={}){ setRandomBackground();
     const v=el(`
       <div class="fade">
         ${stageBar()}
-        <div class="scoreline"><span class="pill">⚡ ${round}/${totalRounds}</span></div>
+        <div class="scoreline"><span class="pill">⚡ ${totalRounds}번 중 ${round}번째</span></div>
         <div class="panel" style="position:relative;">
           <div class="typing-boss-wrap" style="height:110px; margin-top:-10px; margin-bottom:5px;">
              <div class="boss-hp-wrap"><div class="boss-hp-bar" id="bossHpBarPig" style="width:${hp}%"></div><div class="boss-hp-text" id="bossHpTextPig">${Math.round(hp)} / 100</div></div>
@@ -1847,7 +1895,7 @@ function playSpeed({lv, rounds=5, onDone=null}={}){ setRandomBackground();
   function askWhere(grid,targets){
     const label=document.querySelector('#label');
     const targetSet=new Set(targets); const selected=new Set(); let done=false;
-    label.innerHTML=`어디에 있었나요? <span id="cnt" style="color:var(--speed)">0/${findCount}</span>`;
+    label.innerHTML=`어디에 있었나요? <span id="cnt" style="color:var(--speed)">${findCount}개 중 0개 눌렀어요</span>`;
     const cnt=label.querySelector('#cnt');
     grid.querySelectorAll('.cell').forEach(c=>{
       c.style.cursor='pointer';
@@ -1859,7 +1907,7 @@ function playSpeed({lv, rounds=5, onDone=null}={}){ setRandomBackground();
           c.classList.remove('selected');
           c.innerHTML='';
           beep(440, 0.06);
-          cnt.textContent=`${selected.size}/${findCount}`;
+          cnt.textContent=`${findCount}개 중 ${selected.size}개 눌렀어요`;
           return;
         }
         selected.add(i);
@@ -1868,7 +1916,7 @@ function playSpeed({lv, rounds=5, onDone=null}={}){ setRandomBackground();
         juiceTap(c);
         celebrateAt(c, {count: 7, parts: ['✨','⚡','💥','🔸','⭐']});
         beep(660, 0.08);
-        cnt.textContent=`${selected.size}/${findCount}`;
+        cnt.textContent=`${findCount}개 중 ${selected.size}개 눌렀어요`;
         if(selected.size>=findCount) submitAnswer();
       });
     });
@@ -2022,11 +2070,11 @@ function playSpeed({lv, rounds=5, onDone=null}={}){ setRandomBackground();
         if(allRight) confetti(2);
         
         if (round === totalRounds && Math.round(hp) > 0) {
-           feedback(allRight?`${pick(PRAISE)} (${findCount}/${findCount})`:`${roundScore}개 맞았어요!`, allRight);
+           feedback(allRight?`${pick(PRAISE)} (${findCount}개 모두 맞았어요)`:`${roundScore}개 맞았어요!`, allRight);
            return;
         }
         
-        feedback(allRight?`${pick(PRAISE)} (${findCount}/${findCount})`:`${roundScore}개 맞았어요!`, allRight);
+        feedback(allRight?`${pick(PRAISE)} (${findCount}개 모두 맞았어요)`:`${roundScore}개 맞았어요!`, allRight);
       }
 
       if (round === 1 && allRight) {
@@ -2629,7 +2677,7 @@ function playMath({lv, qs=10, onDone=null}={}){ setRandomBackground();
     const v=el(`
       <div class="fade">
         ${stageBar()}
-        <div class="scoreline"><span class="pill">🔢 ${q}/${total}</span></div>
+        <div class="scoreline"><span class="pill">🔢 ${total}문제 중 ${q}번째</span></div>
         <div class="panel">
           <div class="typing-boss-wrap" style="height:120px; margin-top:-10px; margin-bottom:5px;">
              <div class="boss-hp-wrap"><div class="boss-hp-bar" id="bossHpBarMath" style="width:${hp}%"></div><div class="boss-hp-text" id="bossHpTextMath">${Math.round(hp)} / 100</div></div>
@@ -2852,7 +2900,7 @@ function playMathHard({qs=5, onDone=null}={}){ setRandomBackground();
     const v=el(`
       <div class="fade">
         ${stageBar()}
-        <div class="scoreline"><span class="pill">🧮 ${q}/${total}</span></div>
+        <div class="scoreline"><span class="pill">🧮 ${total}문제 중 ${q}번째</span></div>
         <div class="panel">
           <div class="typing-boss-wrap" style="height:120px; margin-top:-10px; margin-bottom:5px;">
              <div class="boss-hp-wrap"><div class="boss-hp-bar" id="bossHpBarMathHard" style="width:${hp}%"></div><div class="boss-hp-text" id="bossHpTextMathHard">${Math.round(hp)} / 100</div></div>
@@ -3022,7 +3070,7 @@ function playTyping({qs=3, onDone=null}={}){ setRandomBackground();
     const v=el(`
       <div class="fade" style="position:relative;">
         ${stageBar()}
-        <div class="scoreline"><span class="pill">✍️ ${q}/${total}</span></div>
+        <div class="scoreline"><span class="pill">✍️ ${total}문장 중 ${q}번째</span></div>
         <div class="panel" style="position:relative;">
           <div class="typing-boss-wrap">
              <div class="boss-hp-wrap"><div class="boss-hp-bar" id="bossHpBarSlime" style="width:${hp}%"></div><div class="boss-hp-text" id="bossHpTextSlime">${Math.round(hp)} / 100</div></div>
@@ -3350,7 +3398,7 @@ function playDecompose({lv=1, bossHp=100}={}){ setRandomBackground();
           <div class="brand" style="font-size:22px;">${isAbstract ? '📝 머릿속 계산 훈련' : (type==='read'||type==='concept'?'🧠 10 묶음 기초 다지기':'🧩 10 묶음 풀기 훈련')}</div>
           <button class="iconbtn" id="quitDec" style="font-size:18px;">✕</button>
         </div>
-        <div class="scoreline"><span class="pill">단계 ${level}/${maxLevels}</span></div>
+        <div class="scoreline"><span class="pill">${maxLevels}단계 중 ${level}단계</span></div>
         <div class="panel" style="padding:24px 14px; position:relative;">
           <div class="typing-boss-wrap" style="height:110px; margin-top:-10px; margin-bottom:15px;">
              <div class="boss-hp-wrap"><div class="boss-hp-bar" id="bossHpBarDecomp" style="width:${currentHp}%"></div><div class="boss-hp-text" id="bossHpTextDecomp">${Math.round(currentHp)} / 100</div></div>
@@ -3701,7 +3749,7 @@ function showChestRewardModal(){
   const ov = el(`
     <div class="overlay" style="z-index:95;">
       <div class="modal fade" style="text-align:center;max-width:440px;padding:26px 18px 22px;">
-        <div style="display:inline-block;background:#FFEAA7;color:#9B5E14;font-family:'Jua';font-size:14px;padding:4px 14px;border-radius:999px;margin-bottom:8px;border:1px solid #FDCB6E;">🎁 스테이지 클리어 보너스</div>
+        <div style="display:inline-block;background:#FFEAA7;color:#9B5E14;font-family:'Jua';font-size:14px;padding:4px 14px;border-radius:999px;margin-bottom:8px;border:1px solid #FDCB6E;">🎁 오늘 게임을 끝낸 보너스</div>
         <div style="font-family:'Jua';font-size:24px;color:var(--ink);margin-bottom:4px;">선물 상자를 열어보세요!</div>
         <div style="font-size:14px;color:var(--ink-soft);margin-bottom:14px;">세 개의 상자 중 마음에 드는 상자 하나를 골라주세요</div>
         
@@ -4061,7 +4109,7 @@ function showFinalResult(){
     <div class="fade">
       ${levelMsg}
       <div class="panel" style="margin-bottom:14px;">
-        <div style="font-family:'Jua';font-size:24px;margin-bottom:4px;">오늘의 두뇌 운동 완료! 🏁</div>
+        <div style="font-family:'Jua';font-size:24px;margin-bottom:4px;">오늘 게임 ${session.stages.length}개를 모두 끝냈어요! 🏁</div>
         <div class="stars fx-text">${starStr}</div>
         <div class="fx-text" style="font-family:'Jua';font-size:58px;color:${scoreColor(totalScore)};line-height:1.1;">${totalScore}점</div>
         <div style="font-size:15px;color:var(--ink-soft);margin-top:6px;">최고 기록: ${currentMember.bestTotal}점</div>
@@ -4128,7 +4176,7 @@ async function renderHome(isNew=false){
   const greet = isNew ? '환영합니다! 첫 방문이시네요' : (hour<11?'좋은 아침이에요':hour<17?'좋은 오후예요':'편안한 저녁이에요');
   const streakHtml=currentMember.streak>0?`<div class="streak">🔥 ${currentMember.streak}일째 운동 중!</div>`:'';
   const bestHtml=currentMember.bestTotal?`<div class="streak" style="background:#E5F6F0;border-color:#A5DDD0;color:#1E8E7B;">🏆 최고 ${currentMember.bestTotal}점</div>`:'';
-  const cardHtml=`<div class="streak card-badge">🎴 카드 ${owned}/${cardIndex.length}종</div>`;
+  const cardHtml=`<div class="streak card-badge">🎴 카드 ${cardIndex.length}종 중 ${owned}종</div>`;
 
   const lastDigit = parseInt(currentMember.birthdate.slice(-1)) || 0;
   let themeStyle = '';
@@ -4155,7 +4203,7 @@ async function renderHome(isNew=false){
       </div>
       <div class="hero">
         <p class="hello">${greet} 😊</p>
-        <p class="sub">다양한 두뇌 운동을 ${buildStages().length}스테이지로<br>연속해서 해봐요.</p>
+        <p class="sub">오늘 할 두뇌 게임은 모두 ${buildStages().length}개예요.<br>끝까지 하나씩 천천히 해 봐요.</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">${streakHtml}${bestHtml}${cardHtml}</div>
       </div>
       <div class="hero" style="padding:16px 20px;">
@@ -4276,7 +4324,7 @@ async function renderMyCards(){
     <div class="fade">
       <div class="topbar"><div class="brand">📚 라이브러리</div><button class="iconbtn" id="back">‹</button></div>
       <div class="panel" style="margin-bottom:14px;">
-        <div style="font-family:'Jua';font-size:22px;">${Object.keys(owned).length} / ${cardIndex.length}종 수집</div>
+        <div style="font-family:'Jua';font-size:22px;">${cardIndex.length}종 중 ${Object.keys(owned).length}종 모았어요</div>
         <div style="font-size:14px;color:var(--ink-soft);margin-top:4px;">카드를 눌러보세요</div>
       </div>
       <div class="mycard-grid" id="grid">${cardIndex.length?'':'<div style="grid-column:1/-1;color:var(--ink-soft);padding:20px 0;">아직 등록된 카드가 없어요</div>'}</div>
@@ -4752,15 +4800,15 @@ function clearBackground() {
 // ---------- INIT ----------
 (function init(){ renderLoginScreen(); })();
 </script>
-<script src="benchmark.js?v=4"></script>
-<script src="coop.js?v=3"></script>
+<script src="benchmark.js?v=6"></script>
+<script src="coop.js?v=4"></script>
 <script src="recall.js?v=1"></script>
 <script src="radio.js?v=3"></script>
-<script src="glass.js?v=3"></script>
+<script src="glass.js?v=5"></script>
 <script src="weather.js?v=2"></script>
 <script src="video.js?v=2"></script>
-<script src="clean.js?v=5"></script>
-<script src="why.js?v=5"></script>
+<script src="clean.js?v=6"></script>
+<script src="why.js?v=7"></script>
 <script src="news.js?v=11"></script>
 </body>
 </html>
