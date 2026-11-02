@@ -335,6 +335,38 @@
     }
   }
 
+  // 장소 배경 이미지와 스탠딩 캐릭터 이미지 고르기 (시뮬레이션 레이어드 배치)
+  function pickBg(sc) {
+    const p = sc.place || '';
+    if (sc.home || p.startsWith('우리 집')) return 'assets/why/bg_home.jpg';
+    if (/내과|치과|한의원|약국|요양병원|물리치료|건강검진|동물병원|안경원|보건소/.test(p)) return 'assets/why/bg_clinic.jpg';
+    if (/국밥|분식|중국집|치킨|고깃집|횟집|칼국수|백반|음식점/.test(p)) return 'assets/why/bg_restaurant.jpg';
+    if (/카페|빵집|떡집|반찬|떡방앗간/.test(p)) return 'assets/why/bg_cafe_bakery.jpg';
+    if (/마트|과일|정육점|생선 가게|편의점/.test(p)) return 'assets/why/bg_market_shop.jpg';
+    if (/꽃집|화원|옷 가게|옷 수선|미용실|가구점|문구점|사진관/.test(p)) return 'assets/why/bg_boutique.jpg';
+    if (/철물점|인쇄소|세탁소|열쇠|인테리어|자전거|주유소/.test(p)) return 'assets/why/bg_workshop.jpg';
+    if (/건설|물류|택배|공장|시내버스|택시/.test(p)) return 'assets/why/bg_factory.jpg';
+    if (/초등학교|어린이집|학원|도서관|문화센터|합창단|노래 교실|서예|봉사팀/.test(p)) return 'assets/why/bg_school_culture.jpg';
+    if (/산악회|낚시|과수원|비닐하우스|양식장|캠핑장|펜션/.test(p)) return 'assets/why/bg_outdoor.jpg';
+    if (/탁구|배드민턴|동창회|친목계|예식장|마을 회관/.test(p)) return 'assets/why/bg_club_hall.jpg';
+    return 'assets/why/bg_office.jpg';
+  }
+  function pickChar([name, face], role, avoid) {
+    const s = (face || '') + (name || '');
+    const isFem = /👩|💇‍♀️|딸|며느리|동생 영희|소연|미경|정희|하늘|유나|수진|은지|영숙|순옥|은정|영란|수빈|세라|유진|서연|나연|보람|소희|순자|옥희|명자|은숙|수정이|은영이|미영이|은주|미진|정애/.test(s);
+    let c;
+    if (/👦|👧|손자|손녀/.test(s)) c = 'assets/why/char_kid.png';
+    else if (role === 'boss' && /👨‍⚕️|👩‍⚕️|🧑‍⚕️|약사/.test(s)) c = 'assets/why/char_doctor.png';
+    else if (/👵|👩‍🦳|여사님/.test(s)) c = 'assets/why/char_senior_woman.png';
+    else if (/🧓|👴|👨‍🦳|이장님/.test(s)) c = 'assets/why/char_senior_man.png';
+    else if (/👨‍🍳|👩‍🍳|🧑‍🍳/.test(face)) c = 'assets/why/char_chef.png';
+    else if (/👨‍🔧|🧑‍🔧|👷|🧑‍🏭|👨‍🌾|👩‍🌾|🧑‍🌾/.test(face)) c = role === 'boss' ? 'assets/why/char_boss_man.png' : 'assets/why/char_worker.png';
+    else if (role === 'boss') c = isFem ? 'assets/why/char_boss_woman.png' : 'assets/why/char_boss_man.png';
+    else c = isFem ? 'assets/why/char_jr_woman.png' : 'assets/why/char_jr_man.png';
+    if (avoid && c === avoid) c = isFem ? 'assets/why/char_jr_woman.png' : 'assets/why/char_jr_man.png';
+    return c;
+  }
+
   // 단계별 보기: "왜?" 질문 하나 + 대충 넘어가는 말 1개(1단계) / 2개(2단계) / 3개(3단계, 보고에도 짐작이 섞임)
   function questionOptions(L, layer, brushList) {
     const brushes = shuffleArr(brushList).slice(0, L).map(([t, r]) => ({ t, r, kind: 'brush' }));
@@ -346,7 +378,40 @@
     const st = document.createElement('style');
     st.id = 'whyStyle';
     st.textContent = `
-      .wy-chat{background:#B2C7DA;border-radius:18px;padding:14px 10px;min-height:220px;max-height:46vh;overflow-y:auto;}
+      .wy-panel{padding:10px!important;overflow:hidden;}
+      .wy-stage{position:relative;width:100%;min-height:370px;border-radius:20px;overflow:hidden;background:#2C3E50 center/cover no-repeat;box-shadow:0 8px 24px rgba(15,23,42,.18);display:flex;flex-direction:column;justify-content:space-between;transition:background-position .6s ease;}
+      .wy-stage.at-boss{background-position:32% center;}
+      .wy-stage.at-jr{background-position:68% center;}
+      .wy-stage::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(15,23,42,.38) 0%,rgba(15,23,42,.04) 36%,rgba(15,23,42,.62) 100%);pointer-events:none;z-index:1;}
+      .wy-stage.shake{animation:wyShake .45s ease;}
+      .wy-hud{position:relative;z-index:4;display:flex;justify-content:space-between;align-items:center;gap:6px;padding:10px 12px 0;flex-wrap:wrap;}
+      .wy-badge{background:rgba(15,23,42,.72);backdrop-filter:blur(6px);color:#fff;font-family:'Jua';font-size:15px;padding:5px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.22);}
+      .wy-badge.loc{background:rgba(255,255,255,.92);color:#191F28;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.15);}
+      .wy-mysay{position:relative;z-index:4;align-self:flex-end;max-width:86%;margin:6px 12px 0;background:#FEE500;color:#191F28;border:2px solid #F5C400;border-radius:16px 16px 4px 16px;padding:8px 13px;font-size:17px;font-weight:700;line-height:1.4;word-break:keep-all;text-align:left;box-shadow:0 4px 12px rgba(0,0,0,.18);animation:pop .25s ease;}
+      .wy-mysay[hidden]{display:none;}
+      .wy-actor-layer{position:relative;z-index:2;height:225px;display:flex;align-items:flex-end;justify-content:center;pointer-events:none;margin-top:auto;}
+      .wy-char-img{height:245px;width:auto;max-width:78%;object-fit:contain;object-position:bottom center;filter:drop-shadow(0 8px 18px rgba(0,0,0,.38));transform-origin:bottom center;transition:transform .3s ease;}
+      .wy-char-img.enter{animation:wyCharIn .35s cubic-bezier(.2,.8,.2,1);}
+      .wy-char-img.talk{animation:wyTalk .4s ease;}
+      .wy-char-img.angry{animation:wyShake .45s ease;filter:drop-shadow(0 0 16px rgba(240,68,82,.75));}
+      .wy-char-img.happy{animation:wyHappy .6s ease;}
+      @keyframes wyCharIn{from{opacity:0;transform:translateY(18px) scale(.95);}to{opacity:1;transform:translateY(0) scale(1);}}
+      @keyframes wyTalk{0%,100%{transform:translateY(0) scale(1);}50%{transform:translateY(-6px) scale(1.02);}}
+      @keyframes wyHappy{0%,100%{transform:translateY(0);}40%{transform:translateY(-10px) rotate(-2deg);}75%{transform:translateY(-5px) rotate(2deg);}}
+      .wy-mood{position:absolute;top:12px;right:18%;font-size:34px;filter:drop-shadow(0 4px 8px rgba(0,0,0,.28));animation:pop .3s ease;}
+      .wy-mood[hidden]{display:none;}
+      .wy-dlg{position:relative;z-index:3;margin:-18px 8px 8px;background:rgba(255,255,255,.96);backdrop-filter:blur(8px);border:3px solid #D0DDF0;border-radius:18px;padding:18px 14px 14px;text-align:left;box-shadow:0 8px 24px rgba(0,0,0,.22);}
+      .wy-dlg.boss{border-color:#68A0FF;background:rgba(244,248,255,.97);}
+      .wy-dlg.angry{border-color:#F04452;background:#FFF0F1;}
+      .wy-dlg.happy{border-color:#2FA28E;background:#EEFAF6;}
+      .wy-dlg-who{position:absolute;top:-16px;left:14px;display:inline-flex;align-items:center;gap:6px;background:#1E56A0;color:#fff;font-family:'Jua';font-size:17px;padding:4px 14px;border-radius:999px;box-shadow:0 3px 8px rgba(0,0,0,.18);}
+      .wy-dlg.jr .wy-dlg-who{background:#1F7A68;}
+      .wy-dlg.angry .wy-dlg-who{background:#D92D3A;}
+      .wy-dlg-text{font-size:20px;line-height:1.5;font-weight:700;color:#191F28;word-break:keep-all;min-height:1.5em;}
+      .wy-dlg.angry .wy-dlg-text{color:#B0202E;}
+      .wy-log-wrap{margin-top:12px;border-top:1px dashed #D5DCE2;padding-top:8px;}
+      .wy-log-wrap summary{cursor:pointer;font-family:'Jua';font-size:16px;color:#4E5968;padding:6px 4px;text-align:left;user-select:none;}
+      .wy-chat{background:#B2C7DA;border-radius:18px;padding:14px 10px;min-height:160px;max-height:36vh;overflow-y:auto;margin-top:6px;}
       .wy-chat.shake{animation:wyShake .45s ease;}
       @keyframes wyShake{0%,100%{transform:translateX(0);}20%{transform:translateX(-9px);}40%{transform:translateX(8px);}60%{transform:translateX(-6px);}80%{transform:translateX(4px);}}
       .wy-row{display:flex;gap:8px;margin:8px 0;align-items:flex-start;}
@@ -363,8 +428,8 @@
       .wy-tip{margin:10px 2px 0;background:#FFF4E5;border:2px solid #FFC56B;border-radius:14px;padding:10px 12px;font-family:'Jua';font-size:18px;line-height:1.5;color:#8A5300;text-align:left;}
       .wy-tip.good{background:#E8F7F2;border-color:#8FD3C2;color:#1E6B5C;}
       .wy-tip.bad{background:#FFECEC;border-color:#F04452;color:#B0202E;}
-      .wy-ask{font-family:'Jua';font-size:18px;margin:14px 2px 8px;text-align:left;color:#333D4B;}
-      .wy-opt{display:block;width:100%;text-align:left;border:2px solid #E5E8EB;background:#fff;border-radius:16px;padding:14px 16px;margin-bottom:9px;font-size:19px;line-height:1.45;color:#191F28;cursor:pointer;word-break:keep-all;}
+      .wy-ask{font-family:'Jua';font-size:18px;margin:12px 2px 8px;text-align:left;color:#333D4B;}
+      .wy-opt{display:block;width:100%;text-align:left;border:2px solid #D0D8E2;background:#fff;border-radius:16px;padding:14px 16px;margin-bottom:9px;font-size:19px;line-height:1.45;color:#191F28;cursor:pointer;word-break:keep-all;box-shadow:0 2px 6px rgba(0,0,0,.04);}
       .wy-opt:active{transform:scale(.98);}
       .wy-opt.gone{opacity:.35;pointer-events:none;}
       .wy-report{display:block;width:100%;border:0;border-radius:16px;background:#3182F6;color:#fff;font-weight:700;font-size:19px;padding:15px;margin-top:6px;cursor:pointer;}
@@ -397,25 +462,48 @@
 
     function runScenario(sc) {
       clear();
+      const [bossName, bossFace] = sc.boss, [jrName, jrFace] = sc.jr;
+      const bgUrl = pickBg(sc);
+      const bossCharUrl = pickChar(sc.boss, 'boss');
+      const jrCharUrl = pickChar(sc.jr, 'jr', bossCharUrl);
       const bar = typeof stageBar === 'function' && typeof session !== 'undefined' && session ? stageBar() : '';
       const v = el(`
         <div class="fade">
           ${bar}
-          <div class="scoreline"><span class="pill">💼 ${esc(sc.place)} · ${L}단계</span></div>
-          <div class="panel" style="padding:14px;">
-            <div class="wy-chat" id="wyChat"></div>
+          <div class="panel wy-panel">
+            <div class="wy-stage at-boss" id="wyStage" style="background-image:url('${bgUrl}')">
+              <div class="wy-hud">
+                <span class="wy-badge">💼 ${esc(sc.place)} · ${L}단계</span>
+                <span class="wy-badge loc" id="wyLoc">🏢 ${esc(bossName)} 말씀</span>
+              </div>
+              <div class="wy-mysay" id="wyMySay" hidden></div>
+              <div class="wy-actor-layer">
+                <img class="wy-char-img enter" id="wyCharImg" src="${bossCharUrl}" alt="${esc(bossName)}">
+                <div class="wy-mood" id="wyMood" hidden></div>
+              </div>
+              <div class="wy-dlg boss" id="wyDlg">
+                <div class="wy-dlg-who" id="wyDlgWho">${bossFace} ${esc(bossName)}</div>
+                <div class="wy-dlg-text" id="wyDlgText"></div>
+              </div>
+            </div>
             <div id="wyLoss"></div>
             <div id="wyTip"></div>
             <div id="wyArea"></div>
+            <details class="wy-log-wrap">
+              <summary>📜 지금까지 나눈 대화 다시 보기</summary>
+              <div class="wy-chat" id="wyChat"></div>
+            </details>
           </div>
         </div>`);
       app.appendChild(v);
       const chat = v.querySelector('#wyChat'), lossEl = v.querySelector('#wyLoss'), tipEl = v.querySelector('#wyTip'), area = v.querySelector('#wyArea');
-      const [bossName, bossFace] = sc.boss, [jrName, jrFace] = sc.jr;
+      const stageEl = v.querySelector('#wyStage'), locEl = v.querySelector('#wyLoc'), mySayEl = v.querySelector('#wyMySay');
+      const charImgEl = v.querySelector('#wyCharImg'), moodEl = v.querySelector('#wyMood'), dlgEl = v.querySelector('#wyDlg');
+      const dlgWhoEl = v.querySelector('#wyDlgWho'), dlgTextEl = v.querySelector('#wyDlgText');
       const toBoss = sc.home ? `${bossName}에게` : `${bossName}께`, reportWord = sc.home ? '말하' : sc.owner ? '말씀드리' : '보고하';
       const tallyAtStart = { ...tally };
       const known = [{ fact: sc.openFact[0], no: sc.openFact[1] }]; // 지금까지 들은 말 = 보고할 때 고를 수 있는 말
-      let layerIdx = 0, wrongHere = 0;
+      let layerIdx = 0, wrongHere = 0, lastSpeaker = 'boss';
       const foundRoot = () => layerIdx >= sc.layers.length;
 
       const scroll = () => { chat.scrollTop = chat.scrollHeight; };
@@ -425,8 +513,35 @@
           ? `<div class="wy-row me"><div class="wy-b">${esc(text)}</div></div>`
           : `<div class="wy-row ${isBoss ? 'boss' : ''} ${mood || ''}"><div class="wy-face">${isBoss ? bossFace : jrFace}</div><div><div class="wy-name">${esc(isBoss ? bossName : jrName)}</div><div class="wy-b">${esc(text)}</div></div></div>`);
         scroll();
+        if (who === 'me') {
+          mySayEl.hidden = false;
+          mySayEl.textContent = `🗣️ 나: "${text}"`;
+          return;
+        }
+        const targetUrl = isBoss ? bossCharUrl : jrCharUrl;
+        const switched = lastSpeaker !== who;
+        lastSpeaker = who;
+        stageEl.classList.toggle('at-boss', isBoss);
+        stageEl.classList.toggle('at-jr', !isBoss);
+        if (charImgEl.getAttribute('src') !== targetUrl) charImgEl.setAttribute('src', targetUrl);
+        charImgEl.setAttribute('alt', isBoss ? bossName : jrName);
+        charImgEl.className = 'wy-char-img';
+        void charImgEl.offsetWidth;
+        charImgEl.classList.add(mood === 'angry' ? 'angry' : mood === 'happy' ? 'happy' : switched ? 'enter' : 'talk');
+        if (mood === 'angry') { moodEl.hidden = false; moodEl.textContent = '😠'; }
+        else if (mood === 'happy') { moodEl.hidden = false; moodEl.textContent = '😊'; }
+        else if (!isBoss && layerIdx === 0) { moodEl.hidden = false; moodEl.textContent = '😅'; }
+        else { moodEl.hidden = true; }
+        dlgEl.className = `wy-dlg ${isBoss ? 'boss' : 'jr'} ${mood || ''}`;
+        dlgWhoEl.textContent = `${isBoss ? bossFace : jrFace} ${isBoss ? bossName : jrName}`;
+        dlgTextEl.textContent = text;
       };
-      const move = text => { chat.insertAdjacentHTML('beforeend', `<div class="wy-move"><span>${esc(text)}</span></div>`); scroll(); };
+      const move = text => {
+        chat.insertAdjacentHTML('beforeend', `<div class="wy-move"><span>${esc(text)}</span></div>`);
+        scroll();
+        locEl.textContent = text;
+        mySayEl.hidden = true;
+      };
       const tip = (html, cls) => { tipEl.innerHTML = html ? `<div class="wy-tip ${cls || ''}">${html}</div>` : ''; };
       const later = (fn, ms) => setTimeout(fn, ms);
       const penalty = () => Object.keys(PENALTY).reduce((s, k) => s + (tally[k] - tallyAtStart[k]) * PENALTY[k], 0);
@@ -498,6 +613,16 @@
       // 보고: 들은 말 중에서 진짜 원인을 고른다. 겉으로 드러난 이유를 고르면 꾸중을 듣고 다시 고른다.
       function report() {
         move(`🚶 ${toBoss} 갔어요`);
+        stageEl.classList.add('at-boss');
+        stageEl.classList.remove('at-jr');
+        charImgEl.setAttribute('src', bossCharUrl);
+        charImgEl.setAttribute('alt', bossName);
+        charImgEl.className = 'wy-char-img enter';
+        moodEl.hidden = true;
+        dlgEl.className = 'wy-dlg boss';
+        dlgWhoEl.textContent = `${bossFace} ${bossName}`;
+        dlgTextEl.textContent = `${iGa(jrName)} 왜 그랬는지 알아 왔나요?`;
+        lastSpeaker = 'boss';
         tip('');
         chooseReport();
       }
@@ -523,6 +648,7 @@
           }
           tally.report++; wrongHere++;
           say('boss', `😠 ${o.no}`, 'angry');
+          stageEl.classList.remove('shake'); void stageEl.offsetWidth; stageEl.classList.add('shake');
           chat.classList.remove('shake'); void chat.offsetWidth; chat.classList.add('shake');
           if (typeof beep === 'function') beep(220, 0.15);
           tip('😓 그건 겉으로 보이는 이유예요. 마지막에 들은 말을 떠올려 봐요.', 'bad');
