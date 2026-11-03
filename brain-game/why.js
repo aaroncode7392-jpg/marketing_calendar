@@ -409,6 +409,24 @@
       .wy-dlg.angry .wy-dlg-who{background:#D92D3A;}
       .wy-dlg-text{font-size:20px;line-height:1.5;font-weight:700;color:#191F28;word-break:keep-all;min-height:1.5em;}
       .wy-dlg.angry .wy-dlg-text{color:#B0202E;}
+      .wy-ctx-strip{margin-top:8px;background:#F3F7FF;border:2px solid #BFD4FF;border-radius:14px;padding:10px 12px;text-align:left;font-size:17px;line-height:1.45;color:#1E3A6E;word-break:keep-all;}
+      .wy-ctx-strip b{font-family:'Jua';font-size:18px;color:#154291;display:block;margin-bottom:2px;}
+      .wy-help-bar{display:flex;gap:8px;margin-top:8px;}
+      .wy-help-btn{flex:1;border:2px solid #CBD5E1;background:#fff;border-radius:14px;padding:11px 10px;font-family:'Jua';font-size:17px;color:#1E293B;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.05);word-break:keep-all;line-height:1.3;}
+      .wy-help-btn.explain{background:#FFF9DB;border-color:#F59F00;color:#7C4A00;}
+      .wy-help-btn.explain.open{background:#F59F00;color:#fff;}
+      .wy-help-btn.restart{background:#EEF4FF;border-color:#68A0FF;color:#1E56A0;}
+      .wy-help-btn:active{transform:scale(.98);}
+      .wy-detail{margin-top:8px;background:#FFFDF5;border:3px solid #F59F00;border-radius:18px;padding:14px;text-align:left;box-shadow:0 6px 18px rgba(0,0,0,.08);animation:pop .25s ease;}
+      .wy-detail[hidden]{display:none;}
+      .wy-detail-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:2px dashed #FCD34D;}
+      .wy-detail-title{font-family:'Jua';font-size:20px;color:#7C4A00;}
+      .wy-detail-close{border:0;background:#FDE68A;color:#7C4A00;font-family:'Jua';font-size:16px;padding:5px 12px;border-radius:999px;cursor:pointer;}
+      .wy-detail-sec{background:#fff;border:1px solid #F3E8C8;border-radius:14px;padding:11px 12px;margin-bottom:8px;font-size:18px;line-height:1.5;color:#191F28;word-break:keep-all;}
+      .wy-detail-sec:last-child{margin-bottom:0;}
+      .wy-detail-sec-hd{font-family:'Jua';font-size:18px;color:#92400E;margin-bottom:4px;}
+      .wy-detail-step{padding:5px 0;border-top:1px dashed #E5E7EB;font-size:17px;}
+      .wy-detail-step:first-of-type{border-top:0;}
       .wy-log-wrap{margin-top:12px;border-top:1px dashed #D5DCE2;padding-top:8px;}
       .wy-log-wrap summary{cursor:pointer;font-family:'Jua';font-size:16px;color:#4E5968;padding:6px 4px;text-align:left;user-select:none;}
       .wy-chat{background:#B2C7DA;border-radius:18px;padding:14px 10px;min-height:160px;max-height:36vh;overflow-y:auto;margin-top:6px;}
@@ -486,6 +504,15 @@
                 <div class="wy-dlg-text" id="wyDlgText"></div>
               </div>
             </div>
+            <div class="wy-ctx-strip" id="wyCtxStrip">
+              <b>📌 오늘의 상황 (${bossFace} ${esc(bossName)} 말씀)</b>
+              "${esc(sc.order)}"
+            </div>
+            <div class="wy-help-bar">
+              <button type="button" class="wy-help-btn explain" id="wyExplainBtn">📖 상황 자세히 알려주기</button>
+              <button type="button" class="wy-help-btn restart" id="wyRestartBtn">🎬 처음부터 상황극 시작</button>
+            </div>
+            <div class="wy-detail" id="wyDetail" hidden></div>
             <div id="wyLoss"></div>
             <div id="wyTip"></div>
             <div id="wyArea"></div>
@@ -500,11 +527,81 @@
       const stageEl = v.querySelector('#wyStage'), locEl = v.querySelector('#wyLoc'), mySayEl = v.querySelector('#wyMySay');
       const charImgEl = v.querySelector('#wyCharImg'), moodEl = v.querySelector('#wyMood'), dlgEl = v.querySelector('#wyDlg');
       const dlgWhoEl = v.querySelector('#wyDlgWho'), dlgTextEl = v.querySelector('#wyDlgText');
+      const explainBtn = v.querySelector('#wyExplainBtn'), restartBtn = v.querySelector('#wyRestartBtn'), detailEl = v.querySelector('#wyDetail');
       const toBoss = sc.home ? `${bossName}에게` : `${bossName}께`, reportWord = sc.home ? '말하' : sc.owner ? '말씀드리' : '보고하';
       const tallyAtStart = { ...tally };
-      const known = [{ fact: sc.openFact[0], no: sc.openFact[1] }]; // 지금까지 들은 말 = 보고할 때 고를 수 있는 말
-      let layerIdx = 0, wrongHere = 0, lastSpeaker = 'boss';
+      let known = [{ fact: sc.openFact[0], no: sc.openFact[1] }]; // 지금까지 들은 말 = 보고할 때 고를 수 있는 말
+      let layerIdx = 0, wrongHere = 0, lastSpeaker = 'boss', phase = 'ask', timers = [];
       const foundRoot = () => layerIdx >= sc.layers.length;
+
+      const later = (fn, ms) => { const id = setTimeout(fn, ms); timers.push(id); return id; };
+      const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
+
+      function roleExplainText() {
+        const p = sc.place || '';
+        if (sc.home || p.startsWith('우리 집')) {
+          return `🏠 여기는 <b>${esc(p)}</b>(우리 가족)이에요.<br><b>${esc(bossName)}</b>의 부탁을 받아 <b>${esc(jrName)}</b>에게 왜 이런 일이 생겼는지 차근차근 물어보는 역할이에요.`;
+        }
+        if (sc.owner) {
+          return `🏪 여기는 내가 운영하는 <b>${esc(p)}</b>이에요.<br>손님·거래처인 <b>${esc(bossName)}</b>이 불편을 겪으셔서, 우리 직원 <b>${esc(jrName)}</b>에게 진짜 이유를 알아봐 드리는 사장님 역할이에요.`;
+        }
+        if (/산악회|동호회|노래 교실|서예|합창단|봉사팀|동창회|친목계|마을 회관/.test(p)) {
+          return `🤝 여기는 내가 활동하는 <b>${esc(p)}</b> 모임이에요.<br><b>${esc(bossName)}</b>의 부탁으로 일을 맡았던 <b>${esc(jrName)}</b>에게 가서 왜 문제가 생겼는지 알아 오는 역할이에요.`;
+        }
+        return `💼 여기는 내가 일하는 <b>${esc(p)}</b>이에요.<br>윗사람인 <b>${esc(bossName)}</b>의 말씀에 따라 <b>${esc(jrName)}</b>에게 가서 실수한 진짜 이유를 알아 오는 역할이에요.`;
+      }
+
+      function nowActionText() {
+        if (phase === 'intro') return `아래의 <b>[🚶 ${esc(jrName)}에게 가서 물어보기 →]</b> 버튼을 눌러 ${esc(jrName)}에게 가 보세요.`;
+        if (phase === 'ask') {
+          if (foundRoot()) return `진짜 원인을 다 알아냈어요! 아래의 <b>[📋 ${esc(toBoss)} ${reportWord}러 가기]</b> 버튼을 눌러 주세요.`;
+          return `아래 보기 중에서 "알겠어요"처럼 대충 넘어가는 말 대신, <b>"왜 … 했어요?"</b> 하고 이유를 꼬치꼬치 묻는 말을 골라 눌러 주세요. (총 3번 중 ${layerIdx + 1}번째 질문 차례)`;
+        }
+        if (phase === 'report') return `${esc(toBoss)} 돌아왔어요. 보기 중에서 <b>맨 마지막(3번째)에 들은 진짜 원인</b>을 골라 전해 주세요.`;
+        if (phase === 'fix') return `앞으로 똑같은 실수가 반복되지 않도록 <b>방금 알아낸 진짜 원인을 막아 주는 방법</b>을 골라 주세요.`;
+        return `오늘의 상황극을 잘 마치셨어요! 아래 버튼을 눌러 다음 게임으로 넘어가 보세요.`;
+      }
+
+      function renderDetail() {
+        if (detailEl.hidden) return;
+        detailEl.innerHTML = `
+          <div class="wy-detail-head">
+            <span class="wy-detail-title">📖 이번 상황 쉽게 이해하기</span>
+            <button type="button" class="wy-detail-close" id="wyDetailClose">닫기 ✕</button>
+          </div>
+          <div class="wy-detail-sec">
+            <div class="wy-detail-sec-hd">① 어디서 무슨 역할을 하나요?</div>
+            ${roleExplainText()}
+          </div>
+          <div class="wy-detail-sec">
+            <div class="wy-detail-sec-hd">② 무슨 일이 벌어졌나요? (사건의 발단)</div>
+            <div><b>${bossFace} ${esc(bossName)}(시키신 분):</b> "${esc(sc.order)}"</div>
+            <div style="margin-top:6px;"><b>${jrFace} ${esc(jrName)}(물어볼 상대):</b> 처음에 "${esc(sc.open)}" 하고 얼버무렸어요.</div>
+            <div style="margin-top:6px;font-size:16px;color:#92400E;">💡 겉으로 한 변명만 듣고 대충 넘어가면, 나중에 <b>'${esc(sc.pay)}'</b> 같은 큰 손해가 나요!</div>
+          </div>
+          <div class="wy-detail-sec">
+            <div class="wy-detail-sec-hd">③ 지금까지 알아낸 이유 (총 3단계)</div>
+            <div class="wy-detail-step">${layerIdx >= 1 ? `⭕ <b>1번째 대답:</b> "${esc(sc.layers[0].a)}"` : '⬜ <b>1번째 질문:</b> 아직 물어보기 전이에요'}</div>
+            <div class="wy-detail-step">${layerIdx >= 2 ? `⭕ <b>2번째 대답:</b> "${esc(sc.layers[1].a)}"` : '⬜ <b>2번째 질문:</b> 아직 물어보기 전이에요'}</div>
+            <div class="wy-detail-step">${layerIdx >= 3 ? `🎯 <b>3번째 진짜 원인:</b> "${esc(sc.layers[2].a)}"` : '⬜ <b>3번째 진짜 원인:</b> 끝까지 "왜?"를 물으면 나와요'}</div>
+          </div>
+          <div class="wy-detail-sec" style="background:#EEF4FF;border-color:#9EC1FF;">
+            <div class="wy-detail-sec-hd" style="color:#1E56A0;">④ 지금 어떻게 하면 되나요?</div>
+            ${nowActionText()}
+          </div>`;
+        const closeBtn = detailEl.querySelector('#wyDetailClose');
+        if (closeBtn) closeBtn.addEventListener('click', () => toggleDetail(false));
+      }
+
+      function toggleDetail(forceOpen) {
+        const open = typeof forceOpen === 'boolean' ? forceOpen : detailEl.hidden;
+        detailEl.hidden = !open;
+        explainBtn.classList.toggle('open', open);
+        explainBtn.textContent = open ? '📖 상황 설명 접기 ▲' : '📖 상황 자세히 알려주기';
+        if (open) renderDetail();
+      }
+
+      explainBtn.addEventListener('click', () => toggleDetail());
 
       const scroll = () => { chat.scrollTop = chat.scrollHeight; };
       const say = (who, text, mood) => {
@@ -543,10 +640,11 @@
         mySayEl.hidden = true;
       };
       const tip = (html, cls) => { tipEl.innerHTML = html ? `<div class="wy-tip ${cls || ''}">${html}</div>` : ''; };
-      const later = (fn, ms) => setTimeout(fn, ms);
       const penalty = () => Object.keys(PENALTY).reduce((s, k) => s + (tally[k] - tallyAtStart[k]) * PENALTY[k], 0);
 
       function askStep() {
+        phase = 'ask';
+        renderDetail();
         if (foundRoot()) {
           area.innerHTML = `<button class="wy-report pulse" type="button" id="wyRep">📋 ${esc(toBoss)} ${reportWord}러 가기</button>`;
           area.querySelector('#wyRep').addEventListener('click', report);
@@ -573,6 +671,7 @@
           say('jr', layer.a);
           known.push({ fact: layer.fact, no: layer.no });
           layerIdx++;
+          renderDetail();
           if (typeof beep === 'function') beep(660, 0.1);
           tip(foundRoot()
             ? '🔎 진짜 원인이 나왔어요! 보고하러 가요.'
@@ -612,6 +711,7 @@
 
       // 보고: 들은 말 중에서 진짜 원인을 고른다. 겉으로 드러난 이유를 고르면 꾸중을 듣고 다시 고른다.
       function report() {
+        phase = 'report';
         move(`🚶 ${toBoss} 갔어요`);
         stageEl.classList.add('at-boss');
         stageEl.classList.remove('at-jr');
@@ -624,6 +724,7 @@
         dlgTextEl.textContent = `${iGa(jrName)} 왜 그랬는지 알아 왔나요?`;
         lastSpeaker = 'boss';
         tip('');
+        renderDetail();
         chooseReport();
       }
 
@@ -659,6 +760,8 @@
 
       // 원인을 알았으면 앞으로 어떻게 막을지까지
       function askFix() {
+        phase = 'fix';
+        renderDetail();
         const [q, a, wrongs] = sc.fix;
         say('boss', q);
         const opts = shuffleArr([{ t: a, ok: true }, ...wrongs.map(t => ({ t, ok: false }))]);
@@ -675,6 +778,8 @@
           area.innerHTML = '';
           say('me', o.t);
           later(() => {
+            phase = 'done';
+            renderDetail();
             say('boss', sc.closing || '좋아요. "왜?"라고 물어봐 준 덕분에 큰 손해를 막았어요.', 'happy');
             scores.push(Math.max(MIN_SCORE, 100 - penalty()));
             tip(wrongHere === 0 ? '🎉 완벽해요! 끝까지 "왜?"라고 물어서 손해를 막았어요.' : '👏 잘했어요! "왜?"라고 물어서 진짜 원인을 찾았어요.', 'good');
@@ -688,13 +793,47 @@
         }));
       }
 
-      if (sc.owner) move('🏢 내가 사장이고, 직원은 한 명뿐인 회사예요');
-      say('boss', sc.order);
-      later(() => { move(`🚶 ${jrName}에게 갔어요`); say('jr', sc.open); }, 900);
-      later(() => {
+      function enterJrScene() {
+        clearTimers();
+        move(`🚶 ${jrName}에게 갔어요`);
+        say('jr', sc.open);
         if (L <= 2) tip(`🎯 <b>"왜?"</b> 하고 끝까지 물어서 진짜 원인을 알아 오세요.`);
         askStep();
-      }, 1700);
+      }
+
+      function startRoleplay(manualStep) {
+        clearTimers();
+        chat.innerHTML = '';
+        lossEl.innerHTML = '';
+        tip('');
+        area.innerHTML = '';
+        mySayEl.hidden = true;
+        known = [{ fact: sc.openFact[0], no: sc.openFact[1] }];
+        layerIdx = 0;
+        wrongHere = 0;
+        lastSpeaker = 'boss';
+        phase = 'intro';
+        locEl.textContent = `🏢 ${bossName} 말씀`;
+        if (sc.owner) move('🏢 내가 사장이고, 직원은 한 명뿐인 회사예요');
+        say('boss', sc.order);
+        renderDetail();
+        if (manualStep) {
+          tip(`🎬 <b>상황극 1장면:</b> ${esc(bossName)}의 말씀을 천천히 읽으신 뒤 아래 버튼을 눌러 주세요.`);
+          area.innerHTML = `<div class="wy-ask">먼저 ${esc(bossName)}이 무슨 일로 부르셨는지 읽어 보세요.</div>
+            <button class="wy-report pulse" type="button" id="wyGoJr">🚶 ${esc(jrName)}에게 가서 물어보기 →</button>`;
+          area.querySelector('#wyGoJr').addEventListener('click', enterJrScene);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+          later(() => { move(`🚶 ${jrName}에게 갔어요`); say('jr', sc.open); }, 900);
+          later(() => {
+            if (L <= 2) tip(`🎯 <b>"왜?"</b> 하고 끝까지 물어서 진짜 원인을 알아 오세요.`);
+            askStep();
+          }, 1700);
+        }
+      }
+
+      restartBtn.addEventListener('click', () => startRoleplay(true));
+      startRoleplay(false);
     }
 
     function finish() {
