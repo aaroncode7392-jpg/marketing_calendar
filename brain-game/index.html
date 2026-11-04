@@ -1502,9 +1502,10 @@ let session=null;
 function buildStages(){
   const lv=d=>domainLevel(d);
   const lv2=d=>Math.min(MAX_DOMAIN_LEVEL,domainLevel(d)+1);
+  const wp=(window.TRAIN && TRAIN.pickStageMeta) ? TRAIN.pickStageMeta() : {type:'why', label:'💼 원인 알아 오기', domain:'reason'};
   return [
     {type:'speed', label:'⚡ 순간 포착', domain:'speed', lv:lv2('speed')},
-    {type:'why',   label:'💼 원인 알아 오기', domain:'reason'},
+    {type:wp.type, label:wp.label, domain:'reason', guide:wp.guide, mode:wp.mode},
     {type:'memory',label:'🃏 짝 맞추기', domain:'memory',lv:lv2('memory')},
     {type:'math',  label:'🔢 빠른 셈',   domain:'math',  lv:lv2('math')},
     {type:'clean', label:'🧹 청소 심부름', domain:'reason'},
@@ -1541,6 +1542,7 @@ function onGameDone(score100, durationSec = null){
 const STAGE_GUIDE={
   speed:'잠깐 보인 그림의 자리를 기억해서 눌러요',
   why:'후배에게 "왜?"라고 물어서 원인을 알아 와요',
+  train:'선배에게 배운 순서를 기억해 맞을 때까지 해 보고, 다음 날 후배에게 가르쳐 줘요',
   memory:'같은 그림 카드 두 장을 찾아요',
   math:'계산 문제를 풀어요',
   clean:'선생님 말씀을 외워서 순서대로 청소해요',
@@ -1556,7 +1558,7 @@ function courseNextHtml(next,idx){
   return `<div class="trans-next">
     <div class="course-next-title">${idx===0?'첫 번째 게임은 이거예요':'다음 게임은 이거예요'}</div>
     <div class="course-next-name">${next.label}</div>
-    <div class="course-next-guide">${STAGE_GUIDE[next.type]||''}</div>
+    <div class="course-next-guide">${next.guide||STAGE_GUIDE[next.type]||''}</div>
     <div class="course-go">${idx===0?'아래 버튼을 누르면 시작해요.':'오늘은 아직 끝나지 않았어요.<br>아래 버튼을 눌러 다음 게임으로 넘어가요.'}</div>
   </div>`;
 }
@@ -1742,7 +1744,7 @@ function showTransition(prevStage, prevScore, isFirst){
     `<div style="font-family:'Jua';font-size:21px;color:var(--ink-soft);margin-bottom:6px;">${prevStage.label} 끝!</div>
      <div style="font-family:'Jua';font-size:56px;color:${scoreColor(prevScore)};line-height:1.1;">${prevScore}점</div>
      <div class="course-status">${courseStatusText(idx,total)}</div>`;
-  const colorMap={speed:'#E8633F',memory:'#1E8E7B',seq:'#D9952A',math:'#8A5BA2',mathhard:'#6B4A9E',typing:'#D45C89',why:'#3F6FB5',clean:'#2FA28E'};
+  const colorMap={speed:'#E8633F',memory:'#1E8E7B',seq:'#D9952A',math:'#8A5BA2',mathhard:'#6B4A9E',typing:'#D45C89',why:'#3F6FB5',train:'#D35400',clean:'#2FA28E'};
   const v=el(`
     <div class="fade">
       <div class="panel" style="text-align:center;padding:26px 20px;">
@@ -1774,6 +1776,7 @@ function runGame(stage, onDone){
   else if(stage.type==='mathhard') playMathHard({qs:5, onDone});
   else if(stage.type==='typing') playTyping({onDone});
   else if(stage.type==='why') { if(window.WHY) WHY.play({onDone}); else playSeq({lv:domainLevel('seq'), mode:'color', onDone}); }
+  else if(stage.type==='train') { if(window.TRAIN) TRAIN.play({onDone, mode:stage.mode}); else if(window.WHY) WHY.play({onDone}); else playSeq({lv:domainLevel('seq'), mode:'color', onDone}); }
   else if(stage.type==='clean') { if(window.CLEAN) CLEAN.play({onDone}); else playSeq({lv:domainLevel('seq'), mode:'object', onDone}); }
 }
 function stageBar(){
@@ -4231,7 +4234,9 @@ async function renderHome(isNew=false){
           <button class="btn btn-ghost practice-btn" data-type="mathhard" style="margin:0;font-size:13px;padding:12px 4px;line-height:1.5;">🧮<br>심화계산</button>
           <button class="btn btn-ghost practice-btn" data-type="typing" style="margin:0;font-size:13px;padding:12px 4px;line-height:1.5;">✍️<br>명언쓰기</button>
           <button class="btn btn-ghost practice-btn" data-type="clean" style="margin:0;font-size:13px;padding:12px 4px;line-height:1.5;grid-column:1/-1;">🧹 청소 심부름 (말씀 외워서 순서대로)</button>
-          <button class="btn btn-ghost practice-btn" data-type="why" style="margin:0;font-size:13px;padding:12px 4px;line-height:1.5;grid-column:1/-1;">💼 원인 알아 오기 ("왜?"라고 끝까지 물어보기)</button>
+          <button class="btn btn-ghost practice-btn" data-type="why" style="margin:0;font-size:13px;padding:12px 4px;line-height:1.5;grid-column:1/-1;">💼 왜라고 질문하기 ("왜?"라고 끝까지 물어보기)</button>
+          <button class="btn btn-ghost practice-btn" data-type="train-learn" style="margin:0;font-size:13px;padding:12px 4px;line-height:1.5;grid-column:1/-1;">👩‍🍳 선배에게 일 배우기 (레시피·응대 순서 외워서 하기)</button>
+          <button class="btn btn-ghost practice-btn" data-type="train-teach" style="margin:0;font-size:13px;padding:12px 4px;line-height:1.5;grid-column:1/-1;">👩‍🏫 후배에게 교육 시키기 (배운 순서 알려주고 검토받기)</button>
         </div>
       </div>
       <button class="btn btn-ghost" id="myCardsBtn" style="font-size:18px;">📚 라이브러리</button>
@@ -4272,9 +4277,12 @@ function playPractice(type){ setRandomBackground();
   else if(type==='typing') playTyping({onDone});
   else if(type==='clean' && window.CLEAN) CLEAN.play({onDone});
   else if(type==='why' && window.WHY) WHY.play({onDone});
+  else if(type==='train' && window.TRAIN) TRAIN.play({onDone});
+  else if(type==='train-learn' && window.TRAIN) TRAIN.play({onDone, mode:'learn'});
+  else if(type==='train-teach' && window.TRAIN) TRAIN.play({onDone, mode:'teach'});
 }
 function showPracticeResult(type,score){
-  const labels={speed:'⚡ 순간 포착',seq:'🎵 순서 기억',math:'🔢 빠른 셈',memory:'🃏 짝 맞추기',mathhard:'🧮 심화 계산',typing:'✍️ 명언 따라쓰기',clean:'🧹 청소 심부름',why:'💼 원인 알아 오기'};
+  const labels={speed:'⚡ 순간 포착',seq:'🎵 순서 기억',math:'🔢 빠른 셈',memory:'🃏 짝 맞추기',mathhard:'🧮 심화 계산',typing:'✍️ 명언 따라쓰기',clean:'🧹 청소 심부름',why:'💼 왜라고 질문하기',train:'👩‍🍳 선배·후배 교육', 'train-learn':'👩‍🍳 선배에게 일 배우기', 'train-teach':'👩‍🏫 후배에게 교육 시키기'};
   const noScore=(type==='seq');
   clear();
   const v=el(`
@@ -4739,6 +4747,7 @@ async function renderMemberDetail(member){
   if(window.GLASS) GLASS.injectAdminPanel(v, member);
   if(window.CLEAN) CLEAN.injectAdminPanel(v, member);
   if(window.WHY) WHY.injectAdminPanel(v, member);
+  if(window.TRAIN) TRAIN.injectAdminPanel(v, member);
   v.querySelector('#back').addEventListener('click',renderAdminDashboard);
   v.querySelector('#back2').addEventListener('click',renderAdminDashboard);
 }
@@ -4809,6 +4818,7 @@ function clearBackground() {
 <script src="video.js?v=2"></script>
 <script src="clean.js?v=6"></script>
 <script src="why.js?v=10"></script>
+<script src="train.js?v=1"></script>
 <script src="news.js?v=11"></script>
 </body>
 </html>
