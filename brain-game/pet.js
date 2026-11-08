@@ -224,38 +224,56 @@
 
   function parseWeatherState(brief, previewPreset) {
     if (previewPreset) {
+      if (previewPreset === 'drizzle') {
+        return { season: getCurrentSeason(), isChristmas: false, isRain: true, isDrizzle: true, isSnow: false, isCold: false, isHot: false, isNight: false, outfit: 'short', hasUmbrella: true, badge: '🌦️ 이슬비 · 우산 산책', line: '🌦️ 촉촉한 이슬비가 내려서 우산을 챙겨 들고 산책해요!' };
+      }
       if (previewPreset === 'rain') {
-        return { season: getCurrentSeason(), isRain: true, isSnow: false, isCold: false, isHot: false, isNight: false, outfit: 'short', hasUmbrella: true, badge: '☂️ 비 · 우산 산책', line: '☂️ 비가 내려서 두 분 다 우산을 챙겨 들고 산책 중이에요!' };
+        return { season: getCurrentSeason(), isChristmas: false, isRain: true, isDrizzle: false, isSnow: false, isCold: false, isHot: false, isNight: false, outfit: 'short', hasUmbrella: true, badge: '☂️ 비 · 우산 산책', line: '☂️ 비가 내려서 두 분 다 우산을 챙겨 들고 산책 중이에요!' };
       }
       if (previewPreset === 'cold') {
-        return { season: 'winter', isChristmas: true, isRain: false, isSnow: false, isCold: true, isHot: false, isNight: false, outfit: 'coat', hasUmbrella: false, badge: '🎄 추위 · 코트와 목도리', line: '🎄 크리스마스 겨울 광장! 날씨가 쌀쌀해서 따뜻한 코트와 목도리를 두르고 산책해요!' };
+        return { season: 'winter', isChristmas: true, isRain: false, isDrizzle: false, isSnow: false, isCold: true, isHot: false, isNight: false, outfit: 'coat', hasUmbrella: false, badge: '🎄 추위 · 코트와 목도리', line: '🎄 크리스마스 겨울 광장! 날씨가 쌀쌀해서 따뜻한 코트와 목도리를 두르고 산책해요!' };
       }
       if (previewPreset === 'snow') {
-        return { season: 'winter', isChristmas: true, isRain: false, isSnow: true, isCold: true, isHot: false, isNight: false, outfit: 'pad', hasUmbrella: true, badge: '🎄 눈 · 우산과 패딩', line: '🎄 화이트 크리스마스! 함박눈이 내려서 패딩을 입고 우산을 쓰고 걸어요!' };
+        return { season: 'winter', isChristmas: true, isRain: false, isDrizzle: false, isSnow: true, isCold: true, isHot: false, isNight: false, outfit: 'pad', hasUmbrella: true, badge: '🎄 눈 · 우산과 패딩', line: '🎄 화이트 크리스마스! 함박눈이 내려서 패딩을 입고 우산을 쓰고 걸어요!' };
       }
       if (previewPreset === 'hot') {
-        return { season: 'summer', isChristmas: false, isRain: false, isSnow: false, isCold: false, isHot: true, isNight: false, outfit: 'short', hasUmbrella: false, badge: '☀️ 더움 · 시원한 반팔', line: '☀️ 햇살이 따뜻한 날이라 시원한 반팔 차림으로 산책 중이에요!' };
+        return { season: 'summer', isChristmas: false, isRain: false, isDrizzle: false, isSnow: false, isCold: false, isHot: true, isNight: false, outfit: 'short', hasUmbrella: false, badge: '☀️ 더움 · 시원한 반팔', line: '☀️ 햇살이 따뜻한 날이라 시원한 반팔 차림으로 산책 중이에요!' };
       }
       if (previewPreset === 'spring') {
-        return { season: 'spring', isChristmas: false, isRain: false, isSnow: false, isCold: false, isHot: false, isNight: false, outfit: 'short', hasUmbrella: false, badge: '🌸 봄꽃 공원 · 반팔', line: '🌸 벚꽃이 살랑살랑 흩날리는 봄날 공원을 함께 걸어요!' };
+        return { season: 'spring', isChristmas: false, isRain: false, isDrizzle: false, isSnow: false, isCold: false, isHot: false, isNight: false, outfit: 'short', hasUmbrella: false, badge: '🌸 봄꽃 공원 · 반팔', line: '🌸 벚꽃이 살랑살랑 흩날리는 봄날 공원을 함께 걸어요!' };
       }
     }
 
     const hour = new Date().getHours();
     const isNight = brief && brief.isDay !== undefined ? !brief.isDay : (hour >= 19 || hour < 6);
-    const code = brief && Number.isFinite(brief.code) ? brief.code : 0;
+    const rawCode = brief && Number.isFinite(brief.code) ? brief.code : 0;
+    const dailyCode = brief && Number.isFinite(brief.dailyCode) ? brief.dailyCode : rawCode;
+    const currentCode = brief && Number.isFinite(brief.currentCode) ? brief.currentCode : rawCode;
     const temp = brief && Number.isFinite(brief.temp) ? brief.temp : 16;
 
-    const isRain = [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99].includes(code);
-    const isSnow = [71, 73, 75, 77, 85, 86].includes(code);
+    // 상단 날씨 헤드라인 텍스트("🌦️ 오늘 서울은 이슬비가 내려요" 등)도 함께 파싱하여 맵 날씨와 100% 일치시킴!
+    let titleText = (brief && typeof brief.title === 'string') ? brief.title : '';
+    if (!titleText && typeof document !== 'undefined') {
+      const helloEl = document.querySelector('.hero .hello');
+      if (helloEl && helloEl.textContent) titleText = helloEl.textContent;
+    }
+
+    const DRIZZLE_CODES = [51, 53, 55, 56, 57];
+    const RAIN_CODES = [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99];
+    const SNOW_CODES = [71, 73, 75, 77, 85, 86];
+
+    const isDrizzle = DRIZZLE_CODES.includes(rawCode) || DRIZZLE_CODES.includes(dailyCode) || DRIZZLE_CODES.includes(currentCode) || /이슬비|안개비|가랑비/.test(titleText);
+    const isSnow = SNOW_CODES.includes(rawCode) || SNOW_CODES.includes(dailyCode) || SNOW_CODES.includes(currentCode) || /눈이|싸락눈|폭설|함박눈/.test(titleText);
+    const isRain = !isSnow && (isDrizzle || RAIN_CODES.includes(rawCode) || RAIN_CODES.includes(dailyCode) || RAIN_CODES.includes(currentCode) || /비|소나기|천둥|번개/.test(titleText));
     const isCold = !isSnow && temp <= 10;
     const isHot = temp >= 23;
 
     let season = getCurrentSeason();
-    if (isSnow || isCold || temp <= 10) season = 'winter';
+    if (isSnow || (!isRain && (isCold || temp <= 10))) season = 'winter';
     else if (isHot) season = 'summer';
 
-    const isChristmas = Boolean(isSnow || isCold || season === 'winter');
+    // 이슬비·비가 내릴 때는 눈 덮인 크리스마스 배경 대신 비/이슬비 맵이 표현되도록 함!
+    const isChristmas = Boolean(!isRain && (isSnow || isCold || season === 'winter'));
 
     let outfit = 'short';
     if (isSnow) outfit = 'pad';
@@ -269,9 +287,15 @@
     if (isSnow) {
       badge = `🎄 눈 (${temp}°) · 패딩과 우산`;
       line = '🎄 화이트 크리스마스! 따뜻한 패딩에 우산을 챙겨 들고 산책해요!';
+    } else if (isDrizzle && isCold) {
+      badge = `🌦️ 이슬비 (${temp}°) · 코트와 우산`;
+      line = '🌦️ 쌀쌀한 이슬비가 촉촉하게 내려요! 코트와 목도리, 우산을 챙겼어요 😊';
+    } else if (isDrizzle) {
+      badge = `🌦️ 이슬비 (${temp}°) · 우산 산책`;
+      line = '🌦️ 오늘 서울에 촉촉한 이슬비가 내려요! 우산을 쓰고 산책해요 😊';
     } else if (isRain && isCold) {
-      badge = `🎄 찬비 (${temp}°) · 코트와 우산`;
-      line = '🎄 쌀쌀한 겨울비 소식에 코트와 목도리, 우산까지 따뜻하게 챙겼어요!';
+      badge = `☂️ 찬비 (${temp}°) · 코트와 우산`;
+      line = '☂️ 쌀쌀한 비 소식에 코트와 목도리, 우산까지 따뜻하게 챙겼어요!';
     } else if (isRain) {
       badge = `☂️ 비 (${temp}°) · 우산 산책`;
       line = '☂️ 오늘은 비 소식이 있어요! 외출하실 때 우산 꼭 챙기세요 😊';
@@ -286,7 +310,7 @@
       badge = `${seasonKor} ${temp}° · 산책 광장`;
     }
 
-    return { season, isChristmas, isNight, isRain, isSnow, isCold, isHot, outfit, hasUmbrella, badge, line, temp };
+    return { season, isChristmas, isNight, isRain, isDrizzle, isSnow, isCold, isHot, outfit, hasUmbrella, badge, line, temp };
   }
 
   function normAngle(a) {
@@ -300,21 +324,31 @@
   }
 
   // ==========================================================
-  // 계절(봄·여름·가을·겨울 크리스마스) & 날씨(맑음·비·눈·추위·밤) 배경 공간 렌더러
+  // 계절(봄·여름·가을·겨울 크리스마스) & 날씨(맑음·이슬비·비·눈·추위·밤) 배경 공간 렌더러
   // ==========================================================
   function drawSceneryBackground(ctx, t, wx, bgParticles, ripples) {
     const W = 580, H = 430;
     const horizonY = 252;
-    const isXmas = Boolean(wx.isChristmas || wx.isSnow || wx.isCold || wx.season === 'winter');
+    // 비·이슬비가 내릴 때는 크리스마스 눈 배경 대신 비/이슬비 맵이 표현되도록 함!
+    const isXmas = Boolean(!wx.isRain && (wx.isChristmas || wx.isSnow));
 
     // 1. 하늘 그라데이션
     const skyGrad = ctx.createLinearGradient(0, 0, 0, horizonY);
-    if (wx.isNight) {
+    if (wx.isNight && !wx.isRain) {
       skyGrad.addColorStop(0, '#0F172A');
       skyGrad.addColorStop(1, '#1E3A5F');
-    } else if (wx.isRain && !isXmas) {
-      skyGrad.addColorStop(0, '#475569');
-      skyGrad.addColorStop(1, '#94A3B8');
+    } else if (wx.isRain) {
+      if (wx.isDrizzle) {
+        // 이슬비 내리는 촉촉한 안개빛 하늘
+        skyGrad.addColorStop(0, '#475569');
+        skyGrad.addColorStop(0.55, '#64748B');
+        skyGrad.addColorStop(1, '#CBD5E1');
+      } else {
+        // 비 내리는 비구름 하늘
+        skyGrad.addColorStop(0, '#334155');
+        skyGrad.addColorStop(0.55, '#64748B');
+        skyGrad.addColorStop(1, '#94A3B8');
+      }
     } else if (isXmas) {
       if (wx.isSnow) {
         // 눈 오는 화이트 크리스마스 하늘
@@ -343,7 +377,7 @@
     ctx.fillStyle = skyGrad;
     ctx.fillRect(0, 0, W, horizonY + 10);
 
-    // 크리스마스 하늘 반짝이는 황금 별빛 & 산타 루돌프 썰매
+    // 크리스마스 하늘 반짝이는 황금 별빛
     if (isXmas) {
       ctx.save();
       const stars = [
@@ -368,7 +402,7 @@
 
     // 2. 해 / 달 / 구름
     ctx.save();
-    if (wx.isNight || (isXmas && !wx.isSnow)) {
+    if ((wx.isNight && !wx.isRain) || (isXmas && !wx.isSnow)) {
       ctx.fillStyle = '#FEF08A';
       ctx.shadowColor = '#FEF08A';
       ctx.shadowBlur = 20;
@@ -388,7 +422,7 @@
     }
 
     const cloudColor = wx.isRain
-      ? 'rgba(100, 116, 139, 0.82)'
+      ? 'rgba(71, 85, 105, 0.86)'
       : wx.isNight
         ? 'rgba(148, 163, 184, 0.25)'
         : isXmas
@@ -396,9 +430,9 @@
           : 'rgba(255, 255, 255, 0.82)';
     ctx.fillStyle = cloudColor;
     [
-      { baseX: 110, y: 88, s: 1.0, spd: 4 },
-      { baseX: 340, y: 72, s: 0.85, spd: 3 },
-      { baseX: 470, y: 105, s: 0.75, spd: 5 },
+      { baseX: 95, y: 84, s: 1.05, spd: 4 },
+      { baseX: 280, y: 68, s: 0.92, spd: 3 },
+      { baseX: 455, y: 96, s: 0.88, spd: 5 },
     ].forEach((cl) => {
       const cx = ((cl.baseX + t * cl.spd) % (W + 120)) - 60;
       ctx.save();
@@ -414,7 +448,7 @@
     });
     ctx.restore();
 
-    // 3. 원경 산자락 & 언덕 (계절별 색상)
+    // 3. 원경 산자락 & 언덕 (계절 및 비/이슬비 색상)
     ctx.save();
     let farHillColor = '#86EFAC';
     let nearHillColor = '#4ADE80';
@@ -422,7 +456,13 @@
     let lawnBotColor = '#4ADE80';
     let pathColor = '#E2E8F0';
 
-    if (isXmas) {
+    if (wx.isRain) {
+      farHillColor = '#64748B';
+      nearHillColor = '#34D399';
+      lawnTopColor = '#6EE7B7';
+      lawnBotColor = '#10B981';
+      pathColor = '#94A3B8';
+    } else if (isXmas) {
       farHillColor = '#CBD5E1';
       nearHillColor = '#E2E8F0';
       lawnTopColor = '#F8FAFC';
@@ -440,12 +480,6 @@
       lawnTopColor = '#A7F3D0';
       lawnBotColor = '#34D399';
       pathColor = '#FDF2F8';
-    } else if (wx.isRain) {
-      farHillColor = '#64748B';
-      nearHillColor = '#6EE7B7';
-      lawnTopColor = '#6EE7B7';
-      lawnBotColor = '#34D399';
-      pathColor = '#94A3B8';
     } else {
       farHillColor = '#4ADE80';
       nearHillColor = '#22C55E';
@@ -480,12 +514,36 @@
     ctx.fillStyle = lawnGrad;
     ctx.fillRect(0, horizonY + 6, W, H - horizonY);
 
+    // 이슬비 내릴 때 지평선 위로 은은하게 깔리는 촉촉한 물안개 레이어
+    if (wx.isRain) {
+      const mistGrad = ctx.createLinearGradient(0, horizonY - 24, 0, horizonY + 26);
+      mistGrad.addColorStop(0, 'rgba(226, 232, 240, 0)');
+      mistGrad.addColorStop(0.5, wx.isDrizzle ? 'rgba(226, 232, 240, 0.42)' : 'rgba(203, 213, 225, 0.28)');
+      mistGrad.addColorStop(1, 'rgba(226, 232, 240, 0)');
+      ctx.fillStyle = mistGrad;
+      ctx.fillRect(0, horizonY - 24, W, 50);
+    }
+
     ctx.fillStyle = pathColor;
-    ctx.globalAlpha = wx.isRain ? 0.55 : 0.72;
+    ctx.globalAlpha = wx.isRain ? 0.65 : 0.72;
     ctx.beginPath();
     ctx.ellipse(290, 384, 248, 38, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
+
+    // 비/이슬비 내릴 때 광장 바닥에 반짝이는 물웅덩이(Puddles)
+    if (wx.isRain) {
+      ctx.fillStyle = 'rgba(125, 211, 252, 0.35)';
+      [
+        { px: 165, py: 382, rx: 38, ry: 9 },
+        { px: 295, py: 392, rx: 46, ry: 11 },
+        { px: 415, py: 378, rx: 34, ry: 8 },
+      ].forEach((pd) => {
+        ctx.beginPath();
+        ctx.ellipse(pd.px, pd.py, pd.rx, pd.ry, 0, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
     ctx.restore();
 
     // 4. 계절별 나무 (겨울/눈/추위는 화려한 크리스마스 트리!) & 공원 기구 배치
@@ -508,19 +566,19 @@
       drawSnowman(ctx, 290, 276, t);
     }
 
-    // 비 오는 날 바닥 물웅덩이 파장(Ripples)
+    // 비·이슬비 오는 날 바닥 물웅덩이 파장(Ripples)
     if (wx.isRain && ripples) {
       ctx.save();
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = wx.isDrizzle ? 1.4 : 1.7;
       for (const rp of ripples) {
-        rp.r += 0.45;
+        rp.r += wx.isDrizzle ? 0.38 : 0.48;
         if (rp.r > 22) {
           rp.r = 2;
-          rp.x = 90 + Math.random() * 400;
-          rp.y = 355 + Math.random() * 55;
+          rp.x = 95 + Math.random() * 390;
+          rp.y = 356 + Math.random() * 52;
         }
-        const alpha = Math.max(0, 1 - rp.r / 22) * 0.65;
-        ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+        const alpha = Math.max(0, 1 - rp.r / 22) * 0.72;
+        ctx.strokeStyle = `rgba(224, 242, 254, ${alpha})`;
         ctx.beginPath();
         ctx.ellipse(rp.x, rp.y, rp.r, rp.r * 0.32, 0, 0, Math.PI * 2);
         ctx.stroke();
@@ -528,18 +586,31 @@
       ctx.restore();
     }
 
-    // 5. 계절·날씨 하늘 입자
+    // 5. 계절·날씨 하늘 입자 (이슬비 / 비 / 눈 / 꽃잎 / 단풍잎)
     ctx.save();
     if (wx.isRain) {
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.62)';
-      ctx.lineWidth = 2.0;
-      for (const p of bgParticles) {
-        p.y = (p.y + p.v * 3.8) % H;
-        p.x = (p.x - 1.1 + W) % W;
+      ctx.strokeStyle = wx.isDrizzle ? 'rgba(224, 242, 254, 0.74)' : 'rgba(255, 255, 255, 0.68)';
+      ctx.lineWidth = wx.isDrizzle ? 1.45 : 2.1;
+      ctx.lineCap = 'round';
+      for (let i = 0; i < bgParticles.length; i++) {
+        const p = bgParticles[i];
+        p.y = (p.y + p.v * (wx.isDrizzle ? 2.9 : 3.9)) % H;
+        p.x = (p.x - (wx.isDrizzle ? 0.75 : 1.15) + W) % W;
+        const dropLen = wx.isDrizzle ? 10 : 16;
+        const dropDx = wx.isDrizzle ? -2.4 : -4.2;
         ctx.beginPath();
         ctx.moveTo(p.x, p.y);
-        ctx.lineTo(p.x - 4, p.y + 15);
+        ctx.lineTo(p.x + dropDx, p.y + dropLen);
         ctx.stroke();
+        // 이슬비는 촘촘하고 잔잔한 안개비 줄기를 한 겹 더 표현!
+        if (wx.isDrizzle) {
+          const px2 = (p.x + 145) % W;
+          const py2 = (p.y + 95) % H;
+          ctx.beginPath();
+          ctx.moveTo(px2, py2);
+          ctx.lineTo(px2 - 2.0, py2 + 8.5);
+          ctx.stroke();
+        }
       }
     } else if (wx.isSnow) {
       // 눈 오는 크리스마스: 함박눈 + 반짝이는 골드 스파클
@@ -815,7 +886,7 @@
 
   // 왼쪽 턱걸이 운동기구 (철봉: 성인용 높은 바 + 미니 머털이용 낮은 바)
   function drawPullupBarStation(ctx, x, y, wx, t = 0) {
-    const isXmas = Boolean(wx.isChristmas || wx.isSnow || wx.isCold || wx.season === 'winter');
+    const isXmas = Boolean(!wx.isRain && (wx.isChristmas || wx.isSnow));
     ctx.save();
     ctx.translate(x, y);
 
@@ -882,7 +953,7 @@
 
   // 오른쪽 공원 원목 의자/벤치 & 가로등
   function drawParkChairStation(ctx, x, y, wx, t = 0) {
-    const isXmas = Boolean(wx.isChristmas || wx.isSnow || wx.isCold || wx.season === 'winter');
+    const isXmas = Boolean(!wx.isRain && (wx.isChristmas || wx.isSnow));
     ctx.save();
     ctx.translate(x, y);
 
@@ -1141,7 +1212,192 @@
     ctx.restore();
   }
 
-  // 서로 게임 중일 때 캐릭터가 휴대용 3D 두뇌게임기를 들고 집중해서 플레이하는 모션!
+  // ==========================================================
+  // 턱걸이(pullup) 및 게임중(gaming) 전용: PNG 원본의 아래쪽 팔이 중복 출력(팔 4개 현상)되지 않도록
+  // 3D Mii 헤드만 크롭하고 몸통·바지·신발을 깔끔한 3D 도형으로 렌더링하여 팔이 정확히 2개만 보이게 하는 헬퍼!
+  // ==========================================================
+  function drawMiiHeadAndArmlessBody(ctx, charId, fallbackImg, pH, outfit, hasCrown, t, isMini = false) {
+    const isFather = charId === '610708';
+    const isMutul = charId === 'mutul';
+    // 610708_short_front에는 왼손 검지 포즈가 턱 근처에 있으므로 헤드 크롭 시에는 손이 아래에 있는 pad/coat 스프라이트 우선 사용!
+    const headImg = isFather
+      ? (loadedSprites['610708_pad_front'] || loadedSprites['610708_coat_front'] || fallbackImg)
+      : isMutul
+        ? (loadedSprites['mutul_front'] || fallbackImg)
+        : (loadedSprites['691105_coat_front'] || loadedSprites['691105_pad_front'] || fallbackImg);
+
+    const headRatio = isMutul ? 0.565 : (isFather ? 0.472 : 0.482);
+    const footY = isMini ? 4 : 6;
+    const topY = footY - pH;
+    const neckY = topY + pH * headRatio;
+    const bodyH = footY - neckY;
+    const hipY = neckY + bodyH * 0.52;
+    const u = pH / 200;
+
+    ctx.save();
+    // 1) 다리(바지/반바지) & 신발
+    const legX = 8.5 * u;
+    const legW = 12 * u;
+    const legTopY = hipY - 2 * u;
+    const shoeY = footY - 4.5 * u;
+
+    [-legX, legX].forEach((lx) => {
+      if (isFather && outfit === 'short') {
+        // 카키 반바지 + 종아리
+        ctx.fillStyle = '#C2B280';
+        ctx.beginPath();
+        ctx.roundRect(lx - legW / 2, legTopY, legW, bodyH * 0.24, 3 * u);
+        ctx.fill();
+        ctx.fillStyle = '#FDBA8C';
+        ctx.beginPath();
+        ctx.roundRect(lx - legW * 0.42, legTopY + bodyH * 0.2, legW * 0.84, shoeY - (legTopY + bodyH * 0.2), 2.5 * u);
+        ctx.fill();
+      } else {
+        // 긴바지 (아버지/머털이: 네이비 차콜, 어머니: 데님 청바지)
+        ctx.fillStyle = (!isFather && !isMutul) ? '#3B6E9C' : '#1E293B';
+        ctx.beginPath();
+        ctx.roundRect(lx - legW / 2, legTopY, legW, shoeY - legTopY + 2 * u, 3.5 * u);
+        ctx.fill();
+      }
+      // 신발
+      ctx.fillStyle = (!isFather && !isMutul) ? '#64748B' : '#334155';
+      ctx.strokeStyle = '#F8FAFC';
+      ctx.lineWidth = 1.2 * u;
+      ctx.beginPath();
+      ctx.ellipse(lx, shoeY, 6.8 * u, 4.2 * u, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    });
+
+    // 2) 팔 없는 깔끔한 3D 몸통 (복장별 렌더링)
+    const torsoTopY = neckY - 3 * u;
+    const torsoBotY = (outfit === 'coat' && !isMutul) ? (hipY + bodyH * 0.16) : (hipY + 3 * u);
+    const torsoH = torsoBotY - torsoTopY;
+    const torsoW = (outfit === 'coat' || outfit === 'pad') && !isMutul ? 40 * u : 35 * u;
+
+    if (isMutul) {
+      // 미니 머털도사 전통 조끼/도포 몸통 + 주황색 동정 깃
+      ctx.fillStyle = '#334155';
+      ctx.beginPath();
+      ctx.roundRect(-torsoW / 2, torsoTopY, torsoW, torsoH, [8 * u, 8 * u, 4 * u, 4 * u]);
+      ctx.fill();
+      ctx.strokeStyle = '#F97316';
+      ctx.lineWidth = 5 * u;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-8 * u, torsoTopY + 3 * u);
+      ctx.lineTo(5 * u, torsoTopY + torsoH * 0.55);
+      ctx.moveTo(8 * u, torsoTopY + 3 * u);
+      ctx.lineTo(-9 * u, torsoTopY + torsoH * 0.72);
+      ctx.stroke();
+    } else if (outfit === 'coat') {
+      // 겨울 코트 + 따뜻한 목도리
+      const cGrad = ctx.createLinearGradient(0, torsoTopY, 0, torsoBotY);
+      cGrad.addColorStop(0, isFather ? '#B47B48' : '#F3E8D6');
+      cGrad.addColorStop(1, isFather ? '#8C5A2B' : '#D6C4B0');
+      ctx.fillStyle = cGrad;
+      ctx.beginPath();
+      ctx.roundRect(-torsoW / 2, torsoTopY, torsoW, torsoH, [9 * u, 9 * u, 4 * u, 4 * u]);
+      ctx.fill();
+      // 코트 단추
+      ctx.fillStyle = '#451A03';
+      ctx.beginPath();
+      ctx.arc(0, torsoTopY + torsoH * 0.52, 2.2 * u, 0, Math.PI * 2);
+      ctx.arc(0, torsoTopY + torsoH * 0.72, 2.2 * u, 0, Math.PI * 2);
+      ctx.fill();
+      // 목도리
+      ctx.fillStyle = isFather ? '#DC2626' : '#F87171';
+      ctx.beginPath();
+      ctx.roundRect(-torsoW * 0.48, torsoTopY + 1 * u, torsoW * 0.96, 10 * u, 5 * u);
+      ctx.roundRect(1 * u, torsoTopY + 7 * u, 9 * u, 16 * u, 3 * u);
+      ctx.fill();
+    } else if (outfit === 'pad') {
+      // 겨울 패딩 점퍼 (퀼팅 스티치)
+      const pGrad = ctx.createLinearGradient(0, torsoTopY, 0, torsoBotY);
+      if (isFather) {
+        pGrad.addColorStop(0, '#1E3A5F');
+        pGrad.addColorStop(1, '#0F2342');
+      } else {
+        pGrad.addColorStop(0, '#F4B8C4');
+        pGrad.addColorStop(0.42, '#F4B8C4');
+        pGrad.addColorStop(0.43, '#F5EFE6');
+        pGrad.addColorStop(1, '#E5DCCB');
+      }
+      ctx.fillStyle = pGrad;
+      ctx.beginPath();
+      ctx.roundRect(-torsoW / 2, torsoTopY, torsoW, torsoH, [10 * u, 10 * u, 5 * u, 5 * u]);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(15, 23, 42, 0.25)';
+      ctx.lineWidth = 1.2 * u;
+      ctx.beginPath();
+      ctx.moveTo(-torsoW * 0.46, torsoTopY + torsoH * 0.36);
+      ctx.lineTo(torsoW * 0.46, torsoTopY + torsoH * 0.36);
+      ctx.moveTo(-torsoW * 0.46, torsoTopY + torsoH * 0.68);
+      ctx.lineTo(torsoW * 0.46, torsoTopY + torsoH * 0.68);
+      ctx.moveTo(0, torsoTopY + 2 * u);
+      ctx.lineTo(0, torsoBotY);
+      ctx.stroke();
+    } else {
+      // 반팔 티셔츠 (아버지: 차콜 블랙 + X 로고, 어머니: 스트라이프 + 꽃 브로치)
+      if (isFather) {
+        ctx.fillStyle = '#1E293B';
+        ctx.beginPath();
+        ctx.roundRect(-torsoW / 2, torsoTopY, torsoW, torsoH, [8 * u, 8 * u, 3 * u, 3 * u]);
+        ctx.fill();
+        ctx.strokeStyle = '#F8FAFC';
+        ctx.lineWidth = 2.2 * u;
+        ctx.beginPath();
+        ctx.moveTo(-7 * u, torsoTopY + 10 * u);
+        ctx.lineTo(7 * u, torsoTopY + 24 * u);
+        ctx.moveTo(7 * u, torsoTopY + 10 * u);
+        ctx.lineTo(-7 * u, torsoTopY + 24 * u);
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = '#F8FAFC';
+        ctx.beginPath();
+        ctx.roundRect(-torsoW / 2, torsoTopY, torsoW, torsoH, [8 * u, 8 * u, 3 * u, 3 * u]);
+        ctx.fill();
+        ctx.fillStyle = '#1E293B';
+        for (let sy = torsoTopY + 6 * u; sy < torsoBotY - 3 * u; sy += 6.5 * u) {
+          ctx.fillRect(-torsoW * 0.46, sy, torsoW * 0.92, 2.6 * u);
+        }
+        // 빨간 꽃 장식
+        ctx.fillStyle = '#EF4444';
+        ctx.beginPath();
+        ctx.arc(6 * u, torsoTopY + 15 * u, 4.2 * u, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#FACC15';
+        ctx.beginPath();
+        ctx.arc(6 * u, torsoTopY + 15 * u, 1.8 * u, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // 3) 3D Mii 헤드 크롭 렌더링 (턱 위쪽 영역만 크롭하여 원본 팔이 절대 찍히지 않음!)
+    if (headImg && headImg.complete && headImg.naturalWidth) {
+      const fullDrawW = (headImg.naturalWidth / headImg.naturalHeight) * pH;
+      const srcH = Math.round(headImg.naturalHeight * headRatio);
+      const dstH = pH * headRatio;
+      ctx.shadowColor = 'rgba(15, 23, 42, 0.22)';
+      ctx.shadowBlur = 10;
+      ctx.drawImage(
+        headImg,
+        0, 0, headImg.naturalWidth, srcH,
+        -fullDrawW / 2, topY, fullDrawW, dstH
+      );
+      ctx.shadowBlur = 0;
+    }
+
+    // 4) 오늘 게임 완료 시 머리 위 황금 왕관!
+    if (hasCrown) {
+      drawGoldenCrown(ctx, 0, topY + (isFather ? 13 : 15) * u, isMini ? 0.75 : 0.92, t);
+    }
+
+    ctx.restore();
+    return { u, topY, neckY, shoulderY: neckY + 8 * u, hipY };
+  }
+
+  // 서로 게임 중일 때 캐릭터가 휴대용 3D 두뇌게임기를 들고 집중해서 플레이하는 모션 (팔 2개만 렌더링!)
   function drawGamingMotion(ctx, charId, cx, groundY, jumpY, depthScale, img, targetW, targetH, t, outfit, hasCrown, gameLabel) {
     const isFather = charId === '610708';
     const gameBobY = Math.sin(t * 8.2 + (isFather ? 0 : 1.4)) * 3.2;
@@ -1163,21 +1419,11 @@
     ctx.translate(cx, groundY + jumpY + gameBobY);
     ctx.rotate(gameTilt);
 
-    // 1) 캐릭터 본체
-    ctx.shadowColor = 'rgba(15, 23, 42, 0.26)';
-    ctx.shadowBlur = 14;
-    ctx.shadowOffsetY = 5;
-    ctx.drawImage(img, -targetW / 2, -targetH + 6, targetW, targetH);
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetY = 0;
+    // 1) 팔 없는 3D 몸통 + 3D Mii 헤드 + 왕관 렌더링
+    const { u, shoulderY } = drawMiiHeadAndArmlessBody(ctx, charId, img, targetH, outfit, hasCrown, t, false);
 
-    // 2) 오늘 게임을 완료한 상태라면 머리 위에 황금 왕관!
-    if (hasCrown) {
-      drawGoldenCrown(ctx, 0, -targetH + (isFather ? 14 : 16), 1.0, t);
-    }
-
-    // 3) 가슴 앞에서 양손으로 잡고 있는 3D 휴대용 두뇌게임기 (Handheld Brain Console)
-    const consoleY = -targetH * 0.43 + Math.sin(t * 12) * 1.5;
+    // 2) 가슴 앞에서 양손으로 잡고 있는 3D 휴대용 두뇌게임기 (Handheld Brain Console)
+    const consoleY = -targetH * 0.36 + Math.sin(t * 12) * 1.5;
 
     // 게임기 화면에서 얼굴로 퍼지는 네온 빛무리
     const screenGlow = ctx.createRadialGradient(0, consoleY - 6, 4, 0, consoleY - 18, 48);
@@ -1189,21 +1435,34 @@
     ctx.arc(0, consoleY - 12, 48, 0, Math.PI * 2);
     ctx.fill();
 
-    // 어깨에서 게임기 양옆으로 모인 양팔
-    const armColor = outfit === 'coat'
+    // 어깨에서 게임기 양옆으로 모인 딱 2개의 팔!
+    const sleeveColor = outfit === 'coat'
       ? (isFather ? '#B47B48' : '#E5D5C5')
       : outfit === 'pad'
         ? (isFather ? '#1E3A5F' : '#F4B8C4')
-        : (isFather ? '#1E293B' : '#F1F5F9');
-    ctx.strokeStyle = armColor;
-    ctx.lineWidth = 9.5;
+        : '#FDBA8C';
+    ctx.strokeStyle = sleeveColor;
+    ctx.lineWidth = 10 * u;
     ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     ctx.beginPath();
-    ctx.moveTo(-26, consoleY - 14);
-    ctx.quadraticCurveTo(-36, consoleY + 2, -26, consoleY + 6);
-    ctx.moveTo(26, consoleY - 14);
-    ctx.quadraticCurveTo(36, consoleY + 2, 26, consoleY + 6);
+    ctx.moveTo(-17 * u, shoulderY);
+    ctx.quadraticCurveTo(-30 * u, (shoulderY + consoleY) * 0.52, -25, consoleY + 3);
+    ctx.moveTo(17 * u, shoulderY);
+    ctx.quadraticCurveTo(30 * u, (shoulderY + consoleY) * 0.52, 25, consoleY + 3);
     ctx.stroke();
+
+    if (outfit === 'short') {
+      // 반팔 소매 캡
+      ctx.strokeStyle = isFather ? '#1E293B' : '#F8FAFC';
+      ctx.lineWidth = 11.5 * u;
+      ctx.beginPath();
+      ctx.moveTo(-17 * u, shoulderY);
+      ctx.lineTo(-23 * u, shoulderY + 10 * u);
+      ctx.moveTo(17 * u, shoulderY);
+      ctx.lineTo(23 * u, shoulderY + 10 * u);
+      ctx.stroke();
+    }
 
     // 3D 휴대용 콘솔 본체 (네이비 바디 + 왼쪽 블루 조이콘 + 오른쪽 레드 조이콘)
     ctx.save();
@@ -1425,15 +1684,17 @@
       return;
     }
 
-    // [행동 B] 철봉 턱걸이 운동하기 (pullup)
+    // [행동 B] 철봉 턱걸이 운동하기 (pullup - 팔 2개만 렌더링!)
     if (act === 'pullup') {
       const pullCycle = t * 4.2 + (isFather ? 0 : 1.2);
       const pullPhase = (Math.sin(pullCycle) + 1) * 0.5; // 0(매달림) ~ 1(턱걸이 정점)
       const pullScale = 0.85;
       const pH = targetH * pullScale;
-      const pW = targetW * pullScale;
       const pullLiftY = -12 - pullPhase * 34;
       const barLocalY = -232 - (groundY - 348); // 머리 위 철봉 가로바 높이
+      const u = pH / 200;
+      const headRatio = isFather ? 0.472 : 0.482;
+      const shoulderY = pullLiftY + 6 - pH * (1 - headRatio) + 8 * u;
 
       // 바닥 그림자
       ctx.save();
@@ -1446,49 +1707,54 @@
       ctx.save();
       ctx.translate(cx, groundY + jumpY);
 
-      // 어깨에서 머리 위 철봉 바깥쪽(±28)으로 뻗어 매달린 양팔
-      const shoulderY = pullLiftY - pH * 0.42;
-      const armColor = outfit === 'coat'
+      // 1) 어깨에서 머리 위 철봉 바깥쪽(±26)으로 뻗어 매달린 딱 2개의 팔!
+      const sleeveColor = outfit === 'coat'
         ? (isFather ? '#B47B48' : '#E5D5C5')
         : outfit === 'pad'
           ? (isFather ? '#1E3A5F' : '#F4B8C4')
-          : (isFather ? '#1E293B' : '#F1F5F9');
-      ctx.strokeStyle = armColor;
-      ctx.lineWidth = 10;
+          : '#FDBA8C';
+      ctx.strokeStyle = sleeveColor;
+      ctx.lineWidth = 10 * u;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.beginPath();
-      ctx.moveTo(-18, shoulderY);
-      ctx.quadraticCurveTo(-34, (shoulderY + barLocalY) * 0.5, -28, barLocalY + 3);
-      ctx.moveTo(18, shoulderY);
-      ctx.quadraticCurveTo(34, (shoulderY + barLocalY) * 0.5, 28, barLocalY + 3);
+      ctx.moveTo(-16 * u, shoulderY);
+      ctx.quadraticCurveTo(-32 * u, (shoulderY + barLocalY) * 0.52, -26, barLocalY + 3);
+      ctx.moveTo(16 * u, shoulderY);
+      ctx.quadraticCurveTo(32 * u, (shoulderY + barLocalY) * 0.52, 26, barLocalY + 3);
       ctx.stroke();
 
-      // 캐릭터 본체 (턱걸이 상하 리프트)
+      if (outfit === 'short') {
+        // 반팔 소매 캡 (어깨 위쪽만 소매, 팔뚝은 맨살)
+        ctx.strokeStyle = isFather ? '#1E293B' : '#F8FAFC';
+        ctx.lineWidth = 11.5 * u;
+        ctx.beginPath();
+        ctx.moveTo(-16 * u, shoulderY);
+        ctx.lineTo(-22 * u, shoulderY - 12 * u);
+        ctx.moveTo(16 * u, shoulderY);
+        ctx.lineTo(22 * u, shoulderY - 12 * u);
+        ctx.stroke();
+      }
+
+      // 2) 팔 없는 깔끔한 3D 몸통·바지·신발 + 3D Mii 헤드 (턱걸이 상하 리프트)
       ctx.save();
       ctx.translate(0, pullLiftY);
-      ctx.scale(1 + pullPhase * 0.03, 1 - pullPhase * 0.02);
-      ctx.shadowColor = 'rgba(15, 23, 42, 0.24)';
-      ctx.shadowBlur = 12;
-      ctx.drawImage(img, -pW / 2, -pH + 6, pW, pH);
-      ctx.shadowBlur = 0;
-      if (hasCrown) {
-        drawGoldenCrown(ctx, 0, -pH + 13, 0.88, t);
-      }
+      ctx.scale(1 + pullPhase * 0.025, 1 - pullPhase * 0.015);
+      drawMiiHeadAndArmlessBody(ctx, charId, img, pH, outfit, hasCrown, t, false);
       ctx.restore();
 
-      // 머리 위 철봉 바를 꽉 쥔 두 손 (얼굴 바깥쪽 철봉 위치!)
+      // 3) 머리 위 철봉 바를 꽉 쥔 두 손 (얼굴 바깥쪽 철봉 위치!)
       ctx.fillStyle = '#FDBA8C';
       ctx.strokeStyle = '#9A3412';
       ctx.lineWidth = 1.5;
-      [-28, 28].forEach((hx) => {
+      [-26, 26].forEach((hx) => {
         ctx.beginPath();
-        ctx.arc(hx, barLocalY, 6, 0, Math.PI * 2);
+        ctx.arc(hx, barLocalY, 5.8, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
       });
 
-      // 턱걸이 구호 배지
+      // 4) 턱걸이 구호 배지
       ctx.font = 'bold 13px sans-serif';
       ctx.fillStyle = '#DC2626';
       ctx.textAlign = 'center';
@@ -1619,37 +1885,45 @@
       return;
     }
 
-    // [행동 B] 미니 철봉 턱걸이 운동하기 (pullup - 미니 머털도사)
+    // [행동 B] 미니 철봉 턱걸이 운동하기 (pullup - 미니 머털도사, 팔 2개만 렌더링!)
     if (act === 'pullup' && isMutul) {
       const pullPhase = (Math.sin(t * 4.8 + 0.7) + 1) * 0.5;
       const pullScale = 0.85;
       const pH = targetH * pullScale;
-      const pW = targetW * pullScale;
       const pullLiftY = -8 - pullPhase * 22;
       const barLocalY = -138 - (groundY - 348);
+      const u = pH / 200;
+      const shoulderY = pullLiftY + 4 - pH * (1 - 0.565) + 8 * u;
 
       ctx.save();
       ctx.translate(cx, groundY + jumpY);
+
+      // 1) 어깨에서 철봉 바(±14)로 뻗은 딱 2개의 팔!
       ctx.strokeStyle = '#334155';
       ctx.lineWidth = 6.5;
       ctx.lineCap = 'round';
       ctx.beginPath();
-      ctx.moveTo(-10, pullLiftY - pH * 0.38);
-      ctx.quadraticCurveTo(-20, (pullLiftY - pH * 0.38 + barLocalY) * 0.5, -15, barLocalY + 2);
-      ctx.moveTo(10, pullLiftY - pH * 0.38);
-      ctx.quadraticCurveTo(20, (pullLiftY - pH * 0.38 + barLocalY) * 0.5, 15, barLocalY + 2);
+      ctx.moveTo(-9, shoulderY);
+      ctx.quadraticCurveTo(-19, (shoulderY + barLocalY) * 0.52, -14, barLocalY + 2);
+      ctx.moveTo(9, shoulderY);
+      ctx.quadraticCurveTo(19, (shoulderY + barLocalY) * 0.52, 14, barLocalY + 2);
       ctx.stroke();
 
+      // 2) 팔 없는 깔끔한 미니 머털도사 3D 몸통 + 3D 헤드
       ctx.save();
       ctx.translate(0, pullLiftY);
-      ctx.drawImage(img, -pW / 2, -pH + 4, pW, pH);
+      drawMiiHeadAndArmlessBody(ctx, 'mutul', img, pH, 'short', false, t, true);
       ctx.restore();
 
+      // 3) 철봉을 꽉 쥔 두 손
       ctx.fillStyle = '#FDBA8C';
-      [-15, 15].forEach((hx) => {
+      ctx.strokeStyle = '#9A3412';
+      ctx.lineWidth = 1.2;
+      [-14, 14].forEach((hx) => {
         ctx.beginPath();
         ctx.arc(hx, barLocalY, 4.2, 0, Math.PI * 2);
         ctx.fill();
+        ctx.stroke();
       });
       ctx.font = 'bold 11px sans-serif';
       ctx.fillStyle = '#EA580C';
@@ -1811,7 +2085,7 @@
     let savedBrief = null;
     try { savedBrief = JSON.parse(localStorage.getItem('wxBrief') || 'null'); } catch (e) { savedBrief = null; }
     let previewPreset = null;
-    const PRESETS = [null, 'rain', 'cold', 'snow', 'hot', 'spring'];
+    const PRESETS = [null, 'drizzle', 'rain', 'cold', 'snow', 'hot', 'spring'];
     let presetIdx = 0;
 
     let wx = parseWeatherState(savedBrief, previewPreset);
@@ -1916,7 +2190,7 @@
       ch.nextActivityAt = now + 5400 + Math.random() * 3400;
 
       if (act === 'gaming') {
-        ch.targetX = id === '610708' ? 195 : 385;
+        ch.targetX = id === '610708' ? 235 : 375;
         ch.targetZ = 2;
       } else if (act === 'pullup') {
         ch.targetX = id === 'mutul' ? 74 : 126;
