@@ -1,16 +1,15 @@
 // ==========================================================
-// 날씨 아래 3D 다마고치 영역 (window.PET)
-// - 왼쪽: 610708 3D 캐릭터 (assets/pet/char_610708.png)
-// - 오른쪽: 691105 3D 캐릭터 (assets/pet/char_691105.png)
-// - 두 분의 3D 캐릭터가 항상 나란히 함께 서서 반겨주는 다마고치 스테이지
-// 1) 실시간 오늘 날씨(맑음·비·눈·추위·더위·밤)에 맞춰 배경·우산·대사 자동 변화
-// 2) 캐릭터 터치 시 3D 입체 기울기·점프·하트 파티클·쓰다듬기 반응과 다정한 말풍선 대사
-// 3) 오늘의 두뇌운동 완료 시 '특식 밥 주기' & '간식 주기'로 친밀도 게이지 상승 및 레벨업
+// 날씨 아래 3D 캐릭터 라운지 영역 (window.PET)
+// - 왼쪽: 610708 닌텐도 Wii(Mii) 스타일 3D 캐릭터 (assets/pet/char_610708.png)
+// - 오른쪽: 691105 닌텐도 Wii(Mii) 스타일 3D 캐릭터 (assets/pet/char_691105.png)
+// 1) 실시간 오늘 날씨(맑음·비·눈·추위·더위·밤)에 맞춰 배경·우산·안부 인사 자동 변화
+// 2) 캐릭터 터치 및 [👋 반갑게 인사] 시 3D 점프·하트 파티클·다정한 덕담 말풍선
+// 3) 오늘의 두뇌운동 완료 시 [💐 축하 꽃다발] 및 [🍵 다과 나누기]로 활력 레벨업
 // ==========================================================
 (function () {
   const CHAR_ASSETS = {
-    '610708': 'assets/pet/char_610708.png',
-    '691105': 'assets/pet/char_691105.png',
+    '610708': 'assets/pet/char_610708.png?v=2',
+    '691105': 'assets/pet/char_691105.png?v=2',
   };
   const loadedChars = {};
 
@@ -99,7 +98,7 @@
 
   let activeMount = null;
 
-  // 날씨 코드/기온에서 다마고치 환경 상태 계산
+  // 날씨 코드/기온에서 배경·소품 상태 계산
   function parseWeatherState(brief) {
     const hour = new Date().getHours();
     const isNight = brief && brief.isDay !== undefined ? !brief.isDay : (hour >= 19 || hour < 6);
@@ -111,8 +110,6 @@
     const isHot = temp >= 28;
     let prop = null;
     if (isRain) prop = 'umbrella';
-    else if (isSnow || isCold) prop = 'scarf';
-    else if (isHot && !isNight) prop = 'sunglasses';
 
     let skyClass = '';
     if (isRain) skyClass = 'wx-rain';
@@ -139,7 +136,7 @@
     const state = getPetState();
     const doneToday = isSessionDoneToday();
     const today = todayKey();
-    const fedToday = state.fedDay === today;
+    const giftedToday = state.fedDay === today;
 
     let savedBrief = null;
     try { savedBrief = JSON.parse(localStorage.getItem('wxBrief') || 'null'); } catch (e) { savedBrief = null; }
@@ -150,17 +147,17 @@
     stageBox.id = 'petStageBox';
 
     const initLine = () => {
-      if (doneToday && !fedToday) return '🎉 오늘 두뇌운동을 끝내셨네요! 아래 [🍖 밥 주기]를 눌러 두 분께 특식을 주세요!';
+      if (doneToday && !giftedToday) return '🎉 오늘 두뇌운동을 멋지게 끝내셨네요! 아래 [💐 축하 꽃다발]을 눌러 보세요!';
       if (wx.isRain) return '☂️ 오늘은 비 소식이 있어요! 외출하실 때 우산 꼭 챙기세요 😊';
       if (wx.isCold || wx.isSnow) return '🧣 날씨가 쌀쌀해요! 따뜻하게 입으시고 감기 조심하세요 💕';
-      if (doneToday && fedToday) return '🥰 특식 덕분에 기분 최고예요! 두 분 캐릭터를 톡톡 눌러 쓰다듬어 주세요!';
-      return '💑 두 분의 3D 캐릭터예요! 톡톡 터치해 보시고, 오늘 두뇌운동 끝내면 특식도 주세요!';
+      if (doneToday && giftedToday) return '💐 오늘 두뇌운동 완주 정말 축하드려요! 늘 건강하고 행복한 하루 보내세요!';
+      return '😊 오늘도 반갑습니다! 캐릭터를 톡톡 터치해서 반갑게 인사를 나눠 보세요!';
     };
 
     stageBox.innerHTML = `
       <div class="pet-hud">
         <div class="pet-lv-pill">
-          <span>❤️ 친밀도 <b id="petLvTxt">Lv.${state.lv}</b></span>
+          <span>✨ 활력 <b id="petLvTxt">Lv.${state.lv}</b></span>
           <div class="pet-exp-track"><div class="pet-exp-fill" id="petExpFill" style="width:${Math.min(100, state.exp)}%"></div></div>
         </div>
         <div class="pet-wx-pill" id="petWxPill">${wx.badge}</div>
@@ -173,11 +170,11 @@
         <div class="pet-fx-layer" id="petFxLayer"></div>
       </div>
       <div class="pet-actions">
-        <button type="button" class="pet-act-btn" id="petBtnStroke">👋 쓰다듬기</button>
-        <button type="button" class="pet-act-btn ${doneToday && !fedToday ? 'ready-feed' : fedToday ? 'done-feed' : ''}" id="petBtnFeed">
-          🍖 ${fedToday ? '식사 완료' : doneToday ? '특식 밥주기!' : '밥 주기'}
+        <button type="button" class="pet-act-btn" id="petBtnStroke">👋 반갑게 인사</button>
+        <button type="button" class="pet-act-btn ${doneToday && !giftedToday ? 'ready-feed' : giftedToday ? 'done-feed' : ''}" id="petBtnFeed">
+          💐 ${giftedToday ? '축하 완료' : doneToday ? '축하 꽃다발!' : '꽃다발 선물'}
         </button>
-        <button type="button" class="pet-act-btn" id="petBtnSnack">🍓 간식 주기</button>
+        <button type="button" class="pet-act-btn" id="petBtnSnack">🍵 다과 나누기</button>
       </div>
     `;
 
@@ -230,14 +227,14 @@
       }
     }
 
-    // 3D 캐릭터 물리 상태 (점프, 기울기, 찌부/늘어남, 표정)
+    // 3D 캐릭터 물리 상태 (점프, 기울기, 표정)
     const anim = {
       vy: 0,
       y: 0,
       scaleX: 1,
       scaleY: 1,
       tiltX: 0,
-      mood: 'idle', // 'idle' | 'happy' | 'eat' | 'love'
+      mood: 'idle',
       moodUntil: 0,
       foodEmoji: null,
       foodProg: 0,
@@ -251,15 +248,15 @@
       anim.moodUntil = performance.now() + durMs;
     }
 
-    const COUPLE_LINES = [
-      '💑 두 분이 함께 활짝 웃으시니 복이 가득 들어와요!',
-      '☝️ 하하하! 오늘도 두 분 나란히 두뇌운동 화이팅입니다!',
-      '🌸 호호호~ 다정하게 터치해 주셔서 기분이 최고예요 🥰',
+    const GREET_LINES = [
+      '💑 두 분이 함께 활짝 웃으시니 보기만 해도 기분이 좋아져요!',
+      '☝️ 하하하! 오늘도 활기차게 두뇌운동 화이팅입니다!',
+      '🌸 호호호~ 반갑게 인사 나누니 마음이 참 따뜻하네요 🥰',
       '✨ 언제 봐도 참 다정하고 멋지신 두 분이에요 💕',
       '💪 오늘도 건강하고 웃음 가득한 하루 보내세요!',
     ];
 
-    function onStroke(clientX) {
+    function onGreet(clientX) {
       if (typeof beep === 'function') beep(660, 0.08);
       if (clientX && cv) {
         const rect = cv.getBoundingClientRect();
@@ -267,18 +264,18 @@
         anim.tiltX = Math.max(-1, Math.min(1, relX)) * 14;
       }
       triggerJump('love', 1800);
-      spawnParticles(['❤️', '💕', '✨']);
+      spawnParticles(['❤️', '👏', '✨']);
       state.petCount = (state.petCount || 0) + 1;
       const up = addExp(5);
-      if (up) say(`🎊 우와! 친밀도가 Lv.${state.lv}로 올랐어요! 늘 아껴 주셔서 감사해요!`);
-      else say(COUPLE_LINES[state.petCount % COUPLE_LINES.length]);
+      if (up) say(`🎊 우와! 오늘의 활력 지수가 Lv.${state.lv}로 올랐어요! 늘 건강하세요!`);
+      else say(GREET_LINES[state.petCount % GREET_LINES.length]);
     }
 
     stageBox.querySelector('#petCanvasWrap').addEventListener('click', (e) => {
-      onStroke(e.clientX);
+      onGreet(e.clientX);
     });
     stageBox.querySelector('#petBtnStroke').addEventListener('click', () => {
-      onStroke();
+      onGreet();
     });
 
     stageBox.querySelector('#petBtnFeed').addEventListener('click', () => {
@@ -287,51 +284,51 @@
       if (state.fedDay === t) {
         if (typeof beep === 'function') beep(587, 0.08);
         triggerJump('happy', 1600);
-        spawnParticles(['🍖', '😋', '✨']);
-        say('😋 오늘 주신 특식 덕분에 두 분 다 배가 든든해요! 내일 두뇌운동 끝나고 또 주세요!');
+        spawnParticles(['💐', '🌺', '✨']);
+        say('💐 향기로운 축하 꽃다발 덕분에 오늘 하루가 더욱 특별해요!');
         return;
       }
       if (!done) {
         if (typeof beep === 'function') beep(440, 0.1);
-        anim.foodEmoji = '🍙';
+        anim.foodEmoji = '🌷';
         anim.foodProg = 1;
-        triggerJump('eat', 1800);
-        spawnParticles(['🍙', '💪']);
+        triggerJump('happy', 1800);
+        spawnParticles(['🌷', '💪']);
         addExp(4);
-        say('🍙 맛보기 주먹밥 냠냠! 아래 [시작하기]로 오늘 두뇌운동을 끝내시면 황금 특식을 드실 수 있어요!');
+        say('🌷 응원의 꽃 한 송이! 아래 [시작하기]로 오늘 두뇌운동을 마치면 풍성한 축하 꽃다발을 드릴 수 있어요!');
         return;
       }
-      // 오늘 두뇌운동 완료 상태 -> 황금 특식 급여!
+      // 오늘 두뇌운동 완료 상태 -> 축하 꽃다발 전달!
       state.fedDay = t;
       feedBtn.classList.remove('ready-feed');
       feedBtn.classList.add('done-feed');
-      feedBtn.innerHTML = '🍖 식사 완료';
-      anim.foodEmoji = '🍖';
+      feedBtn.innerHTML = '💐 축하 완료';
+      anim.foodEmoji = '💐';
       anim.foodProg = 1;
-      triggerJump('eat', 2400);
-      spawnParticles(['🍖', '🎉', '❤️', '🌟']);
+      triggerJump('happy', 2400);
+      spawnParticles(['💐', '🎉', '❤️', '🌟']);
       const up = addExp(45);
-      if (up) say(`🎉 황금 특식 냠냠! 친밀도가 Lv.${state.lv}로 레벨업했어요! 최고예요!`);
-      else say('😋 우와! 오늘 두뇌운동 완주 보상으로 주신 황금 특식, 정말 꿀맛이에요!');
+      if (up) say(`🎉 오늘의 두뇌운동 완주 축하 꽃다발! 활력 지수가 Lv.${state.lv}로 올라갔어요!`);
+      else say('💐 오늘 두뇌운동 완주를 진심으로 축하드려요! 정말 멋지십니다!');
     });
 
     stageBox.querySelector('#petBtnSnack').addEventListener('click', () => {
       const t = todayKey();
-      const snacks = ['🎂', '🍓', '🍰', '🍡', '🍊'];
-      const pickSnack = snacks[Math.floor(Math.random() * snacks.length)];
+      const treats = ['🍵', '☕', '🍊', '🍎', '🍰'];
+      const pickTreat = treats[Math.floor(Math.random() * treats.length)];
       if (typeof beep === 'function') beep(740, 0.08);
-      anim.foodEmoji = pickSnack;
+      anim.foodEmoji = pickTreat;
       anim.foodProg = 1;
-      triggerJump('eat', 1900);
-      spawnParticles([pickSnack, '😋', '💕']);
+      triggerJump('happy', 1900);
+      spawnParticles([pickTreat, '😊', '💕']);
       if (state.snackDay !== t) {
         state.snackDay = t;
         const up = addExp(18);
-        if (up) say(`🎊 달콤한 간식 먹고 친밀도가 Lv.${state.lv}로 올랐어요!`);
-        else say(`${pickSnack} 달콤한 간식 냠냠! 두 분 함께 드시니 더 맛있어요 🥰`);
+        if (up) say(`🎊 따뜻한 다과 시간과 함께 활력 지수가 Lv.${state.lv}로 올랐어요!`);
+        else say(`${pickTreat} 향긋한 차와 다과를 함께 나누니 기분이 참 좋네요 🥰`);
       } else {
         addExp(3);
-        say(`${pickSnack} 오물오물~ 간식은 언제 먹어도 정말 맛있어요! 😊`);
+        say(`${pickTreat} 여유롭게 차 한잔 나누며 오늘도 편안한 시간 보내세요 😊`);
       }
     });
 
@@ -447,10 +444,10 @@
 
       // 왼쪽: 610708 3D 캐릭터, 오른쪽: 691105 3D 캐릭터 항상 나란히 표시
       if (loadedChars['610708']) {
-        draw3DSprite(loadedChars['610708'], cx - 92, baseFootY, 348, t, anim.mood);
+        draw3DSprite(loadedChars['610708'], cx - 95, baseFootY, 350, t, anim.mood);
       }
       if (loadedChars['691105']) {
-        draw3DSprite(loadedChars['691105'], cx + 92, baseFootY, 340, t + 0.8, anim.mood);
+        draw3DSprite(loadedChars['691105'], cx + 95, baseFootY, 340, t + 0.8, anim.mood);
       }
 
       // 두 분 사이 하트 둥실둥실
@@ -468,7 +465,7 @@
         ctx.restore();
       }
 
-      // 밥/간식 먹기 애니메이션
+      // 꽃다발/다과 전달 애니메이션
       if (anim.foodProg > 0 && anim.foodEmoji) {
         ctx.save();
         const fx = cx + 88 * anim.foodProg;
