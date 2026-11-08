@@ -29,6 +29,11 @@
     '610708_pad_side': 'assets/pet/char_610708_pad_side.png?v=5',
     '691105_pad_front': 'assets/pet/char_691105_pad.png?v=5',
     '691105_pad_side': 'assets/pet/char_691105_pad_side.png?v=5',
+
+    'mutul_front': 'assets/pet/char_mutul.png?v=1',
+    'mutul_side': 'assets/pet/char_mutul_side.png?v=1',
+    'puppy_front': 'assets/pet/char_puppy.png?v=1',
+    'puppy_side': 'assets/pet/char_puppy_side.png?v=1',
   };
   const loadedSprites = {};
 
@@ -72,9 +77,10 @@
       .pet-bubble-wrap{position:absolute;top:36px;left:12px;right:12px;z-index:4;display:flex;justify-content:center;pointer-events:none;}
       .pet-bubble{background:rgba(255,255,255,.92);backdrop-filter:blur(6px);border:1.5px solid #FDE68A;border-radius:999px;padding:4px 12px;font-family:'Jua';font-size:12.5px;color:#1E293B;line-height:1.25;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,.08);max-width:96%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative;transition:opacity .35s ease,transform .35s ease;}
       .pet-bubble.is-hidden{opacity:0;transform:translateY(-6px);}
-      .pet-canvas-wrap{position:relative;z-index:3;height:265px;display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:manipulation;}
-      .pet-canvas{width:100%;height:265px;display:block;}
-      .pet-walk-hint{position:absolute;bottom:7px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,.45);backdrop-filter:blur(4px);color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;pointer-events:none;white-space:nowrap;z-index:4;}
+      .pet-canvas-wrap{position:relative;z-index:3;height:280px;display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:manipulation;}
+      .pet-canvas{width:100%;height:280px;display:block;}
+      .pet-walk-hint{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,.48);backdrop-filter:blur(4px);color:#fff;font-size:10.5px;font-weight:700;padding:2.5px 10px;border-radius:999px;pointer-events:none;white-space:nowrap;z-index:4;transition:opacity .4s ease;}
+      .pet-walk-hint.is-hidden{opacity:0;}
       .pet-fx-layer{position:absolute;inset:0;pointer-events:none;z-index:5;overflow:hidden;}
       .pet-float-item{position:absolute;font-size:24px;animation:petFloatUp .95s ease-out forwards;pointer-events:none;filter:drop-shadow(0 2px 6px rgba(0,0,0,.2));}
       @keyframes petFloatUp{0%{opacity:1;transform:translate(-50%,0) scale(.6);}40%{opacity:1;transform:translate(-50%,-28px) scale(1.2);}100%{opacity:0;transform:translate(-50%,-64px) scale(.9);}}
@@ -586,22 +592,22 @@
 
     const jumpY = ch.y || 0;
     const depthScale = 1 + (ch.z || 0) * 0.003;
-    const groundY = 398 + (ch.z || 0) * 0.85;
+    const groundY = 360 + (ch.z || 0) * 0.65;
     const cx = ch.x;
 
-    const targetH = (isFather ? 264 : 254) * depthScale;
+    const targetH = (isFather ? 236 : 226) * depthScale;
     const targetW = (img.naturalWidth / img.naturalHeight) * targetH;
 
     // 1. 바닥 입체 그림자
     const jumpFactor = Math.max(0.55, 1 + (jumpY + bobY) / 140);
     ctx.save();
-    const pedGrad = ctx.createRadialGradient(cx, groundY - 4, 4, cx, groundY - 4, 54 * depthScale * jumpFactor);
+    const pedGrad = ctx.createRadialGradient(cx, groundY - 4, 4, cx, groundY - 4, 50 * depthScale * jumpFactor);
     pedGrad.addColorStop(0, 'rgba(15, 23, 42, 0.28)');
     pedGrad.addColorStop(0.6, 'rgba(15, 23, 42, 0.14)');
     pedGrad.addColorStop(1, 'rgba(15, 23, 42, 0)');
     ctx.fillStyle = pedGrad;
     ctx.beginPath();
-    ctx.ellipse(cx, groundY - 4, 52 * depthScale * jumpFactor, 12 * depthScale * jumpFactor, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, groundY - 4, 48 * depthScale * jumpFactor, 11 * depthScale * jumpFactor, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
@@ -623,7 +629,99 @@
 
     // 3. 비 오거나 눈 올 때 손에 들고 쓰는 3D 우산 (두 캐릭터 각각 착용!)
     if (wx.hasUmbrella) {
+      ctx.save();
+      ctx.scale(0.9, 0.9);
       drawHeldUmbrella(ctx, t, isFather, isSideView, outfit);
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+
+  // ==========================================================
+  // 두 분 아래쪽 앞마당을 돌아다니는 미니미 머털도사 & 말라뮤트 강아지 3D 렌더링
+  // ==========================================================
+  function drawMiniCompanion(ctx, compId, ch, t, wx) {
+    const isMutul = compId === 'mutul';
+    const yaw = ch.yaw;
+    const isWalking = ch.speed > 0.1;
+    const isSideView = Math.abs(yaw) > 0.28 || isWalking;
+    const facingLeft = yaw < -0.12;
+
+    const viewKey = isSideView ? 'side' : 'front';
+    const img = loadedSprites[`${compId}_${viewKey}`] || loadedSprites[`${compId}_front`];
+    if (!img || !img.complete || !img.naturalWidth) return;
+
+    const walkPhase = ch.walkPhase;
+    const bobY = isWalking
+      ? -Math.abs(Math.sin(walkPhase)) * (isMutul ? 6.5 : 5.5)
+      : Math.sin(t * 3.4 + (isMutul ? 0.5 : 2.1)) * 2.0;
+    const walkTilt = isWalking
+      ? Math.sin(walkPhase) * (isMutul ? 0.065 : 0.055)
+      : Math.sin(t * 2.6 + (isMutul ? 0 : 1.4)) * 0.018;
+    const stepSquashX = isWalking
+      ? 1 + Math.cos(walkPhase * 2) * 0.035
+      : 1 + Math.sin(t * 3.5) * 0.014;
+    const stepSquashY = isWalking
+      ? 1 - Math.cos(walkPhase * 2) * 0.035
+      : 1 - Math.sin(t * 3.5) * 0.014;
+
+    const jumpY = ch.y || 0;
+    const depthScale = 1 + (ch.z || 0) * 0.0025;
+    const groundY = 408 + (ch.z || 0) * 0.45;
+    const cx = ch.x;
+
+    const targetH = (isMutul ? 118 : 88) * depthScale;
+    const targetW = (img.naturalWidth / img.naturalHeight) * targetH;
+
+    // 1. 앞마당 바닥 그림자
+    const jumpFactor = Math.max(0.55, 1 + (jumpY + bobY) / 100);
+    ctx.save();
+    const shadowRx = (isMutul ? 28 : 34) * depthScale * jumpFactor;
+    const pedGrad = ctx.createRadialGradient(cx, groundY - 3, 2, cx, groundY - 3, shadowRx);
+    pedGrad.addColorStop(0, 'rgba(15, 23, 42, 0.28)');
+    pedGrad.addColorStop(0.65, 'rgba(15, 23, 42, 0.13)');
+    pedGrad.addColorStop(1, 'rgba(15, 23, 42, 0)');
+    ctx.fillStyle = pedGrad;
+    ctx.beginPath();
+    ctx.ellipse(cx, groundY - 3, shadowRx, 7.5 * depthScale * jumpFactor, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // 2. 미니미 머털도사 / 강아지 3D 본체 (정면 / 좌측면 / 우측면)
+    ctx.save();
+    ctx.translate(cx, groundY + jumpY + bobY);
+    ctx.rotate(walkTilt);
+
+    const flipX = (isSideView && facingLeft) ? -1 : 1;
+    ctx.scale(flipX * stepSquashX, stepSquashY);
+
+    ctx.shadowColor = 'rgba(15, 23, 42, 0.24)';
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetY = 4;
+    ctx.drawImage(img, -targetW / 2, -targetH + 4, targetW, targetH);
+
+    // 3. 비·눈 올 때 미니미 머털도사도 귀여운 미니 노란 우산 착용!
+    if (isMutul && wx.hasUmbrella) {
+      ctx.save();
+      ctx.translate(isSideView ? 12 : -18, -118 + Math.sin(t * 3.8) * 1.5);
+      ctx.rotate(isSideView ? -0.08 : -0.1);
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      ctx.moveTo(0, 4);
+      ctx.lineTo(0, 68);
+      ctx.stroke();
+      const mGrad = ctx.createRadialGradient(-8, -2, 3, 0, 6, 36);
+      mGrad.addColorStop(0, '#FDE047');
+      mGrad.addColorStop(0.65, '#F59E0B');
+      mGrad.addColorStop(1, '#B45309');
+      ctx.fillStyle = mGrad;
+      ctx.beginPath();
+      ctx.arc(0, 12, 34, Math.PI, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
     }
 
     ctx.restore();
@@ -727,7 +825,6 @@
       </div>
       <div class="pet-canvas-wrap" id="petCanvasWrap">
         <canvas class="pet-canvas" id="petCanvas" width="580" height="430"></canvas>
-        <div class="pet-walk-hint">👆 잔디밭 어디든 터치하면 두 분이 함께 걸어갑니다</div>
         <div class="pet-fx-layer" id="petFxLayer"></div>
       </div>
     `;
@@ -740,6 +837,11 @@
     const fxLayer = stageBox.querySelector('#petFxLayer');
     const cv = stageBox.querySelector('#petCanvas');
     const ctx = cv.getContext('2d');
+
+    const hintEl = stageBox.querySelector('.pet-walk-hint');
+    setTimeout(() => {
+      if (hintEl) hintEl.classList.add('is-hidden');
+    }, 3200);
 
     const chars = {
       '610708': {
@@ -770,6 +872,34 @@
         pose: 'idle',
         nextWanderAt: performance.now() + 4200,
       },
+      mutul: {
+        x: 135,
+        z: 6,
+        targetX: 245,
+        targetZ: 8,
+        yaw: 1.2,
+        targetYaw: 1.2,
+        speed: 1.6,
+        walkPhase: 0.4,
+        y: 0,
+        vy: 0,
+        pose: 'walk',
+        nextWanderAt: performance.now() + 1800,
+      },
+      puppy: {
+        x: 445,
+        z: 10,
+        targetX: 335,
+        targetZ: 12,
+        yaw: -1.2,
+        targetYaw: -1.2,
+        speed: 1.9,
+        walkPhase: 2.1,
+        y: 0,
+        vy: 0,
+        pose: 'walk',
+        nextWanderAt: performance.now() + 1500,
+      },
     };
 
     const anim = {
@@ -790,7 +920,7 @@
     say(wx.line, 2600);
 
     function triggerJumpBoth() {
-      ['610708', '691105'].forEach((id) => {
+      ['610708', '691105', 'mutul', 'puppy'].forEach((id) => {
         chars[id].vy = -5.8;
       });
     }
@@ -837,6 +967,8 @@
         positions: {
           '610708': { x: Math.round(chars['610708'].targetX), z: Math.round(chars['610708'].targetZ) },
           '691105': { x: Math.round(chars['691105'].targetX), z: Math.round(chars['691105'].targetZ) },
+          mutul: { x: Math.round(chars.mutul.targetX), z: Math.round(chars.mutul.targetZ) },
+          puppy: { x: Math.round(chars.puppy.targetX), z: Math.round(chars.puppy.targetZ) },
         },
       };
       if (actionData) {
@@ -878,12 +1010,12 @@
           const isFromMe = act && act.by === myId && initialPositionsSynced;
           const isRecentPos = data.updatedAt && (Date.now() - new Date(data.updatedAt).getTime() < 20000);
           if (data.positions && !isFromMe && (!initialPositionsSynced || isRecentPos)) {
-            ['610708', '691105'].forEach((id) => {
+            ['610708', '691105', 'mutul', 'puppy'].forEach((id) => {
               const pos = data.positions[id];
-              if (pos && Number.isFinite(pos.x)) {
-                const tx = Math.max(105, Math.min(475, pos.x));
+              if (pos && Number.isFinite(pos.x) && chars[id]) {
+                const tx = Math.max(85, Math.min(495, pos.x));
                 const tz = Math.max(-24, Math.min(24, pos.z || 0));
-                if (!initialPositionsSynced) {
+                if (!initialPositionsSynced && (id === '610708' || id === '691105')) {
                   chars[id].x = tx;
                   chars[id].z = tz;
                   chars[id].yaw = 0;
@@ -892,7 +1024,7 @@
                 }
                 chars[id].targetX = tx;
                 chars[id].targetZ = tz;
-                chars[id].nextWanderAt = performance.now() + (initialPositionsSynced ? 6500 : 3800);
+                chars[id].nextWanderAt = performance.now() + (initialPositionsSynced ? 5500 : 3200);
               }
             });
             if (Math.abs(chars['691105'].targetX - chars['610708'].targetX) < 145) {
@@ -924,9 +1056,9 @@
     } catch (e) { /* 오프라인 무시 */ }
 
     const WALK_LINES = [
-      '💑 두 분이 나란히 걸으시니 보기만 해도 미소가 지어져요!',
+      '💑 두 분과 미니 머털이·강아지가 나란히 산책해요!',
       '☝️ 하하하! 오늘도 상쾌하게 산책하며 두뇌운동 화이팅입니다!',
-      '🌸 호호호~ 다정하게 함께 걸으니 발걸음이 가벼워요 🥰',
+      '🐶 멍멍! 강아지와 미니 머털도사도 신나서 따라다녀요 🥰',
       '✨ 오늘 날씨에 딱 맞는 복장으로 기분 좋게 산책해요 💕',
     ];
     let walkClickCount = 0;
@@ -938,7 +1070,7 @@
       const clampedX = Math.max(95, Math.min(485, clickX));
       const clampedZ = Math.max(-24, Math.min(24, (clickY - 350) * 0.45));
 
-      anim.tapRing = { x: clampedX, y: 392 + clampedZ * 0.85, r: 4, alpha: 1 };
+      anim.tapRing = { x: clampedX, y: 382 + clampedZ * 0.75, r: 4, alpha: 1 };
 
       const centerTarget = Math.max(180, Math.min(400, clampedX));
       chars['610708'].targetX = centerTarget - 75;
@@ -948,8 +1080,16 @@
       chars['610708'].nextWanderAt = performance.now() + 6500;
       chars['691105'].nextWanderAt = performance.now() + 6500;
 
+      // 미니미 머털도사 & 강아지도 터치 지점 앞쪽으로 쪼르르 달려감!
+      chars.mutul.targetX = Math.max(85, Math.min(495, centerTarget - 55));
+      chars.mutul.targetZ = 8;
+      chars.mutul.nextWanderAt = performance.now() + 4200;
+      chars.puppy.targetX = Math.max(85, Math.min(495, centerTarget + 55));
+      chars.puppy.targetZ = 12;
+      chars.puppy.nextWanderAt = performance.now() + 3800;
+
       if (typeof beep === 'function') beep(580, 0.05);
-      spawnParticles(['✨', '❤️']);
+      spawnParticles(['✨', '❤️', '🐾']);
       walkClickCount++;
       say(WALK_LINES[walkClickCount % WALK_LINES.length]);
       pushSharedAction({ kind: 'walk' });
@@ -976,7 +1116,7 @@
       }
       const t = now * 0.001;
 
-      // ---- 자율 산책 & 정면/좌측/우측 3D 방향 전환 업데이트 ----
+      // ---- 1) 부모님 (610708, 691105) 자율 산책 & 정면/좌측/우측 3D 방향 전환 ----
       ['610708', '691105'].forEach((id, idx) => {
         const ch = chars[id];
         if (now > ch.nextWanderAt) {
@@ -988,7 +1128,7 @@
             nextX = idx === 0 ? Math.max(105, other.targetX - 150) : Math.min(475, other.targetX + 150);
           }
           ch.targetX = nextX;
-          ch.targetZ = -20 + Math.random() * 40;
+          ch.targetZ = -18 + Math.random() * 34;
           ch.nextWanderAt = now + 3800 + Math.random() * 2600;
         }
 
@@ -1020,6 +1160,49 @@
         }
       });
 
+      // ---- 2) 미니미 머털도사(mutul) & 강아지(puppy) 아래쪽 앞마당 활발한 산책 ----
+      ['mutul', 'puppy'].forEach((id, idx) => {
+        const ch = chars[id];
+        if (now > ch.nextWanderAt) {
+          const other = chars[id === 'mutul' ? 'puppy' : 'mutul'];
+          let nextX = 85 + Math.random() * 410;
+          if (Math.abs(nextX - other.targetX) < 110) {
+            nextX = idx === 0 ? Math.max(85, other.targetX - 120) : Math.min(495, other.targetX + 120);
+          }
+          ch.targetX = nextX;
+          ch.targetZ = 2 + Math.random() * 14;
+          ch.nextWanderAt = now + 2000 + Math.random() * 1900;
+        }
+
+        const dx = ch.targetX - ch.x;
+        const dz = ch.targetZ - ch.z;
+        const dist = Math.hypot(dx, dz);
+
+        if (dist > 3.0) {
+          const maxSpd = id === 'puppy' ? 2.35 : 1.95;
+          const moveStep = Math.min(dist, maxSpd);
+          ch.x += (dx / dist) * moveStep;
+          ch.z += (dz / dist) * moveStep;
+          ch.speed = moveStep;
+          ch.walkPhase += id === 'puppy' ? 0.28 : 0.24;
+          ch.targetYaw = dx < -0.8 ? -1.2 : dx > 0.8 ? 1.2 : 0;
+        } else {
+          ch.speed = 0;
+          ch.targetYaw = 0;
+        }
+
+        ch.yaw = lerpAngle(ch.yaw, ch.targetYaw, 0.22);
+
+        if (ch.y < 0 || ch.vy !== 0) {
+          ch.y += ch.vy;
+          ch.vy += 0.56;
+          if (ch.y >= 0) {
+            ch.y = 0;
+            ch.vy = 0;
+          }
+        }
+      });
+
       ctx.clearRect(0, 0, 580, 430);
 
       // 1. 계절·날씨별 풍경 배경 공간 렌더링
@@ -1038,7 +1221,7 @@
         anim.tapRing.alpha *= 0.92;
       }
 
-      // 3. z 깊이 순서대로 두 3D Mii 캐릭터 렌더링
+      // 3. z 깊이 순서대로 두 3D Mii 캐릭터 (610708, 691105) 렌더링
       const order = ['610708', '691105'].sort((a, b) => chars[a].z - chars[b].z);
       order.forEach((id) => {
         drawMii3DCharacter(ctx, id, chars[id], t, wx);
@@ -1046,12 +1229,18 @@
 
       // 4. 두 분 사이 하트
       const midX = (chars['610708'].x + chars['691105'].x) * 0.5;
-      const midY = 215 + Math.sin(t * 3.2) * 5;
+      const midY = 202 + Math.sin(t * 3.2) * 5;
       ctx.save();
-      ctx.font = '28px sans-serif';
+      ctx.font = '26px sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('❤️', midX, midY);
       ctx.restore();
+
+      // 5. 두 분 아래쪽 앞마당을 돌아다니는 미니미 머털도사(mutul) & 말라뮤트 강아지(puppy)
+      const compOrder = ['mutul', 'puppy'].sort((a, b) => chars[a].z - chars[b].z);
+      compOrder.forEach((cid) => {
+        drawMiniCompanion(ctx, cid, chars[cid], t, wx);
+      });
 
       rafId = requestAnimationFrame(renderLoop);
     }
