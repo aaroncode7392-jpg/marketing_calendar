@@ -430,9 +430,9 @@
           : 'rgba(255, 255, 255, 0.82)';
     ctx.fillStyle = cloudColor;
     [
-      { baseX: 95, y: 84, s: 1.05, spd: 4 },
-      { baseX: 280, y: 68, s: 0.92, spd: 3 },
-      { baseX: 455, y: 96, s: 0.88, spd: 5 },
+      { baseX: 95, y: 78, s: 1.02, spd: 1.6 },
+      { baseX: 280, y: 64, s: 0.90, spd: 1.2 },
+      { baseX: 455, y: 88, s: 0.85, spd: 1.9 },
     ].forEach((cl) => {
       const cx = ((cl.baseX + t * cl.spd) % (W + 120)) - 60;
       ctx.save();
@@ -447,6 +447,9 @@
       ctx.restore();
     });
     ctx.restore();
+
+    // 2.5. 도심 속 공원 느낌을 주는 서울 스카이라인 & 빌딩 숲 (원경 언덕 뒤편)
+    drawCitySkyline(ctx, horizonY, wx, isXmas, t);
 
     // 3. 원경 산자락 & 언덕 (계절 및 비/이슬비 색상)
     ctx.save();
@@ -491,8 +494,8 @@
     ctx.fillStyle = farHillColor;
     ctx.beginPath();
     ctx.moveTo(0, horizonY + 12);
-    ctx.quadraticCurveTo(145, horizonY - 48, 310, horizonY + 4);
-    ctx.quadraticCurveTo(455, horizonY - 38, W, horizonY + 8);
+    ctx.quadraticCurveTo(145, horizonY - 34, 310, horizonY + 6);
+    ctx.quadraticCurveTo(455, horizonY - 28, W, horizonY + 8);
     ctx.lineTo(W, H);
     ctx.lineTo(0, H);
     ctx.closePath();
@@ -501,8 +504,8 @@
     ctx.fillStyle = nearHillColor;
     ctx.beginPath();
     ctx.moveTo(0, horizonY + 8);
-    ctx.quadraticCurveTo(210, horizonY - 22, 410, horizonY + 10);
-    ctx.quadraticCurveTo(510, horizonY - 10, W, horizonY + 12);
+    ctx.quadraticCurveTo(210, horizonY - 18, 410, horizonY + 10);
+    ctx.quadraticCurveTo(510, horizonY - 8, W, horizonY + 12);
     ctx.lineTo(W, H);
     ctx.lineTo(0, H);
     ctx.closePath();
@@ -513,6 +516,22 @@
     lawnGrad.addColorStop(1, lawnBotColor);
     ctx.fillStyle = lawnGrad;
     ctx.fillRect(0, horizonY + 6, W, H - horizonY);
+
+    // 도심 공원 산책로 난간(펜스) — 도시와 공원의 경계를 자연스럽게 연결
+    ctx.save();
+    ctx.strokeStyle = isXmas ? 'rgba(148, 163, 184, 0.55)' : 'rgba(71, 85, 105, 0.32)';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(0, horizonY + 10);
+    ctx.lineTo(W, horizonY + 10);
+    ctx.moveTo(0, horizonY + 16);
+    ctx.lineTo(W, horizonY + 16);
+    for (let fx = 12; fx < W; fx += 28) {
+      ctx.moveTo(fx, horizonY + 7);
+      ctx.lineTo(fx, horizonY + 19);
+    }
+    ctx.stroke();
+    ctx.restore();
 
     // 이슬비 내릴 때 지평선 위로 은은하게 깔리는 촉촉한 물안개 레이어
     if (wx.isRain) {
@@ -546,13 +565,31 @@
     }
     ctx.restore();
 
-    // 4. 계절별 나무 (겨울/눈/추위는 화려한 크리스마스 트리!) & 공원 기구 배치
+    // 4. 풍성한 도심 숲 나무 심기 (원경 능선 나무숲 + 중경 산책로 나무 + 양옆 큰 나무까지 총 12그루!)
+    const backTrees = [
+      { x: 86, y: 253, s: 0.58, v: 1 },
+      { x: 158, y: 247, s: 0.54, v: 2 },
+      { x: 234, y: 252, s: 0.62, v: 0 },
+      { x: 344, y: 250, s: 0.60, v: 1 },
+      { x: 414, y: 254, s: 0.56, v: 2 },
+      { x: 486, y: 251, s: 0.58, v: 0 },
+    ];
+    const midTrees = [
+      { x: 18, y: 268, s: 0.76, v: 2 },
+      { x: 196, y: 264, s: 0.72, v: 1 },
+      { x: 382, y: 265, s: 0.74, v: 0 },
+      { x: 562, y: 270, s: 0.76, v: 2 },
+    ];
     if (isXmas) {
-      drawChristmasTree(ctx, 48, 282, 1.02, t, true);
-      drawChristmasTree(ctx, 532, 284, 0.98, t + 1.2, false);
+      backTrees.forEach((tr, idx) => drawChristmasTree(ctx, tr.x, tr.y, tr.s, t + idx * 0.5, idx % 2 === 0, false));
+      midTrees.forEach((tr, idx) => drawChristmasTree(ctx, tr.x, tr.y, tr.s, t + idx * 0.7, idx % 2 === 1, false));
+      drawChristmasTree(ctx, 52, 284, 1.0, t, true, true);
+      drawChristmasTree(ctx, 528, 286, 0.96, t + 1.2, false, true);
     } else {
-      drawSeasonTree(ctx, 46, 268, 0.94, wx, t);
-      drawSeasonTree(ctx, 528, 272, 0.92, wx, t + 1.5);
+      backTrees.forEach((tr, idx) => drawSeasonTree(ctx, tr.x, tr.y, tr.s, wx, t + idx * 0.6, tr.v));
+      midTrees.forEach((tr, idx) => drawSeasonTree(ctx, tr.x, tr.y, tr.s, wx, t + idx * 0.8, tr.v));
+      drawSeasonTree(ctx, 52, 274, 0.96, wx, t, 0);
+      drawSeasonTree(ctx, 528, 276, 0.94, wx, t + 1.5, 1);
     }
 
     // 왼쪽 공원 턱걸이 철봉 기구 (x=126, y=348)
@@ -566,12 +603,12 @@
       drawSnowman(ctx, 290, 276, t);
     }
 
-    // 비·이슬비 오는 날 바닥 물웅덩이 파장(Ripples)
+    // 비·이슬비 오는 날 바닥 물웅덩이 파장(Ripples - 잔잔한 속도)
     if (wx.isRain && ripples) {
       ctx.save();
       ctx.lineWidth = wx.isDrizzle ? 1.4 : 1.7;
       for (const rp of ripples) {
-        rp.r += wx.isDrizzle ? 0.38 : 0.48;
+        rp.r += wx.isDrizzle ? 0.22 : 0.28;
         if (rp.r > 22) {
           rp.r = 2;
           rp.x = 95 + Math.random() * 390;
@@ -586,7 +623,7 @@
       ctx.restore();
     }
 
-    // 5. 계절·날씨 하늘 입자 (이슬비 / 비 / 눈 / 꽃잎 / 단풍잎)
+    // 5. 계절·날씨 하늘 입자 (이슬비 / 비 / 눈 / 꽃잎 / 단풍잎 - 차분한 낙하 속도)
     ctx.save();
     if (wx.isRain) {
       ctx.strokeStyle = wx.isDrizzle ? 'rgba(224, 242, 254, 0.74)' : 'rgba(255, 255, 255, 0.68)';
@@ -594,8 +631,8 @@
       ctx.lineCap = 'round';
       for (let i = 0; i < bgParticles.length; i++) {
         const p = bgParticles[i];
-        p.y = (p.y + p.v * (wx.isDrizzle ? 2.9 : 3.9)) % H;
-        p.x = (p.x - (wx.isDrizzle ? 0.75 : 1.15) + W) % W;
+        p.y = (p.y + p.v * (wx.isDrizzle ? 1.65 : 2.35)) % H;
+        p.x = (p.x - (wx.isDrizzle ? 0.45 : 0.72) + W) % W;
         const dropLen = wx.isDrizzle ? 10 : 16;
         const dropDx = wx.isDrizzle ? -2.4 : -4.2;
         ctx.beginPath();
@@ -616,8 +653,8 @@
       // 눈 오는 크리스마스: 함박눈 + 반짝이는 골드 스파클
       for (let i = 0; i < bgParticles.length; i++) {
         const p = bgParticles[i];
-        p.y = (p.y + p.v * 0.9) % H;
-        p.x = (p.x + Math.sin(t + p.y * 0.03) * 0.85 + W) % W;
+        p.y = (p.y + p.v * 0.52) % H;
+        p.x = (p.x + Math.sin(t * 0.8 + p.y * 0.03) * 0.55 + W) % W;
         ctx.fillStyle = i % 5 === 0 ? 'rgba(254, 240, 138, 0.9)' : 'rgba(255, 255, 255, 0.94)';
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.s * 2.2, 0, Math.PI * 2);
@@ -627,9 +664,9 @@
       // 추운 날 크리스마스: 잔잔한 눈송이 + 황금빛 크리스마스 반짝이
       for (let i = 0; i < bgParticles.length; i++) {
         const p = bgParticles[i];
-        p.y = (p.y + p.v * 0.45) % H;
-        p.x = (p.x + Math.sin(t * 1.2 + i) * 0.6 + W) % W;
-        const pulse = 0.55 + 0.45 * Math.sin(t * 3.5 + i);
+        p.y = (p.y + p.v * 0.28) % H;
+        p.x = (p.x + Math.sin(t * 0.7 + i) * 0.4 + W) % W;
+        const pulse = 0.55 + 0.45 * Math.sin(t * 2.2 + i);
         ctx.fillStyle = i % 2 === 0
           ? `rgba(254, 240, 138, ${0.85 * pulse})`
           : `rgba(255, 255, 255, ${0.8 * pulse})`;
@@ -640,11 +677,11 @@
     } else if (wx.season === 'spring') {
       ctx.fillStyle = '#F9A8D4';
       for (const p of bgParticles) {
-        p.y = (p.y + p.v * 0.65) % H;
-        p.x = (p.x + Math.sin(t * 1.5 + p.y * 0.04) * 1.1 + W) % W;
+        p.y = (p.y + p.v * 0.38) % H;
+        p.x = (p.x + Math.sin(t * 0.9 + p.y * 0.04) * 0.65 + W) % W;
         ctx.save();
         ctx.translate(p.x, p.y);
-        ctx.rotate(t + p.x * 0.05);
+        ctx.rotate(t * 0.6 + p.x * 0.05);
         ctx.beginPath();
         ctx.ellipse(0, 0, p.s * 2.4, p.s * 1.4, 0, 0, Math.PI * 2);
         ctx.fill();
@@ -653,11 +690,11 @@
     } else if (wx.season === 'autumn') {
       for (let i = 0; i < bgParticles.length; i++) {
         const p = bgParticles[i];
-        p.y = (p.y + p.v * 0.7) % H;
-        p.x = (p.x + Math.sin(t * 1.3 + i) * 1.1 + W) % W;
+        p.y = (p.y + p.v * 0.42) % H;
+        p.x = (p.x + Math.sin(t * 0.8 + i) * 0.65 + W) % W;
         ctx.save();
         ctx.translate(p.x, p.y);
-        ctx.rotate(t * 1.2 + i);
+        ctx.rotate(t * 0.7 + i);
         ctx.fillStyle = i % 2 === 0 ? '#F59E0B' : '#EF4444';
         ctx.beginPath();
         ctx.ellipse(0, 0, p.s * 2.6, p.s * 1.5, 0, 0, Math.PI * 2);
@@ -668,7 +705,7 @@
       ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
       for (let i = 0; i < 12; i++) {
         const p = bgParticles[i];
-        const pulse = 0.5 + 0.5 * Math.sin(t * 2 + i);
+        const pulse = 0.5 + 0.5 * Math.sin(t * 1.4 + i);
         ctx.beginPath();
         ctx.arc(p.x, p.y * 0.55, p.s * (1 + pulse), 0, Math.PI * 2);
         ctx.fill();
@@ -677,8 +714,124 @@
     ctx.restore();
   }
 
+  // 도심 속 공원 배경을 위한 서울 시티 스카이라인 (빌딩 숲 + 남산타워/타워 실루엣 + 창문 불빛)
+  function drawCitySkyline(ctx, horizonY, wx, isXmas, t) {
+    ctx.save();
+    const isLit = Boolean(wx.isNight || wx.isRain || isXmas);
+
+    // 1) 원경 스카이라인 빌딩 실루엣
+    const farBldColor = wx.isNight
+      ? 'rgba(30, 41, 59, 0.72)'
+      : wx.isRain
+        ? 'rgba(71, 85, 105, 0.48)'
+        : isXmas
+          ? 'rgba(51, 65, 85, 0.46)'
+          : 'rgba(100, 116, 139, 0.28)';
+    ctx.fillStyle = farBldColor;
+    const farBuildings = [
+      { x: 14, w: 34, h: 64 },
+      { x: 52, w: 28, h: 82 },
+      { x: 86, w: 38, h: 56 },
+      { x: 132, w: 30, h: 72 },
+      { x: 214, w: 36, h: 68 },
+      { x: 256, w: 42, h: 92 },
+      { x: 304, w: 32, h: 62 },
+      { x: 344, w: 38, h: 86 },
+      { x: 388, w: 30, h: 58 },
+      { x: 424, w: 36, h: 76 },
+      { x: 514, w: 38, h: 70 },
+    ];
+    farBuildings.forEach((b) => {
+      ctx.beginPath();
+      ctx.roundRect(b.x, horizonY - b.h, b.w, b.h + 10, [3, 3, 0, 0]);
+      ctx.fill();
+    });
+
+    // 왼쪽 언덕 위 남산 서울타워 랜드마크 실루엣 (x=184)
+    const tx = 184, ty = horizonY - 26;
+    ctx.fillStyle = farBldColor;
+    ctx.fillRect(tx - 10, ty - 14, 20, 16);
+    ctx.fillRect(tx - 2.5, ty - 62, 5, 48);
+    ctx.beginPath();
+    ctx.roundRect(tx - 9, ty - 72, 18, 11, 4);
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = farBldColor;
+    ctx.beginPath();
+    ctx.moveTo(tx, ty - 72);
+    ctx.lineTo(tx, ty - 94);
+    ctx.stroke();
+    // 타워 꼭대기 불빛
+    const beaconPulse = 0.55 + 0.45 * Math.sin(t * 2.2);
+    ctx.fillStyle = `rgba(251, 113, 133, ${beaconPulse})`;
+    ctx.beginPath();
+    ctx.arc(tx, ty - 95, 2.8, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 오른쪽 랜드마크 스카이타워 실루엣 (x=482)
+    const ltx = 482;
+    ctx.fillStyle = farBldColor;
+    ctx.beginPath();
+    ctx.moveTo(ltx - 15, horizonY + 6);
+    ctx.lineTo(ltx - 6, horizonY - 108);
+    ctx.lineTo(ltx + 6, horizonY - 108);
+    ctx.lineTo(ltx + 15, horizonY + 6);
+    ctx.closePath();
+    ctx.fill();
+
+    // 2) 중경 입체 도심 빌딩 + 창문 디테일
+    const nearBldColor = wx.isNight
+      ? '#1E293B'
+      : wx.isRain
+        ? '#475569'
+        : isXmas
+          ? '#334155'
+          : '#64748B';
+    const nearBuildings = [
+      { x: 32, w: 32, h: 54 },
+      { x: 104, w: 34, h: 64 },
+      { x: 236, w: 38, h: 74 },
+      { x: 282, w: 32, h: 52 },
+      { x: 356, w: 36, h: 68 },
+      { x: 438, w: 34, h: 58 },
+      { x: 532, w: 34, h: 60 },
+    ];
+    nearBuildings.forEach((b, bIdx) => {
+      const topY = horizonY - b.h;
+      ctx.fillStyle = nearBldColor;
+      ctx.globalAlpha = wx.isNight || isXmas ? 0.82 : 0.52;
+      ctx.beginPath();
+      ctx.roundRect(b.x, topY, b.w, b.h + 10, [3, 3, 0, 0]);
+      ctx.fill();
+
+      // 옥상 포인트 라인
+      ctx.fillStyle = isLit ? '#94A3B8' : '#E2E8F0';
+      ctx.fillRect(b.x + 2, topY, b.w - 4, 2.5);
+      ctx.globalAlpha = 1;
+
+      // 빌딩 창문 격자 (밤/비/겨울엔 따뜻한 노란 불빛, 낮엔 유리창 반사광)
+      const cols = 3;
+      const rows = Math.floor((b.h - 14) / 10);
+      const winW = 5, winH = 5.5;
+      const startX = b.x + (b.w - (cols * winW + (cols - 1) * 4)) * 0.5;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const isWindowOn = ((bIdx * 7 + r * 3 + c * 5) % 3 !== 0);
+          if (isLit) {
+            ctx.fillStyle = isWindowOn ? 'rgba(254, 240, 138, 0.78)' : 'rgba(148, 163, 184, 0.22)';
+          } else {
+            ctx.fillStyle = isWindowOn ? 'rgba(224, 242, 254, 0.62)' : 'rgba(255, 255, 255, 0.28)';
+          }
+          ctx.fillRect(startX + c * (winW + 4), topY + 7 + r * 10, winW, winH);
+        }
+      }
+    });
+
+    ctx.restore();
+  }
+
   // 겨울(눈 오는 날 · 추운 날) 화려한 크리스마스 트리 + 오너먼트 + 알전구 + 선물상자
-  function drawChristmasTree(ctx, x, y, scale, t, isLeft) {
+  function drawChristmasTree(ctx, x, y, scale, t, isLeft, showGifts = true) {
     ctx.save();
     ctx.translate(x, y);
     ctx.scale(scale, scale);
@@ -748,7 +901,7 @@
       { dx: 28, dy: -44, c: '#4ADE80' },
     ];
     ornaments.forEach((ob, idx) => {
-      const glow = 0.5 + 0.5 * Math.sin(t * 4.5 + idx * 1.1);
+      const glow = 0.5 + 0.5 * Math.sin(t * 2.4 + idx * 1.1);
       ctx.save();
       ctx.fillStyle = ob.c;
       ctx.shadowColor = glow > 0.7 ? '#FEF08A' : ob.c;
@@ -760,7 +913,7 @@
     });
 
     // 트리 꼭대기 황금 별 (Christmas Star)
-    const starPulse = 1 + Math.sin(t * 3.8) * 0.08;
+    const starPulse = 1 + Math.sin(t * 2.0) * 0.06;
     ctx.save();
     ctx.translate(0, -158);
     ctx.scale(starPulse, starPulse);
@@ -786,10 +939,12 @@
     ctx.stroke();
     ctx.restore();
 
-    // 트리 아래 크리스마스 선물상자 2개
-    const giftDir = isLeft ? 1 : -1;
-    drawGiftBox(ctx, giftDir * 16, -2, 18, 15, '#EF4444', '#FACC15');
-    drawGiftBox(ctx, giftDir * 31, 0, 14, 12, '#16A34A', '#FCA5A5');
+    // 전경 메인 트리 아래 크리스마스 선물상자 2개
+    if (showGifts) {
+      const giftDir = isLeft ? 1 : -1;
+      drawGiftBox(ctx, giftDir * 16, -2, 18, 15, '#EF4444', '#FACC15');
+      drawGiftBox(ctx, giftDir * 31, 0, 14, 12, '#16A34A', '#FCA5A5');
+    }
 
     ctx.restore();
   }
@@ -844,11 +999,11 @@
     ctx.restore();
   }
 
-  function drawSeasonTree(ctx, x, y, scale, wx, t) {
+  function drawSeasonTree(ctx, x, y, scale, wx, t, variant = 0) {
     ctx.save();
     ctx.translate(x, y);
     ctx.scale(scale, scale);
-    const sway = Math.sin(t * 1.6) * 0.025;
+    const sway = Math.sin(t * 0.75) * 0.015;
     ctx.rotate(sway);
 
     ctx.fillStyle = '#78350F';
@@ -858,11 +1013,32 @@
 
     let c1 = '#22C55E', c2 = '#16A34A';
     if (wx.season === 'spring') {
-      c1 = '#FBCFE8';
-      c2 = '#F472B6';
+      if (variant === 2) {
+        c1 = '#86EFAC';
+        c2 = '#22C55E';
+      } else {
+        c1 = '#FBCFE8';
+        c2 = '#F472B6';
+      }
     } else if (wx.season === 'autumn') {
-      c1 = x < 290 ? '#FBBF24' : '#F87171';
-      c2 = x < 290 ? '#D97706' : '#DC2626';
+      if (variant === 2) {
+        c1 = '#4ADE80';
+        c2 = '#15803D';
+      } else if (variant === 1 || x < 240) {
+        c1 = '#FBBF24';
+        c2 = '#D97706';
+      } else {
+        c1 = '#F87171';
+        c2 = '#DC2626';
+      }
+    } else {
+      if (variant === 1) {
+        c1 = '#34D399';
+        c2 = '#059669';
+      } else if (variant === 2) {
+        c1 = '#4ADE80';
+        c2 = '#15803D';
+      }
     }
 
     const puffs = [
@@ -1201,8 +1377,8 @@
     ctx.lineTo(blanketX + blanketW * 0.55, blanketY + blanketH - 4);
     ctx.stroke();
 
-    // 5) 쿨쿨 잠드는 Zzz 애니메이션 방울
-    const zPhase = (t * 1.4) % 1;
+    // 5) 쿨쿨 잠드는 Zzz 애니메이션 방울 (천천히 평화롭게 떠오름)
+    const zPhase = (t * 0.55) % 1;
     ctx.font = `bold ${isMini ? 13 : 16}px sans-serif`;
     ctx.fillStyle = '#1E293B';
     ctx.fillText('💤', pillowX - 8, pillowY - 22 - zPhase * 12);
@@ -1400,8 +1576,8 @@
   // 서로 게임 중일 때 캐릭터가 휴대용 3D 두뇌게임기를 들고 집중해서 플레이하는 모션 (팔 2개만 렌더링!)
   function drawGamingMotion(ctx, charId, cx, groundY, jumpY, depthScale, img, targetW, targetH, t, outfit, hasCrown, gameLabel) {
     const isFather = charId === '610708';
-    const gameBobY = Math.sin(t * 8.2 + (isFather ? 0 : 1.4)) * 3.2;
-    const gameTilt = Math.sin(t * 4.2 + (isFather ? 0 : 1.1)) * 0.028;
+    const gameBobY = Math.sin(t * 2.6 + (isFather ? 0 : 1.4)) * 1.6;
+    const gameTilt = Math.sin(t * 1.8 + (isFather ? 0 : 1.1)) * 0.018;
 
     // 바닥 그림자
     ctx.save();
@@ -1423,7 +1599,7 @@
     const { u, shoulderY } = drawMiiHeadAndArmlessBody(ctx, charId, img, targetH, outfit, hasCrown, t, false);
 
     // 2) 가슴 앞에서 양손으로 잡고 있는 3D 휴대용 두뇌게임기 (Handheld Brain Console)
-    const consoleY = -targetH * 0.36 + Math.sin(t * 12) * 1.5;
+    const consoleY = -targetH * 0.36 + Math.sin(t * 4.5) * 0.9;
 
     // 게임기 화면에서 얼굴로 퍼지는 네온 빛무리
     const screenGlow = ctx.createRadialGradient(0, consoleY - 6, 4, 0, consoleY - 18, 48);
@@ -1511,9 +1687,9 @@
     ctx.arc(26, 0, 1.8, 0, Math.PI * 2);
     ctx.fill();
 
-    // 빠르게 버튼을 연타하는 두 손 (엄지손가락 상하 탭 모션!)
-    const leftTap = Math.sin(t * 16) * 2.8;
-    const rightTap = Math.cos(t * 16) * 2.8;
+    // 차분하게 버튼을 누르는 두 손 (엄지손가락 상하 탭 모션)
+    const leftTap = Math.sin(t * 5.8) * 1.6;
+    const rightTap = Math.cos(t * 5.8) * 1.6;
     ctx.fillStyle = '#FDBA8C';
     ctx.strokeStyle = '#9A3412';
     ctx.lineWidth = 1.3;
@@ -1527,11 +1703,11 @@
     ctx.stroke();
     ctx.restore();
 
-    // 4) 게임기 주변으로 솟아오르는 두뇌게임 이펙트 아이콘 (🎮, 🧠, ⚡)
+    // 4) 게임기 주변으로 부드럽게 떠오르는 두뇌게임 이펙트 아이콘 (🎮, 🧠, ⚡)
     const icons = ['🎮', '🧠', '⚡'];
     icons.forEach((ic, idx) => {
-      const cycle = (t * 1.3 + idx * 0.33) % 1;
-      const ix = (idx - 1) * 28 + Math.sin(t * 4 + idx) * 5;
+      const cycle = (t * 0.55 + idx * 0.33) % 1;
+      const ix = (idx - 1) * 28 + Math.sin(t * 1.8 + idx) * 4;
       const iy = consoleY - 14 - cycle * 34;
       ctx.save();
       ctx.globalAlpha = Math.max(0, 1 - cycle * 0.9);
@@ -1684,9 +1860,9 @@
       return;
     }
 
-    // [행동 B] 철봉 턱걸이 운동하기 (pullup - 팔 2개만 렌더링!)
+    // [행동 B] 철봉 턱걸이 운동하기 (pullup - 팔 2개만 렌더링, 여유 있는 템포!)
     if (act === 'pullup') {
-      const pullCycle = t * 4.2 + (isFather ? 0 : 1.2);
+      const pullCycle = t * 1.45 + (isFather ? 0 : 1.2);
       const pullPhase = (Math.sin(pullCycle) + 1) * 0.5; // 0(매달림) ~ 1(턱걸이 정점)
       const pullScale = 0.85;
       const pH = targetH * pullScale;
@@ -1763,10 +1939,10 @@
       return;
     }
 
-    // [행동 C] 의자에 앉아있기 (sit)
+    // [행동 C] 의자에 앉아있기 (sit - 차분한 휴식)
     if (act === 'sit') {
-      const seatSway = Math.sin(t * 2.4 + (isFather ? 0 : 1.3)) * 0.025;
-      const legSwing = Math.sin(t * 3.8 + (isFather ? 0 : 1.0)) * 3.5;
+      const seatSway = Math.sin(t * 1.1 + (isFather ? 0 : 1.3)) * 0.018;
+      const legSwing = Math.sin(t * 1.6 + (isFather ? 0 : 1.0)) * 2.2;
       ctx.save();
       ctx.translate(cx, groundY + jumpY + 12);
       ctx.rotate(seatSway);
@@ -1788,25 +1964,25 @@
       }
       ctx.font = '16px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('☕', isFather ? -36 : 36, -targetH * 0.55 + Math.sin(t * 3) * 3);
+      ctx.fillText('☕', isFather ? -36 : 36, -targetH * 0.55 + Math.sin(t * 1.4) * 2);
       ctx.restore();
       return;
     }
 
-    // [행동 D] 자연스럽게 좌·우·정면으로 걸어다니기 (walk)
+    // [행동 D] 자연스럽게 좌·우·정면으로 천천히 걸어다니기 (walk)
     const walkPhase = ch.walkPhase;
     const bobY = isWalking
-      ? -Math.abs(Math.sin(walkPhase)) * 8.5
-      : Math.sin(t * 2.8 + (isFather ? 0 : 1.2)) * 2.5;
+      ? -Math.abs(Math.sin(walkPhase)) * 4.2
+      : Math.sin(t * 1.4 + (isFather ? 0 : 1.2)) * 1.5;
     const walkTilt = isWalking
-      ? Math.sin(walkPhase) * 0.06
-      : Math.sin(t * 2.2 + (isFather ? 0 : 1.0)) * 0.016;
+      ? Math.sin(walkPhase) * 0.028
+      : Math.sin(t * 1.1 + (isFather ? 0 : 1.0)) * 0.01;
     const stepSquashX = isWalking
-      ? 1 + Math.cos(walkPhase * 2) * 0.032
-      : 1 + Math.sin(t * 3.0) * 0.012;
+      ? 1 + Math.cos(walkPhase * 2) * 0.018
+      : 1 + Math.sin(t * 1.5) * 0.008;
     const stepSquashY = isWalking
-      ? 1 - Math.cos(walkPhase * 2) * 0.032
-      : 1 - Math.sin(t * 3.0) * 0.012;
+      ? 1 - Math.cos(walkPhase * 2) * 0.018
+      : 1 - Math.sin(t * 1.5) * 0.008;
 
     const jumpFactor = Math.max(0.55, 1 + (jumpY + bobY) / 140);
     ctx.save();
@@ -1887,7 +2063,7 @@
 
     // [행동 B] 미니 철봉 턱걸이 운동하기 (pullup - 미니 머털도사, 팔 2개만 렌더링!)
     if (act === 'pullup' && isMutul) {
-      const pullPhase = (Math.sin(t * 4.8 + 0.7) + 1) * 0.5;
+      const pullPhase = (Math.sin(t * 1.65 + 0.7) + 1) * 0.5;
       const pullScale = 0.85;
       const pH = targetH * pullScale;
       const pullLiftY = -8 - pullPhase * 22;
@@ -1937,7 +2113,7 @@
     if (act === 'sit') {
       ctx.save();
       ctx.translate(cx, groundY + jumpY + 6);
-      ctx.rotate(Math.sin(t * 2.8) * 0.03);
+      ctx.rotate(Math.sin(t * 1.3) * 0.02);
       ctx.scale(1.03, 0.88);
       ctx.drawImage(img, -targetW / 2, -targetH + 4, targetW, targetH);
       ctx.font = '13px sans-serif';
@@ -1947,20 +2123,20 @@
       return;
     }
 
-    // [행동 D] 자연스럽게 좌·우로 걸어다니기 (walk)
+    // [행동 D] 자연스럽게 좌·우로 천천히 걸어다니기 (walk)
     const walkPhase = ch.walkPhase;
     const bobY = isWalking
-      ? -Math.abs(Math.sin(walkPhase)) * (isMutul ? 6.5 : 5.5)
-      : Math.sin(t * 3.4 + (isMutul ? 0.5 : 2.1)) * 2.0;
+      ? -Math.abs(Math.sin(walkPhase)) * (isMutul ? 3.2 : 2.8)
+      : Math.sin(t * 1.6 + (isMutul ? 0.5 : 2.1)) * 1.2;
     const walkTilt = isWalking
-      ? Math.sin(walkPhase) * (isMutul ? 0.065 : 0.055)
-      : Math.sin(t * 2.6 + (isMutul ? 0 : 1.4)) * 0.018;
+      ? Math.sin(walkPhase) * (isMutul ? 0.03 : 0.025)
+      : Math.sin(t * 1.2 + (isMutul ? 0 : 1.4)) * 0.01;
     const stepSquashX = isWalking
-      ? 1 + Math.cos(walkPhase * 2) * 0.035
-      : 1 + Math.sin(t * 3.5) * 0.014;
+      ? 1 + Math.cos(walkPhase * 2) * 0.018
+      : 1 + Math.sin(t * 1.6) * 0.008;
     const stepSquashY = isWalking
-      ? 1 - Math.cos(walkPhase * 2) * 0.035
-      : 1 - Math.sin(t * 3.5) * 0.014;
+      ? 1 - Math.cos(walkPhase * 2) * 0.018
+      : 1 - Math.sin(t * 1.6) * 0.008;
 
     const jumpFactor = Math.max(0.55, 1 + (jumpY + bobY) / 100);
     ctx.save();
@@ -2130,8 +2306,8 @@
         y: 0,
         vy: 0,
         activity: 'pullup',
-        nextActivityAt: performance.now() + 6200,
-        nextWanderAt: performance.now() + 2400,
+        nextActivityAt: performance.now() + 16000,
+        nextWanderAt: performance.now() + 7200,
       },
       '691105': {
         x: 454,
@@ -2145,8 +2321,8 @@
         y: 0,
         vy: 0,
         activity: 'sit',
-        nextActivityAt: performance.now() + 7100,
-        nextWanderAt: performance.now() + 2800,
+        nextActivityAt: performance.now() + 18500,
+        nextWanderAt: performance.now() + 8000,
       },
       mutul: {
         x: 225,
@@ -2160,8 +2336,8 @@
         y: 0,
         vy: 0,
         activity: 'sleep',
-        nextActivityAt: performance.now() + 5800,
-        nextWanderAt: performance.now() + 1800,
+        nextActivityAt: performance.now() + 17000,
+        nextWanderAt: performance.now() + 6800,
       },
       puppy: {
         x: 385,
@@ -2170,13 +2346,13 @@
         targetZ: 12,
         yaw: -1.2,
         targetYaw: -1.2,
-        speed: 2.1,
+        speed: 0.72,
         walkPhase: 2.1,
         y: 0,
         vy: 0,
         activity: 'walk',
-        nextActivityAt: performance.now() + 5200,
-        nextWanderAt: performance.now() + 1500,
+        nextActivityAt: performance.now() + 15500,
+        nextWanderAt: performance.now() + 6500,
       },
     };
 
@@ -2187,7 +2363,7 @@
         act = 'gaming';
       }
       ch.activity = act;
-      ch.nextActivityAt = now + 5400 + Math.random() * 3400;
+      ch.nextActivityAt = now + 15000 + Math.random() * 10000;
 
       if (act === 'gaming') {
         ch.targetX = id === '610708' ? 235 : 375;
@@ -2202,7 +2378,7 @@
         ch.targetX = id === '610708' ? 245 : id === '691105' ? 325 : id === 'mutul' ? 220 : 355;
         ch.targetZ = (id === '610708' || id === '691105') ? 4 : 10;
       } else {
-        // 'walk': 각자 영역에서 좌·우로 겹치지 않게 걸어다님
+        // 'walk': 각자 영역에서 좌·우로 여유롭게 걸어다님
         const isLeftChar = id === '610708' || id === 'mutul';
         const minLane = isLeftChar ? 95 : 305;
         const maxLane = isLeftChar ? 275 : 485;
@@ -2210,7 +2386,7 @@
         const goRight = ch.x < midLane;
         ch.targetX = goRight ? (midLane + 35 + Math.random() * 50) : (minLane + Math.random() * 50);
         ch.targetZ = (id === '610708' || id === '691105') ? (-8 + Math.random() * 14) : (6 + Math.random() * 10);
-        ch.nextWanderAt = now + 2200 + Math.random() * 1600;
+        ch.nextWanderAt = now + 6500 + Math.random() * 4500;
       }
 
       if (snapImmediate) {
@@ -2221,7 +2397,7 @@
           ch.targetX = isLeftChar ? 265 : 465;
           ch.yaw = 1.2;
           ch.targetYaw = 1.2;
-          ch.speed = 1.9;
+          ch.speed = 0.62;
         } else {
           ch.x = ch.targetX;
           ch.z = ch.targetZ;
@@ -2448,7 +2624,7 @@
                 if (pos.act) chars[id].activity = pos.act;
                 chars[id].targetX = tx;
                 chars[id].targetZ = tz;
-                chars[id].nextActivityAt = performance.now() + 6500;
+                chars[id].nextActivityAt = performance.now() + 16000;
               }
             });
           }
@@ -2499,8 +2675,8 @@
         ['610708', '691105', 'mutul', 'puppy'].forEach((id) => {
           if (playerState[id] && playerState[id].playing) return;
           chars[id].activity = 'walk';
-          chars[id].nextActivityAt = now + 5500;
-          chars[id].nextWanderAt = now + 4500;
+          chars[id].nextActivityAt = now + 16000;
+          chars[id].nextWanderAt = now + 10000;
         });
         if (!playerState['610708'].playing) {
           chars['610708'].targetX = centerTarget - 70;
@@ -2568,7 +2744,7 @@
             ? (midLane + 30 + Math.random() * 55)
             : (minLane + Math.random() * 55);
           ch.targetZ = isMini ? (4 + Math.random() * 12) : (-10 + Math.random() * 16);
-          ch.nextWanderAt = now + 2400 + Math.random() * 1800;
+          ch.nextWanderAt = now + 6800 + Math.random() * 4800;
         }
 
         const curDx = ch.targetX - ch.x;
@@ -2576,23 +2752,23 @@
         const curDist = Math.hypot(curDx, curDz);
 
         if (curDist > 3.2) {
-          const maxSpd = id === 'puppy' ? 2.35 : id === 'mutul' ? 1.95 : 1.85;
+          const maxSpd = id === 'puppy' ? 0.76 : id === 'mutul' ? 0.64 : 0.55;
           const moveStep = Math.min(curDist, maxSpd);
           ch.x += (curDx / curDist) * moveStep;
           ch.z += (curDz / curDist) * moveStep;
           ch.speed = moveStep;
-          ch.walkPhase += id === 'puppy' ? 0.28 : 0.22;
+          ch.walkPhase += id === 'puppy' ? 0.082 : 0.065;
           ch.targetYaw = curDx < -0.5 ? -1.2 : curDx > 0.5 ? 1.2 : 0;
         } else {
           ch.speed = 0;
           ch.targetYaw = 0;
         }
 
-        ch.yaw = lerpAngle(ch.yaw, ch.targetYaw, 0.2);
+        ch.yaw = lerpAngle(ch.yaw, ch.targetYaw, 0.08);
 
         if (ch.y < 0 || ch.vy !== 0) {
           ch.y += ch.vy;
-          ch.vy += 0.54;
+          ch.vy += 0.36;
           if (ch.y >= 0) {
             ch.y = 0;
             ch.vy = 0;
@@ -2622,7 +2798,7 @@
       });
 
       const midX = (chars['610708'].x + chars['691105'].x) * 0.5;
-      const midY = 202 + Math.sin(t * 3.2) * 5;
+      const midY = 202 + Math.sin(t * 1.5) * 3.5;
       ctx.save();
       ctx.font = '24px sans-serif';
       ctx.textAlign = 'center';
