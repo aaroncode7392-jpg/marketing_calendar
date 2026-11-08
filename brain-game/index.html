@@ -833,6 +833,11 @@ function showVerseCard(force = false) {
     localStorage.setItem(info.slotKey, 'true');
     if(window.RECALL) RECALL.note(v.ref);
     ov.remove();
+    if(!force && isGlassReadyToBreak() && !window.__glassAutoShownOnHome){
+      window.__glassAutoShownOnHome = true;
+      GLASS.track('glass_auto_after_reward');
+      NEWS.openFeed('right');
+    }
   };
 
   ov.querySelector('#closeVerseBtn').addEventListener('click', close);
@@ -3836,27 +3841,57 @@ function showChestRewardModal(){
   });
 }
 
+function isGlassReadyToBreak(){
+  return !!(window.GLASS && typeof GLASS.state === 'function' && GLASS.state() === 'ready' && window.NEWS && typeof NEWS.openFeed === 'function');
+}
+function glassRewardCtaHtml(){
+  if(!isGlassReadyToBreak()) return `<div class="touch-hint" style="margin-top:16px;">👉 화면 아무 곳이나 터치하면 닫힙니다</div>`;
+  return `
+    <button type="button" class="btn" style="margin:16px auto 0;max-width:340px;font-size:20px;padding:16px 14px;background:linear-gradient(135deg,#FF9F1C,#F04452);color:#fff;border:0;border-radius:16px;box-shadow:0 6px 20px rgba(240,68,82,.55);animation:nwGlow 1.2s ease-in-out infinite;word-break:keep-all;line-height:1.4;">
+      🧊 마지막 보상! 얼음 깨러 가기 🔨<br><span style="font-size:15px;opacity:.92;">화면을 터치하면 뉴스·라디오·유튜브가 열려요</span>
+    </button>`;
+}
+function closeRewardOverlay(ov){
+  if(ov && ov.parentNode) ov.remove();
+  if(isGlassReadyToBreak()){
+    GLASS.track('glass_auto_after_reward');
+    NEWS.openFeed('right');
+  }
+}
+
 /**
  * 꽝(80%) 결과 화면 표시
  */
 function showEmptyRewardScreen(){
   beep(330, 0.2);
+  const readyGlass = isGlassReadyToBreak();
   const ov = el(`
     <div class="reward-overlay" style="background:rgba(30,20,15,0.85);backdrop-filter:blur(6px);">
       <div style="text-align:center;max-width:380px;animation:zoomFadeIn 0.35s ease both;padding:24px;">
-        <div style="font-size:64px;margin-bottom:12px;animation:jellyPop 0.6s ease;">💨</div>
-        <div style="font-family:'Jua';font-size:26px;color:#FFEAA7;margin-bottom:8px;text-shadow:0 2px 8px rgba(0,0,0,0.5);">
-          아쉽게도 아무것도 안나왔습니다
+        <div style="font-size:64px;margin-bottom:12px;animation:jellyPop 0.6s ease;">${readyGlass ? '🧊' : '💨'}</div>
+        <div style="font-family:'Jua';font-size:25px;color:#FFEAA7;margin-bottom:8px;text-shadow:0 2px 8px rgba(0,0,0,0.5);word-break:keep-all;line-height:1.35;">
+          ${readyGlass ? '상자는 아쉽지만,<br>얼음 깨기가 열렸어요!' : '아쉽게도 아무것도 안나왔습니다'}
         </div>
         <div style="font-size:16px;color:rgba(255,255,255,0.9);line-height:1.6;margin-bottom:16px;">
-          두뇌 운동을 멋지게 완료한 것만으로도<br>충분히 대단해요! 😊<br>다음 판에 또 도전해보세요!
+          ${readyGlass
+            ? '오늘의 두뇌 운동을 끝내서<br><b>뉴스·라디오·유튜브를 막은 얼음(유리)</b>을<br>지금 바로 깰 수 있어요! 😊'
+            : '두뇌 운동을 멋지게 완료한 것만으로도<br>충분히 대단해요! 😊<br>다음 판에 또 도전해보세요!'}
         </div>
-        <div class="touch-hint">👉 화면 아무 곳이나 터치하면 닫힙니다</div>
+        ${glassRewardCtaHtml()}
       </div>
     </div>
   `);
   document.body.appendChild(ov);
-  ov.addEventListener('click', () => ov.remove());
+  let closed = false;
+  const finish = () => {
+    if(closed) return;
+    closed = true;
+    closeRewardOverlay(ov);
+  };
+  ov.addEventListener('click', finish);
+  if(readyGlass){
+    setTimeout(finish, 2200);
+  }
 }
 
 /**
@@ -3920,12 +3955,12 @@ function showVerseRewardScreen(){
           </div>
         </div>
 
-        <div class="touch-hint">👉 화면 아무 곳이나 터치하면 닫힙니다</div>
+        ${glassRewardCtaHtml()}
       </div>
     </div>
   `);
   document.body.appendChild(ov);
-  ov.addEventListener('click', () => ov.remove());
+  ov.addEventListener('click', () => closeRewardOverlay(ov));
 }
 
 /**
@@ -3973,13 +4008,13 @@ async function showMeoteolRewardScreen(){
         <div style="font-family:'Jua';font-size:23px;color:#FFF;margin-top:12px;text-shadow:0 2px 10px rgba(0,0,0,0.8);padding:0 16px;">${card.name || '머털도사 카드'}</div>
         <div style="font-size:14px;color:#FFEAA7;margin-top:2px;text-shadow:0 2px 8px rgba(0,0,0,0.8);padding:0 16px;">${countText} (라이브러리에 저장됨)</div>
 
-        <div class="touch-hint" style="margin-top:16px;">👉 화면 아무 곳이나 터치하면 닫힙니다</div>
+        ${glassRewardCtaHtml()}
       </div>
     </div>
   `);
   document.body.appendChild(ov);
   spawnBurstParticles(ov.querySelector('#meoteolFxWrap'));
-  ov.addEventListener('click', () => ov.remove());
+  ov.addEventListener('click', () => closeRewardOverlay(ov));
 }
 
 function playCardSound(){
@@ -4138,6 +4173,11 @@ function showFinalResult(){
   };
   const onHome = () => {
     if (chestTimer) clearTimeout(chestTimer);
+    if (isGlassReadyToBreak()) {
+      GLASS.track('glass_auto_after_reward');
+      NEWS.openFeed('right');
+      return;
+    }
     renderHome();
   };
   v.querySelector('#retry').addEventListener('click', onRetry);
@@ -4145,6 +4185,13 @@ function showFinalResult(){
     v.querySelector('#home').addEventListener('click', onHome);
     // 통과 기준 점수 이상일 때만 3개 상자 선택 보너스 모달 팝업
     chestTimer = setTimeout(() => { showChestRewardModal(); }, 650);
+  } else if (isGlassReadyToBreak()) {
+    chestTimer = setTimeout(() => {
+      if (isGlassReadyToBreak()) {
+        GLASS.track('glass_auto_after_reward');
+        NEWS.openFeed('right');
+      }
+    }, 2200);
   }
 }
 function getDiagnosis(total,domains){
@@ -4263,7 +4310,14 @@ async function renderHome(isNew=false){
   if(window.WEATHER) WEATHER.injectHomeBrief(v);
 
   // 6시간 슬롯 기준 첫 접속 시 자동 팝업
-  setTimeout(()=>{ showVerseCard(false); }, 350);
+  setTimeout(()=>{
+    const shown = showVerseCard(false);
+    if(!shown && isGlassReadyToBreak() && !window.__glassAutoShownOnHome){
+      window.__glassAutoShownOnHome = true;
+      GLASS.track('glass_auto_after_reward');
+      NEWS.openFeed('right');
+    }
+  }, 350);
 }
 // ---------- 게임별 개별 연습 모드 (세션/점수 집계와 무관하게 한 판만 플레이) ----------
 function playPractice(type){ setRandomBackground();
@@ -4813,7 +4867,7 @@ function clearBackground() {
 <script src="coop.js?v=4"></script>
 <script src="recall.js?v=1"></script>
 <script src="radio.js?v=3"></script>
-<script src="glass.js?v=5"></script>
+<script src="glass.js?v=6"></script>
 <script src="weather.js?v=2"></script>
 <script src="video.js?v=2"></script>
 <script src="clean.js?v=6"></script>
