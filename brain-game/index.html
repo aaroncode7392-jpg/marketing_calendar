@@ -1032,6 +1032,7 @@ function recordClearToday(kind){
   currentMember.completedLog=pushCapped(currentMember.completedLog||[], ts);
   if(kind==='measure') currentMember.measureClearLog=pushCapped(currentMember.measureClearLog||[], ts);
   saveMember();
+  if(window.PET && PET.markCompletedToday) PET.markCompletedToday();
 }
 
 // ---------- HELPERS ----------
@@ -1562,6 +1563,7 @@ function startSession(){
 function beginSession(){
   setGameBackground('assets/bg_landscape_'+(Math.floor(Math.random()*10)+1)+'.jpg');
   markPlayedToday();
+  if(window.PET && PET.setPlayingState) PET.setPlayingState(true, '오늘의 두뇌운동');
   const levels={speed:domainLevel('speed'),math:domainLevel('math'),memory:domainLevel('memory')};
   session={ stages:buildStages(), idx:0, levels, domainScores:{speed:[],memory:[],math:[],typing:[]} };
   showTransition(null,null,true);
@@ -3307,11 +3309,13 @@ function playTyping({qs=3, onDone=null}={}){ setRandomBackground();
 
 // ==========================================================
 function playDecompose({lv=1, bossHp=100}={}){ setRandomBackground();
+  if(window.PET && PET.setPlayingState) PET.setPlayingState(true, '숫자 계산 훈련');
   let level = lv;
   let currentHp = bossHp; // 단계가 바뀌어도 요괴 체력을 이어받는다
   const maxLevels = 20;
   
   if(level > maxLevels) {
+    if(window.PET && PET.setPlayingState) PET.setPlayingState(false);
     clear();
     const v = el(`
       <div class="fade" style="text-align:center;padding:40px 20px;">
@@ -4168,6 +4172,8 @@ function showFinalResult(){
   const levelMsg = levelChangeHtml(prevLevels, {speed:domainLevel('speed'),math:domainLevel('math'),memory:domainLevel('memory')}, prevTyping, typingLevel());
   currentMember.completedLog = pushCapped(currentMember.completedLog || [], new Date().toISOString());
   saveMember();
+  if(window.PET && PET.setPlayingState) PET.setPlayingState(false);
+  if(window.PET && PET.markCompletedToday) PET.markCompletedToday();
   const PASS_SCORE=PASS_SCORE_BY_BIRTHDATE[currentMember.birthdate] ?? DEFAULT_PASS_SCORE;
   const passed=totalScore>=PASS_SCORE;
   const stars=totalScore>=80?3:totalScore>=60?2:1;
@@ -4257,6 +4263,7 @@ function getDiagnosis(total,domains){
 // ==========================================================
 async function renderHome(isNew=false){
   session=null; clear();
+  if(window.PET && PET.setPlayingState) PET.setPlayingState(false);
   cardIndex = await loadCardIndex();
   const owned=Object.keys(currentMember.cards||{}).length;
   const hour=new Date().getHours();
@@ -4367,6 +4374,7 @@ async function renderHome(isNew=false){
 // ---------- 게임별 개별 연습 모드 (세션/점수 집계와 무관하게 한 판만 플레이) ----------
 function playPractice(type){ setRandomBackground();
   setGameBackground('assets/bg_landscape_'+(Math.floor(Math.random()*10)+1)+'.jpg');
+  if(window.PET && PET.setPlayingState) PET.setPlayingState(true, '개별 연습');
   const onDone=(score)=>showPracticeResult(type,score);
   if(type==='speed') playSpeed({lv:domainLevel('speed'), rounds:5, onDone});
   else if(type==='seq') playSeq({lv:domainLevel('seq'), mode:pick(['color','object','animal']), onDone});
@@ -4381,6 +4389,7 @@ function playPractice(type){ setRandomBackground();
   else if(type==='train-teach' && window.TRAIN) TRAIN.play({onDone, mode:'teach'});
 }
 function showPracticeResult(type,score){
+  if(window.PET && PET.setPlayingState) PET.setPlayingState(false);
   const labels={speed:'⚡ 순간 포착',seq:'🎵 순서 기억',math:'🔢 빠른 셈',memory:'🃏 짝 맞추기',mathhard:'🧮 심화 계산',typing:'✍️ 명언 따라쓰기',clean:'🧹 청소 심부름',why:'💼 왜라고 질문하기',train:'👩‍🍳 선배·후배 교육', 'train-learn':'👩‍🍳 선배에게 일 배우기', 'train-teach':'👩‍🏫 후배에게 교육 시키기'};
   const noScore=(type==='seq');
   clear();
@@ -4915,7 +4924,7 @@ function clearBackground() {
 <script src="radio.js?v=3"></script>
 <script src="glass.js?v=7"></script>
 <script src="weather.js?v=3"></script>
-<script src="pet.js?v=11"></script>
+<script src="pet.js?v=12"></script>
 <script src="video.js?v=2"></script>
 <script src="clean.js?v=6"></script>
 <script src="why.js?v=10"></script>

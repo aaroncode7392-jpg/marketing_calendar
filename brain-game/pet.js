@@ -92,6 +92,127 @@
   }
 
   let activeMount = null;
+  let globalPlayingHeartbeat = null;
+
+  // 자정(00:00) 기준 오늘 날짜 문자열 ('YYYY-MM-DD') 반환
+  function getTodayLocalYMD(d = new Date()) {
+    const dt = d instanceof Date ? d : new Date(d);
+    if (Number.isNaN(dt.getTime())) return '';
+    const y = dt.getFullYear();
+    const m = String(dt.getMonth() + 1).padStart(2, '0');
+    const day = String(dt.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  // 해당 회원이 오늘(자정 00:00 ~ 23:59:59) 게임을 완료했는지 확인
+  function hasMemberCompletedToday(memberDoc) {
+    if (!memberDoc || typeof memberDoc !== 'object') return false;
+    const today = getTodayLocalYMD();
+    if (memberDoc.crownDate === today) return true;
+    const isHit = (ts) => ts && getTodayLocalYMD(new Date(ts)) === today;
+    if (Array.isArray(memberDoc.completedLog) && memberDoc.completedLog.some(isHit)) return true;
+    if (Array.isArray(memberDoc.scoreLog) && memberDoc.scoreLog.some((s) => s && isHit(s.ts))) return true;
+    return false;
+  }
+
+  const playerState = {
+    '610708': { playing: false, gameLabel: '두뇌운동', crownDate: null, crownOverride: null },
+    '691105': { playing: false, gameLabel: '두뇌운동', crownDate: null, crownOverride: null },
+  };
+
+  // 로컬스토리지에 저장된 오늘의 왕관 기록 복원
+  ['610708', '691105'].forEach((id) => {
+    try {
+      const savedDate = localStorage.getItem('petCrownDate:' + id);
+      if (savedDate === getTodayLocalYMD()) {
+        playerState[id].crownDate = savedDate;
+      }
+    } catch (e) { /* 무시 */ }
+  });
+
+  // 현재 시각 기준(자정 전까지) 해당 캐릭터가 왕관을 써야 하는지 판별
+  function hasCrownNow(charId) {
+    const st = playerState[charId];
+    if (!st) return false;
+    if (typeof st.crownOverride === 'boolean') return st.crownOverride;
+    const today = getTodayLocalYMD();
+    if (st.crownDate === today) return true;
+    const m = typeof currentMember !== 'undefined' ? currentMember : null;
+    if (m && String(m.birthdate || m.id || '') === charId && hasMemberCompletedToday(m)) {
+      st.crownDate = today;
+      return true;
+    }
+    return false;
+  }
+
+  function syncPlayerStateToFirestore(extraPayload) {
+    try {
+      const db = typeof initFirebase === 'function' ? initFirebase() : null;
+      if (!db) return;
+      const myId = getMyId();
+      const st = playerState[myId];
+      const payload = {
+        type: 'petPlaza',
+        presence: { [myId]: new Date().toISOString() },
+        playingState: {
+          [myId]: {
+            playing: Boolean(st && st.playing),
+            label: (st && st.gameLabel) || '두뇌운동',
+            at: new Date().toISOString(),
+          },
+        },
+        crowns: {
+          [myId]: hasCrownNow(myId) ? getTodayLocalYMD() : null,
+        },
+        ...(extraPayload || {}),
+      };
+      db.collection('members').doc(SHARED_DOC_ID).set(payload, { merge: true }).catch(() => {});
+    } catch (e) { /* 오프라인 무시 */ }
+  }
+
+  function setPlayingState(isPlaying, gameLabel = '두뇌운동', targetId = null) {
+    const id = targetId || getMyId();
+    if (!playerState[id]) return;
+    playerState[id].playing = Boolean(isPlaying);
+    if (gameLabel) playerState[id].gameLabel = gameLabel;
+
+    if (activeMount && typeof activeMount.onPlayerStateChanged === 'function') {
+      activeMount.onPlayerStateChanged(id);
+    }
+    syncPlayerStateToFirestore();
+
+    if (!targetId) {
+      if (globalPlayingHeartbeat) {
+        clearInterval(globalPlayingHeartbeat);
+        globalPlayingHeartbeat = null;
+      }
+      if (isPlaying) {
+        globalPlayingHeartbeat = setInterval(() => {
+          syncPlayerStateToFirestore();
+        }, HEARTBEAT_MS);
+      }
+    }
+  }
+
+  function markCompletedToday(targetId = null) {
+    const id = targetId || getMyId();
+    const today = getTodayLocalYMD();
+    if (playerState[id]) {
+      playerState[id].crownDate = today;
+    }
+    try {
+      localStorage.setItem('petCrownDate:' + id, today);
+    } catch (e) { /* 무시 */ }
+    const m = typeof currentMember !== 'undefined' ? currentMember : null;
+    if (m && String(m.birthdate || m.id || '') === id) {
+      m.crownDate = today;
+      if (typeof saveMember === 'function') saveMember();
+    }
+    if (activeMount && typeof activeMount.onPlayerStateChanged === 'function') {
+      activeMount.onPlayerStateChanged(id);
+    }
+    syncPlayerStateToFirestore();
+  }
 
   function getCurrentSeason() {
     const m = new Date().getMonth() + 1;
@@ -821,8 +942,106 @@
     ctx.restore();
   }
 
+  // 게임 완료 캐릭터 머리 위에 자정(00:00)까지 씌우는 3D 황금 왕관 (Royal Golden Crown)
+  function drawGoldenCrown(ctx, x, y, scale, t) {
+    ctx.save();
+    ctx.translate(x, y);
+    const pulse = 1 + Math.sin(t * 3.8) * 0.035;
+    ctx.scale(scale * pulse, scale * pulse);
+
+    // 왕관 후광
+    ctx.shadowColor = 'rgba(250, 204, 21, 0.75)';
+    ctx.shadowBlur = 12;
+
+    // 1) 안쪽 붉은 벨벳 쿠션 캡
+    ctx.fillStyle = '#DC2626';
+    ctx.beginPath();
+    ctx.ellipse(0, -10, 20, 11, 0, Math.PI, 0);
+    ctx.fill();
+
+    // 2) 5봉우리 3D 황금 왕관 본체
+    const cGrad = ctx.createLinearGradient(-24, -28, 24, 0);
+    cGrad.addColorStop(0, '#FEF08A');
+    cGrad.addColorStop(0.45, '#FACC15');
+    cGrad.addColorStop(0.85, '#EAB308');
+    cGrad.addColorStop(1, '#B45309');
+
+    ctx.fillStyle = cGrad;
+    ctx.strokeStyle = '#92400E';
+    ctx.lineWidth = 1.6;
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-20, -2);
+    ctx.lineTo(-24, -20);
+    ctx.lineTo(-13, -10);
+    ctx.lineTo(-11, -24);
+    ctx.lineTo(-4, -12);
+    ctx.lineTo(0, -28);
+    ctx.lineTo(4, -12);
+    ctx.lineTo(11, -24);
+    ctx.lineTo(13, -10);
+    ctx.lineTo(24, -20);
+    ctx.lineTo(20, -2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // 3) 왕관 하단 황금 밴드 테두리
+    ctx.fillStyle = '#F59E0B';
+    ctx.beginPath();
+    ctx.roundRect(-21, -6, 42, 6.5, 3);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.shadowBlur = 0;
+
+    // 4) 왕관 밴드 보석 3개 (중앙 루비, 좌 사파이어, 우 에메랄드)
+    const jewels = [
+      { jx: -11, jy: -2.8, r: 2.3, c: '#3B82F6' },
+      { jx: 0, jy: -2.8, r: 3.0, c: '#EF4444' },
+      { jx: 11, jy: -2.8, r: 2.3, c: '#10B981' },
+    ];
+    jewels.forEach((jw) => {
+      ctx.fillStyle = jw.c;
+      ctx.strokeStyle = '#FEF08A';
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.arc(jw.jx, jw.jy, jw.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    });
+
+    // 5) 5개 왕관 꼭짓점 진주/황금 구슬
+    const tips = [
+      { tx: -24, ty: -21, r: 2.6 },
+      { tx: -11, ty: -25, r: 2.6 },
+      { tx: 0, ty: -29.5, r: 3.4 },
+      { tx: 11, ty: -25, r: 2.6 },
+      { tx: 24, ty: -21, r: 2.6 },
+    ];
+    tips.forEach((tp) => {
+      ctx.fillStyle = '#FEF9C3';
+      ctx.strokeStyle = '#B45309';
+      ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      ctx.arc(tp.tx, tp.ty, tp.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    });
+
+    // 6) 왕관 주변 반짝이는 황금 스파클
+    const spAlpha = 0.55 + 0.45 * Math.sin(t * 5.2);
+    ctx.fillStyle = `rgba(254, 240, 138, ${spAlpha})`;
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('✨', -29, -18 - Math.sin(t * 4) * 2);
+    ctx.fillText('✨', 29, -22 + Math.cos(t * 4) * 2);
+
+    ctx.restore();
+  }
+
   // 이불 덮고 잠드는 침구(매트 + 베개 + 포근한 퀼팅 이불 + Zzz) 렌더링
-  function drawSleepingBedAndBlanket(ctx, charId, img, targetW, targetH, t, isMini) {
+  function drawSleepingBedAndBlanket(ctx, charId, img, targetW, targetH, t, isMini, hasCrown = false) {
     const breath = 1 + Math.sin(t * 2.5) * 0.028;
     const lieScale = isMini ? 0.78 : 0.66;
     const charLen = targetH * lieScale;
@@ -861,6 +1080,9 @@
     ctx.rotate(-Math.PI * 0.48);
     ctx.scale(lieScale, lieScale * breath);
     ctx.drawImage(img, -targetW / 2, -targetH + 6, targetW, targetH);
+    if (hasCrown) {
+      drawGoldenCrown(ctx, 0, -targetH + 14, 0.96, t);
+    }
     ctx.restore();
 
     // 4) 몸통과 다리 위에 덮인 포근한 3D 퀼팅 이불 (목 아래부터 발끝까지 완전히 덮음!)
@@ -916,6 +1138,169 @@
     ctx.font = `bold ${isMini ? 10 : 12}px sans-serif`;
     ctx.fillStyle = '#475569';
     ctx.fillText('Zzz', pillowX + 12, pillowY - 30 - ((zPhase + 0.4) % 1) * 12);
+    ctx.restore();
+  }
+
+  // 서로 게임 중일 때 캐릭터가 휴대용 3D 두뇌게임기를 들고 집중해서 플레이하는 모션!
+  function drawGamingMotion(ctx, charId, cx, groundY, jumpY, depthScale, img, targetW, targetH, t, outfit, hasCrown, gameLabel) {
+    const isFather = charId === '610708';
+    const gameBobY = Math.sin(t * 8.2 + (isFather ? 0 : 1.4)) * 3.2;
+    const gameTilt = Math.sin(t * 4.2 + (isFather ? 0 : 1.1)) * 0.028;
+
+    // 바닥 그림자
+    ctx.save();
+    const pedGrad = ctx.createRadialGradient(cx, groundY - 4, 4, cx, groundY - 4, 46 * depthScale);
+    pedGrad.addColorStop(0, 'rgba(15, 23, 42, 0.28)');
+    pedGrad.addColorStop(0.6, 'rgba(15, 23, 42, 0.14)');
+    pedGrad.addColorStop(1, 'rgba(15, 23, 42, 0)');
+    ctx.fillStyle = pedGrad;
+    ctx.beginPath();
+    ctx.ellipse(cx, groundY - 4, 44 * depthScale, 10 * depthScale, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(cx, groundY + jumpY + gameBobY);
+    ctx.rotate(gameTilt);
+
+    // 1) 캐릭터 본체
+    ctx.shadowColor = 'rgba(15, 23, 42, 0.26)';
+    ctx.shadowBlur = 14;
+    ctx.shadowOffsetY = 5;
+    ctx.drawImage(img, -targetW / 2, -targetH + 6, targetW, targetH);
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+
+    // 2) 오늘 게임을 완료한 상태라면 머리 위에 황금 왕관!
+    if (hasCrown) {
+      drawGoldenCrown(ctx, 0, -targetH + (isFather ? 14 : 16), 1.0, t);
+    }
+
+    // 3) 가슴 앞에서 양손으로 잡고 있는 3D 휴대용 두뇌게임기 (Handheld Brain Console)
+    const consoleY = -targetH * 0.43 + Math.sin(t * 12) * 1.5;
+
+    // 게임기 화면에서 얼굴로 퍼지는 네온 빛무리
+    const screenGlow = ctx.createRadialGradient(0, consoleY - 6, 4, 0, consoleY - 18, 48);
+    screenGlow.addColorStop(0, 'rgba(56, 189, 248, 0.52)');
+    screenGlow.addColorStop(0.6, 'rgba(250, 204, 21, 0.24)');
+    screenGlow.addColorStop(1, 'rgba(56, 189, 248, 0)');
+    ctx.fillStyle = screenGlow;
+    ctx.beginPath();
+    ctx.arc(0, consoleY - 12, 48, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 어깨에서 게임기 양옆으로 모인 양팔
+    const armColor = outfit === 'coat'
+      ? (isFather ? '#B47B48' : '#E5D5C5')
+      : outfit === 'pad'
+        ? (isFather ? '#1E3A5F' : '#F4B8C4')
+        : (isFather ? '#1E293B' : '#F1F5F9');
+    ctx.strokeStyle = armColor;
+    ctx.lineWidth = 9.5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-26, consoleY - 14);
+    ctx.quadraticCurveTo(-36, consoleY + 2, -26, consoleY + 6);
+    ctx.moveTo(26, consoleY - 14);
+    ctx.quadraticCurveTo(36, consoleY + 2, 26, consoleY + 6);
+    ctx.stroke();
+
+    // 3D 휴대용 콘솔 본체 (네이비 바디 + 왼쪽 블루 조이콘 + 오른쪽 레드 조이콘)
+    ctx.save();
+    ctx.translate(0, consoleY);
+
+    // 왼쪽 블루 그립
+    ctx.fillStyle = '#0284C7';
+    ctx.beginPath();
+    ctx.roundRect(-31, -15, 13, 30, [8, 2, 2, 8]);
+    ctx.fill();
+
+    // 오른쪽 코랄레드 그립
+    ctx.fillStyle = '#E11D48';
+    ctx.beginPath();
+    ctx.roundRect(18, -15, 13, 30, [2, 8, 8, 2]);
+    ctx.fill();
+
+    // 중앙 콘솔 바디 & 빛나는 액정
+    ctx.fillStyle = '#0F172A';
+    ctx.strokeStyle = '#E2E8F0';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(-20, -15, 40, 30, 4);
+    ctx.fill();
+    ctx.stroke();
+
+    const lcdGrad = ctx.createLinearGradient(-16, -11, 16, 11);
+    lcdGrad.addColorStop(0, '#38BDF8');
+    lcdGrad.addColorStop(0.5, '#818CF8');
+    lcdGrad.addColorStop(1, '#FACC15');
+    ctx.fillStyle = lcdGrad;
+    ctx.beginPath();
+    ctx.roundRect(-16, -11, 32, 22, 2.5);
+    ctx.fill();
+
+    // 십자키 & 컬러 버튼
+    ctx.fillStyle = '#F8FAFC';
+    ctx.fillRect(-26, -3, 5, 2);
+    ctx.fillRect(-24.5, -4.5, 2, 5);
+    ctx.fillStyle = '#FACC15';
+    ctx.beginPath();
+    ctx.arc(24, -4, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#4ADE80';
+    ctx.beginPath();
+    ctx.arc(26, 0, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 빠르게 버튼을 연타하는 두 손 (엄지손가락 상하 탭 모션!)
+    const leftTap = Math.sin(t * 16) * 2.8;
+    const rightTap = Math.cos(t * 16) * 2.8;
+    ctx.fillStyle = '#FDBA8C';
+    ctx.strokeStyle = '#9A3412';
+    ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    ctx.arc(-26, 4 + leftTap, 5.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(26, 4 + rightTap, 5.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+
+    // 4) 게임기 주변으로 솟아오르는 두뇌게임 이펙트 아이콘 (🎮, 🧠, ⚡)
+    const icons = ['🎮', '🧠', '⚡'];
+    icons.forEach((ic, idx) => {
+      const cycle = (t * 1.3 + idx * 0.33) % 1;
+      const ix = (idx - 1) * 28 + Math.sin(t * 4 + idx) * 5;
+      const iy = consoleY - 14 - cycle * 34;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, 1 - cycle * 0.9);
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(ic, ix, iy);
+      ctx.restore();
+    });
+
+    // 5) 게임기 바로 아래 '🎮 두뇌운동 중!' 상태 배지 (왕관 및 상단 말풍선과 절대 겹치지 않도록 배치)
+    const badgeY = consoleY + 34;
+    const badgeText = `🎮 ${gameLabel || '두뇌게임'} 중!`;
+    ctx.save();
+    ctx.font = 'bold 11.5px sans-serif';
+    const tw = Math.max(92, ctx.measureText(badgeText).width + 18);
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+    ctx.strokeStyle = '#38BDF8';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.roundRect(-tw / 2, badgeY - 16, tw, 20, 10);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#FEF08A';
+    ctx.textAlign = 'center';
+    ctx.fillText(badgeText, 0, badgeY - 2);
+    ctx.restore();
+
     ctx.restore();
   }
 
@@ -995,14 +1380,16 @@
   }
 
   // ==========================================================
-  // 정면(Front) · 좌측면(Left) · 우측면(Right) + 무작위 행동(걸어다니기 / 이불 덮고 잠들기 / 의자에 앉기 / 턱걸이 운동) 렌더링
+  // 정면(Front) · 좌측면(Left) · 우측면(Right) + 무작위 행동 + 게임중 모션(gaming) + 완료 왕관(자정까지) 렌더링
   // ==========================================================
   function drawMii3DCharacter(ctx, charId, ch, t, wx) {
     const isFather = charId === '610708';
     const yaw = ch.yaw;
     const isWalking = ch.speed > 0.12;
     const isAtTarget = Math.hypot(ch.targetX - ch.x, ch.targetZ - ch.z) <= 8;
-    const act = isAtTarget ? (ch.activity || 'walk') : 'walk';
+    const isGaming = Boolean(playerState[charId] && playerState[charId].playing) || ch.activity === 'gaming';
+    const hasCrown = hasCrownNow(charId);
+    const act = isGaming ? 'gaming' : (isAtTarget ? (ch.activity || 'walk') : 'walk');
 
     const isSideView = act === 'walk' && (Math.abs(yaw) > 0.25 || isWalking);
     const facingLeft = yaw < -0.15;
@@ -1022,11 +1409,18 @@
     const targetH = (isFather ? 226 : 216) * depthScale;
     const targetW = (img.naturalWidth / img.naturalHeight) * targetH;
 
+    // [행동 0] 게임중인 모션 (gaming)
+    if (act === 'gaming') {
+      const gameLabel = (playerState[charId] && playerState[charId].gameLabel) || '두뇌운동';
+      drawGamingMotion(ctx, charId, cx, groundY, jumpY, depthScale, img, targetW, targetH, t, outfit, hasCrown, gameLabel);
+      return;
+    }
+
     // [행동 A] 이불 덮고 잠들기 (sleep)
     if (act === 'sleep') {
       ctx.save();
       ctx.translate(cx, groundY + jumpY);
-      drawSleepingBedAndBlanket(ctx, charId, img, targetW, targetH, t, false);
+      drawSleepingBedAndBlanket(ctx, charId, img, targetW, targetH, t, false, hasCrown);
       ctx.restore();
       return;
     }
@@ -1077,6 +1471,10 @@
       ctx.shadowColor = 'rgba(15, 23, 42, 0.24)';
       ctx.shadowBlur = 12;
       ctx.drawImage(img, -pW / 2, -pH + 6, pW, pH);
+      ctx.shadowBlur = 0;
+      if (hasCrown) {
+        drawGoldenCrown(ctx, 0, -pH + 13, 0.88, t);
+      }
       ctx.restore();
 
       // 머리 위 철봉 바를 꽉 쥔 두 손 (얼굴 바깥쪽 철봉 위치!)
@@ -1110,6 +1508,11 @@
       ctx.shadowColor = 'rgba(15, 23, 42, 0.24)';
       ctx.shadowBlur = 12;
       ctx.drawImage(img, -targetW / 2, -targetH + 6 + legSwing * 0.2, targetW, targetH);
+      ctx.shadowBlur = 0;
+
+      if (hasCrown) {
+        drawGoldenCrown(ctx, 0, -targetH + (isFather ? 14 : 16) + legSwing * 0.2, 0.98, t);
+      }
 
       if (wx.hasUmbrella) {
         ctx.save();
@@ -1165,6 +1568,12 @@
     ctx.shadowBlur = 14;
     ctx.shadowOffsetY = 5;
     ctx.drawImage(img, -targetW / 2, -targetH + 6, targetW, targetH);
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+
+    if (hasCrown) {
+      drawGoldenCrown(ctx, isSideView ? 4 : 0, -targetH + (isFather ? 14 : 16), 1.0, t);
+    }
 
     if (wx.hasUmbrella) {
       ctx.save();
@@ -1500,10 +1909,16 @@
     function applyActivityToChar(id, act, now, snapImmediate = false) {
       const ch = chars[id];
       if (!ch) return;
+      if (playerState[id] && playerState[id].playing) {
+        act = 'gaming';
+      }
       ch.activity = act;
       ch.nextActivityAt = now + 5400 + Math.random() * 3400;
 
-      if (act === 'pullup') {
+      if (act === 'gaming') {
+        ch.targetX = id === '610708' ? 195 : 385;
+        ch.targetZ = 2;
+      } else if (act === 'pullup') {
         ch.targetX = id === 'mutul' ? 74 : 126;
         ch.targetZ = -4;
       } else if (act === 'sit') {
@@ -1544,6 +1959,10 @@
     }
 
     function pickRandomActivityFor(id, now) {
+      if (playerState[id] && playerState[id].playing) {
+        applyActivityToChar(id, 'gaming', now, false);
+        return;
+      }
       const pool = id === 'puppy'
         ? ['walk', 'walk', 'sleep', 'sit']
         : ['walk', 'walk', 'pullup', 'sit', 'sleep'];
@@ -1564,6 +1983,15 @@
 
       const nextAct = candidates[Math.floor(Math.random() * candidates.length)] || 'walk';
       applyActivityToChar(id, nextAct, now, false);
+    }
+
+    // 홈 화면에 진입했으므로 내 캐릭터의 게임중 상태는 해제 및 오늘 완료 여부 체크
+    if (playerState[myId]) {
+      playerState[myId].playing = false;
+      const curMem = typeof currentMember !== 'undefined' ? currentMember : null;
+      if (curMem && hasMemberCompletedToday(curMem)) {
+        playerState[myId].crownDate = getTodayLocalYMD();
+      }
     }
 
     (function initRandomBehaviors() {
@@ -1632,6 +2060,8 @@
     // ==========================================================
     let sharedRef = null;
     let unsubShared = null;
+    let unsubMember61 = null;
+    let unsubMember69 = null;
     let heartbeatTimer = null;
     let lastEventSeq = null;
     let initialPositionsSynced = false;
@@ -1647,6 +2077,9 @@
           '691105': { x: Math.round(chars['691105'].targetX), z: Math.round(chars['691105'].targetZ), act: chars['691105'].activity },
           mutul: { x: Math.round(chars.mutul.targetX), z: Math.round(chars.mutul.targetZ), act: chars.mutul.activity },
           puppy: { x: Math.round(chars.puppy.targetX), z: Math.round(chars.puppy.targetZ), act: chars.puppy.activity },
+        },
+        crowns: {
+          [myId]: hasCrownNow(myId) ? getTodayLocalYMD() : null,
         },
       };
       if (actionData) {
@@ -1665,20 +2098,64 @@
       if (db) {
         sharedRef = db.collection('members').doc(SHARED_DOC_ID);
         const beat = () => {
-          sharedRef.set({
-            type: 'petPlaza',
-            presence: { [myId]: new Date().toISOString() },
-          }, { merge: true }).catch(() => {});
+          syncPlayerStateToFirestore();
         };
         beat();
         heartbeatTimer = setInterval(beat, HEARTBEAT_MS);
 
+        // 두 분 회원 문서에서 오늘의 게임 완료 기록(자정까지 왕관)을 실시간 확인
+        const watchMemberCrown = (id) => db.collection('members').doc(id).onSnapshot((mSnap) => {
+          if (!mSnap.exists) return;
+          const mData = mSnap.data() || {};
+          if (hasMemberCompletedToday(mData)) {
+            const today = getTodayLocalYMD();
+            playerState[id].crownDate = today;
+            try { localStorage.setItem('petCrownDate:' + id, today); } catch (e) {}
+          }
+        }, () => {});
+        unsubMember61 = watchMemberCrown('610708');
+        unsubMember69 = watchMemberCrown('691105');
+
         unsubShared = sharedRef.onSnapshot((snap) => {
           if (!snap.exists) return;
           const data = snap.data() || {};
+          const today = getTodayLocalYMD();
+
+          // 1) 왕관 상태 동기화 (자정까지 유지)
+          if (data.crowns && typeof data.crowns === 'object') {
+            ['610708', '691105'].forEach((id) => {
+              if (data.crowns[id] === today) {
+                playerState[id].crownDate = today;
+                try { localStorage.setItem('petCrownDate:' + id, today); } catch (e) {}
+              }
+            });
+          }
+
+          // 2) 서로 게임 중인지(playingState) 실시간 확인 -> 게임중인 모션으로 전환!
+          if (data.playingState && typeof data.playingState === 'object') {
+            const pState = data.playingState[partnerId];
+            if (pState && typeof pState === 'object') {
+              const pAge = pState.at ? (Date.now() - new Date(pState.at).getTime()) : 999999;
+              const isPartnerPlaying = Boolean(pState.playing) && pAge < 90000;
+              const wasPlaying = playerState[partnerId].playing;
+              playerState[partnerId].playing = isPartnerPlaying;
+              if (pState.label) playerState[partnerId].gameLabel = pState.label;
+
+              if (isPartnerPlaying && !wasPlaying) {
+                applyActivityToChar(partnerId, 'gaming', performance.now(), false);
+                say(`🎮 지금 ${partnerId}님이 열공 두뇌게임 중이에요! 응원해 주세요 💪`, 3600);
+              } else if (!isPartnerPlaying && wasPlaying) {
+                pickRandomActivityFor(partnerId, performance.now());
+              }
+            }
+          }
+
+          // 3) 상단 접속 배지 업데이트
           const pTime = data.presence && data.presence[partnerId];
           const partnerOnline = pTime && (Date.now() - new Date(pTime).getTime() < PRESENCE_TTL_MS);
-          if (partnerOnline) {
+          if (playerState[partnerId].playing) {
+            syncPillEl.innerHTML = `<span class="pet-sync-dot"></span> 🎮 ${partnerId}님 열공 게임 중!`;
+          } else if (partnerOnline) {
             syncPillEl.innerHTML = `<span class="pet-sync-dot"></span> 💑 ${partnerId}님과 함께 접속 중!`;
           } else {
             syncPillEl.innerHTML = `<span class="pet-sync-dot"></span> 실시간 연동 광장`;
@@ -1689,6 +2166,7 @@
           const isRecentPos = data.updatedAt && (Date.now() - new Date(data.updatedAt).getTime() < 20000);
           if (data.positions && !isFromMe && isRecentPos) {
             ['610708', '691105', 'mutul', 'puppy'].forEach((id) => {
+              if (playerState[id] && playerState[id].playing) return;
               const pos = data.positions[id];
               if (pos && Number.isFinite(pos.x) && chars[id]) {
                 const tx = Math.max(70, Math.min(495, pos.x));
@@ -1720,8 +2198,8 @@
 
     const WALK_LINES = [
       '💪 철봉 턱걸이부터 🛌 낮잠·🪑 벤치 휴식·🚶 산책까지 자유롭게 즐겨요!',
-      '☝️ 하하하! 오늘도 상쾌하게 운동하며 두뇌운동 화이팅입니다!',
-      '🐶 멍멍! 강아지와 미니 머털도사도 신나게 뛰어놀아요 🥰',
+      '👑 오늘의 두뇌운동을 완료하면 자정까지 멋진 황금 왕관을 써요!',
+      '🎮 서로 게임 중이면 캐릭터도 두뇌게임기를 들고 열공 모션으로 바뀌어요!',
       '✨ 터치할 때마다 새로운 무작위 행동과 산책을 함께해요 💕',
     ];
     let walkClickCount = 0;
@@ -1737,22 +2215,27 @@
       anim.tapRing = { x: clampedX, y: 368 + clampedZ * 0.75, r: 4, alpha: 1 };
 
       if (clickX < 165 && clickY < 370) {
-        applyActivityToChar('610708', 'pullup', now, false);
+        if (!playerState['610708'].playing) applyActivityToChar('610708', 'pullup', now, false);
         applyActivityToChar('mutul', 'pullup', now, false);
       } else if (clickX > 400 && clickY < 370) {
-        applyActivityToChar('691105', 'sit', now, false);
-        applyActivityToChar('610708', 'sit', now, false);
+        if (!playerState['691105'].playing) applyActivityToChar('691105', 'sit', now, false);
+        if (!playerState['610708'].playing) applyActivityToChar('610708', 'sit', now, false);
       } else {
         const centerTarget = Math.max(170, Math.min(410, clampedX));
         ['610708', '691105', 'mutul', 'puppy'].forEach((id) => {
+          if (playerState[id] && playerState[id].playing) return;
           chars[id].activity = 'walk';
           chars[id].nextActivityAt = now + 5500;
           chars[id].nextWanderAt = now + 4500;
         });
-        chars['610708'].targetX = centerTarget - 70;
-        chars['610708'].targetZ = clampedZ;
-        chars['691105'].targetX = centerTarget + 70;
-        chars['691105'].targetZ = Math.max(-18, Math.min(18, clampedZ + 3));
+        if (!playerState['610708'].playing) {
+          chars['610708'].targetX = centerTarget - 70;
+          chars['610708'].targetZ = clampedZ;
+        }
+        if (!playerState['691105'].playing) {
+          chars['691105'].targetX = centerTarget + 70;
+          chars['691105'].targetZ = Math.max(-18, Math.min(18, clampedZ + 3));
+        }
         chars.mutul.targetX = Math.max(85, Math.min(495, centerTarget - 50));
         chars.mutul.targetZ = 8;
         chars.puppy.targetX = Math.max(85, Math.min(495, centerTarget + 50));
@@ -1792,7 +2275,9 @@
         const isLeftChar = id === '610708' || id === 'mutul';
         const ch = chars[id];
 
-        if (now > ch.nextActivityAt) {
+        if (playerState[id] && playerState[id].playing && ch.activity !== 'gaming') {
+          applyActivityToChar(id, 'gaming', now, false);
+        } else if (now > ch.nextActivityAt) {
           pickRandomActivityFor(id, now);
         }
 
@@ -1901,10 +2386,18 @@
           applyActivityToChar(id, actMap[id], now, snapImmediate);
         });
       },
+      onPlayerStateChanged(id) {
+        const now = performance.now();
+        if (playerState[id] && playerState[id].playing) {
+          applyActivityToChar(id, 'gaming', now, true);
+        }
+      },
       cleanup() {
         if (rafId) cancelAnimationFrame(rafId);
         if (heartbeatTimer) clearInterval(heartbeatTimer);
         if (unsubShared) unsubShared();
+        if (unsubMember61) unsubMember61();
+        if (unsubMember69) unsubMember69();
       },
     };
   }
@@ -1927,5 +2420,37 @@
     }
   }
 
-  window.PET = { mountHomeTamagotchi, onWeather, setPreview, setActivities, getPetState };
+  function setPlayerStatus(statusMap) {
+    const today = getTodayLocalYMD();
+    Object.keys(statusMap || {}).forEach((id) => {
+      if (!playerState[id]) return;
+      const cfg = statusMap[id] || {};
+      if (typeof cfg.playing === 'boolean') {
+        playerState[id].playing = cfg.playing;
+      }
+      if (cfg.gameLabel) {
+        playerState[id].gameLabel = cfg.gameLabel;
+      }
+      if (typeof cfg.crown === 'boolean') {
+        playerState[id].crownOverride = cfg.crown;
+        playerState[id].crownDate = cfg.crown ? today : null;
+      }
+      if (activeMount && typeof activeMount.onPlayerStateChanged === 'function') {
+        activeMount.onPlayerStateChanged(id);
+      }
+    });
+  }
+
+  window.PET = {
+    mountHomeTamagotchi,
+    onWeather,
+    setPreview,
+    setActivities,
+    setPlayingState,
+    markCompletedToday,
+    setPlayerStatus,
+    hasCrownNow,
+    getTodayLocalYMD,
+    getPetState,
+  };
 })();
