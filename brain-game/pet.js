@@ -242,10 +242,21 @@
       if (previewPreset === 'spring') {
         return { season: 'spring', isChristmas: false, isRain: false, isDrizzle: false, isSnow: false, isCold: false, isHot: false, isNight: false, outfit: 'short', hasUmbrella: false, badge: '🌸 봄꽃 공원 · 반팔', line: '🌸 벚꽃이 살랑살랑 흩날리는 봄날 공원을 함께 걸어요!' };
       }
+      if (previewPreset === 'night') {
+        return applyNightIndoor({ season: 'autumn', isChristmas: false, isRain: false, isDrizzle: false, isSnow: false, isCold: false, isHot: false, isNight: true, outfit: 'short', hasUmbrella: false, badge: '', line: '' });
+      }
+      if (previewPreset === 'nightRain') {
+        return applyNightIndoor({ season: getCurrentSeason(), isChristmas: false, isRain: true, isDrizzle: true, isSnow: false, isCold: false, isHot: false, isNight: true, outfit: 'short', hasUmbrella: false, badge: '', line: '' });
+      }
+      if (previewPreset === 'nightSnow') {
+        return applyNightIndoor({ season: 'winter', isChristmas: true, isRain: false, isDrizzle: false, isSnow: true, isCold: true, isHot: false, isNight: true, outfit: 'short', hasUmbrella: false, badge: '', line: '' });
+      }
     }
 
     const hour = new Date().getHours();
-    const isNight = brief && brief.isDay !== undefined ? !brief.isDay : (hour >= 19 || hour < 6);
+    // 밤(19시~새벽 6시) 또는 최근 날씨 응답이 해진 뒤(isDay=0)이면 아파트 거실 배경으로 전환
+    const briefFresh = brief && Number.isFinite(brief.at) && (Date.now() - brief.at < 2 * 3600 * 1000);
+    const isNight = (hour >= 19 || hour < 6) || Boolean(briefFresh && brief.isDay === 0);
     const rawCode = brief && Number.isFinite(brief.code) ? brief.code : 0;
     const dailyCode = brief && Number.isFinite(brief.dailyCode) ? brief.dailyCode : rawCode;
     const currentCode = brief && Number.isFinite(brief.currentCode) ? brief.currentCode : rawCode;
@@ -310,7 +321,27 @@
       badge = `${seasonKor} ${temp}° · 산책 광장`;
     }
 
-    return { season, isChristmas, isNight, isRain, isDrizzle, isSnow, isCold, isHot, outfit, hasUmbrella, badge, line, temp };
+    return applyNightIndoor({ season, isChristmas, isNight, isRain, isDrizzle, isSnow, isCold, isHot, outfit, hasUmbrella, badge, line, temp });
+  }
+
+  // 밤에는 집 안 거실이므로 우산은 내려놓고 편한 실내복(반팔) 차림 + 창밖 날씨 안내 문구
+  function applyNightIndoor(state) {
+    if (!state.isNight) return state;
+    const outside = state.isSnow
+      ? '창밖엔 함박눈이 소복소복 ❄️'
+      : state.isDrizzle
+        ? '창밖엔 촉촉한 이슬비가 🌦️'
+        : state.isRain
+          ? '창밖엔 비가 주룩주룩 ☔'
+          : '창밖엔 반짝이는 서울 야경 ✨';
+    const tempTxt = Number.isFinite(state.temp) ? ` ${state.temp}°` : '';
+    return {
+      ...state,
+      outfit: 'short',
+      hasUmbrella: false,
+      badge: `🌙 밤 · 우리집 거실${tempTxt}`,
+      line: `🌙 우리 집 거실에서 오순도순! ${outside}`,
+    };
   }
 
   function normAngle(a) {
@@ -331,6 +362,12 @@
     const horizonY = 252;
     // 비·이슬비가 내릴 때는 크리스마스 눈 배경 대신 비/이슬비 맵이 표현되도록 함!
     const isXmas = Boolean(!wx.isRain && (wx.isChristmas || wx.isSnow));
+
+    // 밤에는 공원 대신 포근한 아파트 우리 집 거실로 배경 전환!
+    if (wx.isNight) {
+      drawApartmentLivingRoom(ctx, t, wx, bgParticles);
+      return;
+    }
 
     // 1. 하늘 그라데이션
     const skyGrad = ctx.createLinearGradient(0, 0, 0, horizonY);
@@ -711,6 +748,543 @@
         ctx.fill();
       }
     }
+    ctx.restore();
+  }
+
+  // ==========================================================
+  // 🌙 밤 전용 배경: 아파트 우리 집 거실
+  // (베란다 통창 너머 서울 야경 + 실제 날씨, 문틀 턱걸이 바, 소파, 원목 마루, 러그, 벽시계, 스탠드 조명)
+  // 캐릭터 행동 좌표(턱걸이 x=126 / 소파 x=446 / 거실 바닥 이불)와 정확히 맞춤
+  // ==========================================================
+  function drawApartmentLivingRoom(ctx, t, wx, bgParticles) {
+    const W = 580, H = 430;
+    const wallBottom = 296;
+    const isXmas = Boolean(wx.isChristmas || wx.isSnow || wx.season === 'winter');
+
+    // 1) 벽지 (따뜻한 아이보리 + 조명 받은 그라데이션)
+    const wallGrad = ctx.createLinearGradient(0, 0, 0, wallBottom);
+    wallGrad.addColorStop(0, '#E9DCC8');
+    wallGrad.addColorStop(1, '#F6EBDC');
+    ctx.fillStyle = wallGrad;
+    ctx.fillRect(0, 0, W, wallBottom);
+
+    // 은은한 벽지 세로 패턴
+    ctx.save();
+    ctx.strokeStyle = 'rgba(180, 150, 115, 0.10)';
+    ctx.lineWidth = 1;
+    for (let x = 8; x < W; x += 22) {
+      ctx.beginPath();
+      ctx.moveTo(x, 18);
+      ctx.lineTo(x, wallBottom);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // 천장 몰딩
+    ctx.fillStyle = '#FFFDF8';
+    ctx.fillRect(0, 0, W, 14);
+    ctx.fillStyle = 'rgba(160, 130, 95, 0.25)';
+    ctx.fillRect(0, 14, W, 3);
+
+    // 2) 베란다 통창 (창밖 서울 아파트 야경 + 실제 날씨)
+    const winX = 182, winY = 40, winW = 216, winH = 206;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(winX, winY, winW, winH);
+    ctx.clip();
+
+    const nightSky = ctx.createLinearGradient(0, winY, 0, winY + winH);
+    if (wx.isRain) {
+      nightSky.addColorStop(0, '#1E293B');
+      nightSky.addColorStop(1, '#475569');
+    } else if (wx.isSnow) {
+      nightSky.addColorStop(0, '#1E3A5F');
+      nightSky.addColorStop(1, '#64748B');
+    } else {
+      nightSky.addColorStop(0, '#0B1330');
+      nightSky.addColorStop(1, '#2B3A67');
+    }
+    ctx.fillStyle = nightSky;
+    ctx.fillRect(winX, winY, winW, winH);
+
+    // 별 & 달 (맑은 밤에만)
+    if (!wx.isRain && !wx.isSnow) {
+      for (let i = 0; i < 14; i++) {
+        const sx = winX + ((i * 53) % winW);
+        const sy = winY + 8 + ((i * 37) % 70);
+        const tw = 0.4 + 0.6 * Math.abs(Math.sin(t * 0.8 + i * 1.7));
+        ctx.fillStyle = `rgba(255, 255, 255, ${tw})`;
+        ctx.beginPath();
+        ctx.arc(sx, sy, 1.1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.save();
+      ctx.fillStyle = '#FEF9C3';
+      ctx.shadowColor = '#FEF08A';
+      ctx.shadowBlur = 22;
+      ctx.beginPath();
+      ctx.arc(winX + winW - 46, winY + 38, 15, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      // 초승달 모양으로 깎기
+      ctx.fillStyle = nightSky;
+      ctx.beginPath();
+      ctx.arc(winX + winW - 39, winY + 33, 13, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      // 비/눈 오는 밤의 낮게 깔린 구름
+      ctx.fillStyle = wx.isSnow ? 'rgba(203, 213, 225, 0.35)' : 'rgba(100, 116, 139, 0.55)';
+      [[winX + 40, winY + 30], [winX + 120, winY + 22], [winX + 190, winY + 36]].forEach(([cx, cy], i) => {
+        const dx = Math.sin(t * 0.15 + i) * 6;
+        ctx.beginPath();
+        ctx.arc(cx + dx, cy, 22, 0, Math.PI * 2);
+        ctx.arc(cx + dx + 22, cy - 6, 18, 0, Math.PI * 2);
+        ctx.arc(cx + dx - 20, cy + 4, 16, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    // 남산서울타워 실루엣 (멀리)
+    ctx.fillStyle = 'rgba(30, 41, 59, 0.85)';
+    const towerX = winX + 58;
+    ctx.fillRect(towerX - 1.5, winY + 70, 3, 70);
+    ctx.beginPath();
+    ctx.roundRect(towerX - 6, winY + 92, 12, 9, 3);
+    ctx.fill();
+    ctx.fillStyle = `rgba(248, 113, 113, ${0.5 + 0.5 * Math.sin(t * 1.6)})`;
+    ctx.beginPath();
+    ctx.arc(towerX, winY + 68, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 창밖 아파트 단지 (불 켜진 창문들)
+    const blocks = [
+      { x: 0, w: 46, h: 96, c: '#1E293B' },
+      { x: 50, w: 38, h: 70, c: '#273449' },
+      { x: 92, w: 52, h: 118, c: '#1E293B' },
+      { x: 150, w: 40, h: 84, c: '#273449' },
+      { x: 194, w: 48, h: 108, c: '#1E293B' },
+    ];
+    blocks.forEach((b, bi) => {
+      const bx = winX + b.x;
+      const by = winY + winH - b.h;
+      ctx.fillStyle = b.c;
+      ctx.fillRect(bx, by, b.w, b.h);
+      for (let row = 0; row < Math.floor((b.h - 10) / 11); row++) {
+        for (let col = 0; col < Math.floor((b.w - 6) / 9); col++) {
+          const seed = Math.sin((bi + 1) * 91.7 + row * 12.3 + col * 7.1) * 43758.5;
+          const r = seed - Math.floor(seed);
+          if (r > 0.42) {
+            const flick = r > 0.95 ? 0.6 + 0.4 * Math.sin(t * 0.7 + row) : 1;
+            ctx.fillStyle = r > 0.8
+              ? `rgba(254, 215, 170, ${0.85 * flick})`
+              : `rgba(253, 230, 138, ${0.7 * flick})`;
+            ctx.fillRect(bx + 4 + col * 9, by + 6 + row * 11, 5, 6);
+          }
+        }
+      }
+    });
+
+    // 창밖 날씨 입자 (실제 서울 날씨: 이슬비/비/눈)
+    if (wx.isRain) {
+      ctx.strokeStyle = wx.isDrizzle ? 'rgba(226, 232, 240, 0.55)' : 'rgba(226, 232, 240, 0.7)';
+      ctx.lineWidth = wx.isDrizzle ? 1.1 : 1.6;
+      ctx.lineCap = 'round';
+      for (let i = 0; i < bgParticles.length; i++) {
+        const p = bgParticles[i];
+        p.y = (p.y + p.v * (wx.isDrizzle ? 1.4 : 2.1)) % H;
+        p.x = (p.x - (wx.isDrizzle ? 0.35 : 0.6) + W) % W;
+        const px = winX + (p.x / W) * winW;
+        const py = winY + (p.y / H) * winH;
+        const len = wx.isDrizzle ? 7 : 12;
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        ctx.lineTo(px - 1.6, py + len);
+        ctx.stroke();
+      }
+    } else if (wx.isSnow) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+      for (let i = 0; i < bgParticles.length; i++) {
+        const p = bgParticles[i];
+        p.y = (p.y + p.v * 0.45) % H;
+        p.x = (p.x + Math.sin(t * 0.8 + i) * 0.4 + W) % W;
+        const px = winX + (p.x / W) * winW;
+        const py = winY + (p.y / H) * winH;
+        ctx.beginPath();
+        ctx.arc(px, py, p.s * 1.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // 유리에 맺힌 빗방울 (비·이슬비)
+    if (wx.isRain) {
+      for (let i = 0; i < 18; i++) {
+        const dx = winX + 8 + ((i * 47) % (winW - 16));
+        const baseY = winY + 10 + ((i * 29) % (winH - 30));
+        const drip = ((t * (0.08 + (i % 4) * 0.03) + i * 0.13) % 1) * 26;
+        ctx.fillStyle = 'rgba(224, 242, 254, 0.45)';
+        ctx.beginPath();
+        ctx.ellipse(dx, baseY + drip, 1.6, 2.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // 유리 반사광
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.07)';
+    ctx.beginPath();
+    ctx.moveTo(winX + 20, winY);
+    ctx.lineTo(winX + 60, winY);
+    ctx.lineTo(winX + 10, winY + winH);
+    ctx.lineTo(winX - 30, winY + winH);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // 창틀 (화이트 PVC 샷시 + 가운데 문살)
+    ctx.save();
+    ctx.strokeStyle = '#F8FAFC';
+    ctx.lineWidth = 7;
+    ctx.strokeRect(winX, winY, winW, winH);
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(winX + winW / 2, winY);
+    ctx.lineTo(winX + winW / 2, winY + winH);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(100, 116, 139, 0.45)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(winX - 3.5, winY - 3.5, winW + 7, winH + 7);
+    // 손잡이
+    ctx.fillStyle = '#94A3B8';
+    ctx.fillRect(winX + winW / 2 - 9, winY + winH * 0.55, 3, 16);
+    ctx.fillRect(winX + winW / 2 + 6, winY + winH * 0.55, 3, 16);
+    // 창턱
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(winX - 10, winY + winH + 2, winW + 20, 6);
+    ctx.restore();
+
+    // 커튼 (양쪽, 천천히 살랑)
+    const curtainSway = Math.sin(t * 0.5) * 1.5;
+    [
+      { x: winX - 22, dir: 1 },
+      { x: winX + winW - 14, dir: -1 },
+    ].forEach((c) => {
+      const cg = ctx.createLinearGradient(c.x, 0, c.x + 36, 0);
+      cg.addColorStop(0, '#B08968');
+      cg.addColorStop(0.5, '#D6B48C');
+      cg.addColorStop(1, '#A47551');
+      ctx.fillStyle = cg;
+      ctx.beginPath();
+      ctx.moveTo(c.x, 24);
+      ctx.lineTo(c.x + 36, 24);
+      ctx.quadraticCurveTo(c.x + 36 + curtainSway * c.dir, 160, c.x + 34 + curtainSway * c.dir * 2, wallBottom - 8);
+      ctx.lineTo(c.x + 2 + curtainSway * c.dir, wallBottom - 8);
+      ctx.quadraticCurveTo(c.x - 2, 160, c.x, 24);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(120, 80, 50, 0.3)';
+      ctx.lineWidth = 1.2;
+      for (let f = 1; f < 4; f++) {
+        ctx.beginPath();
+        ctx.moveTo(c.x + f * 9, 26);
+        ctx.lineTo(c.x + f * 9 + curtainSway * c.dir, wallBottom - 10);
+        ctx.stroke();
+      }
+    });
+    // 커튼 레일
+    ctx.fillStyle = '#78716C';
+    ctx.fillRect(winX - 30, 20, winW + 60, 5);
+
+    // 크리스마스 시즌: 창문 위 가랜드 알전구
+    if (isXmas) {
+      const bulbColors = ['#EF4444', '#FACC15', '#4ADE80', '#38BDF8', '#F472B6'];
+      ctx.strokeStyle = '#166534';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let i = 0; i <= 12; i++) {
+        const gx = winX - 20 + i * ((winW + 40) / 12);
+        const gy = 30 + Math.sin(i * Math.PI) * 0 + (i % 2 === 0 ? 0 : 7);
+        if (i === 0) ctx.moveTo(gx, gy); else ctx.lineTo(gx, gy);
+      }
+      ctx.stroke();
+      for (let i = 0; i <= 12; i++) {
+        const gx = winX - 20 + i * ((winW + 40) / 12);
+        const gy = 33 + (i % 2 === 0 ? 0 : 7);
+        const pulse = 0.5 + 0.5 * Math.sin(t * 1.6 + i);
+        ctx.save();
+        ctx.fillStyle = bulbColors[i % bulbColors.length];
+        ctx.shadowColor = bulbColors[i % bulbColors.length];
+        ctx.shadowBlur = 8 * pulse;
+        ctx.beginPath();
+        ctx.arc(gx, gy, 2.8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    // 3) 왼쪽: 방문 문틀 + 문틀형 턱걸이 바 (성인 바 높이 y=116, 머털이 미니 바 y=210)
+    ctx.save();
+    const doorL = 94, doorR = 158, doorTop = 102;
+    // 문 안쪽 어두운 복도
+    const hallGrad = ctx.createLinearGradient(0, doorTop, 0, wallBottom);
+    hallGrad.addColorStop(0, '#57534E');
+    hallGrad.addColorStop(1, '#78716C');
+    ctx.fillStyle = hallGrad;
+    ctx.fillRect(doorL, doorTop, doorR - doorL, wallBottom - doorTop);
+    // 열린 원목 방문
+    ctx.fillStyle = '#C8A27A';
+    ctx.beginPath();
+    ctx.moveTo(doorL, doorTop);
+    ctx.lineTo(doorL + 22, doorTop + 10);
+    ctx.lineTo(doorL + 22, wallBottom - 4);
+    ctx.lineTo(doorL, wallBottom);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#A16207';
+    ctx.beginPath();
+    ctx.arc(doorL + 18, 210, 2.4, 0, Math.PI * 2);
+    ctx.fill();
+    // 문틀
+    ctx.strokeStyle = '#EDE0CC';
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.moveTo(doorL, wallBottom);
+    ctx.lineTo(doorL, doorTop);
+    ctx.lineTo(doorR, doorTop);
+    ctx.lineTo(doorR, wallBottom);
+    ctx.stroke();
+    // 문틀 턱걸이 바 (크롬 + 검정 폼 그립)
+    ctx.strokeStyle = '#CBD5E1';
+    ctx.lineWidth = 5.5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(doorL - 6, 116);
+    ctx.lineTo(doorR + 6, 116);
+    ctx.stroke();
+    ctx.strokeStyle = '#1E293B';
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.moveTo(doorL - 2, 116);
+    ctx.lineTo(doorL + 14, 116);
+    ctx.moveTo(doorR - 14, 116);
+    ctx.lineTo(doorR + 2, 116);
+    ctx.stroke();
+    // 머털이용 벽걸이 미니 철봉 (x 58~90, y 210)
+    ctx.fillStyle = '#64748B';
+    ctx.fillRect(54, 202, 5, 16);
+    ctx.fillRect(87, 202, 5, 16);
+    ctx.strokeStyle = '#E2E8F0';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(56, 210);
+    ctx.lineTo(90, 210);
+    ctx.stroke();
+    ctx.restore();
+
+    // 4) 오른쪽 벽: 실제 시각을 가리키는 벽시계 + 가족 액자
+    ctx.save();
+    const now = new Date();
+    const clkX = 498, clkY = 74;
+    ctx.fillStyle = '#FFFFFF';
+    ctx.strokeStyle = '#78350F';
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.arc(clkX, clkY, 22, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#334155';
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      ctx.fillRect(clkX + Math.sin(a) * 17 - 1, clkY - Math.cos(a) * 17 - 1, 2, 2);
+    }
+    const hA = ((now.getHours() % 12) + now.getMinutes() / 60) / 12 * Math.PI * 2;
+    const mA = (now.getMinutes() + now.getSeconds() / 60) / 60 * Math.PI * 2;
+    ctx.strokeStyle = '#1E293B';
+    ctx.lineCap = 'round';
+    ctx.lineWidth = 2.6;
+    ctx.beginPath();
+    ctx.moveTo(clkX, clkY);
+    ctx.lineTo(clkX + Math.sin(hA) * 10, clkY - Math.cos(hA) * 10);
+    ctx.stroke();
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(clkX, clkY);
+    ctx.lineTo(clkX + Math.sin(mA) * 15, clkY - Math.cos(mA) * 15);
+    ctx.stroke();
+
+    // 가족 액자 2개
+    [[430, 120, 34, 42, '#FDE68A'], [474, 128, 28, 34, '#BFDBFE']].forEach(([fx, fy, fw, fh, inner]) => {
+      ctx.fillStyle = '#92400E';
+      ctx.fillRect(fx, fy, fw, fh);
+      ctx.fillStyle = inner;
+      ctx.fillRect(fx + 4, fy + 4, fw - 8, fh - 8);
+      ctx.fillStyle = 'rgba(30, 41, 59, 0.35)';
+      ctx.beginPath();
+      ctx.arc(fx + fw / 2, fy + fh * 0.42, fw * 0.14, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(fx + fw / 2, fy + fh - 7, fw * 0.24, fh * 0.14, 0, Math.PI, 0);
+      ctx.fill();
+    });
+    ctx.restore();
+
+    // 5) 걸레받이 + 원목 마루 바닥
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, wallBottom - 4, W, 8);
+    const floorGrad = ctx.createLinearGradient(0, wallBottom, 0, H);
+    floorGrad.addColorStop(0, '#B7865A');
+    floorGrad.addColorStop(1, '#D4A574');
+    ctx.fillStyle = floorGrad;
+    ctx.fillRect(0, wallBottom + 4, W, H - wallBottom);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(120, 72, 35, 0.22)';
+    ctx.lineWidth = 1;
+    // 원근감 있는 마루 판자 결
+    for (let i = -8; i <= 8; i++) {
+      ctx.beginPath();
+      ctx.moveTo(290 + i * 34, wallBottom + 4);
+      ctx.lineTo(290 + i * 78, H);
+      ctx.stroke();
+    }
+    [318, 344, 376, 414].forEach((ly) => {
+      ctx.beginPath();
+      ctx.moveTo(0, ly);
+      ctx.lineTo(W, ly);
+      ctx.stroke();
+    });
+    ctx.restore();
+
+    // 거실 러그
+    ctx.save();
+    const rugGrad = ctx.createRadialGradient(290, 384, 20, 290, 384, 240);
+    rugGrad.addColorStop(0, '#F5F0E6');
+    rugGrad.addColorStop(1, '#E7DCC8');
+    ctx.fillStyle = rugGrad;
+    ctx.beginPath();
+    ctx.ellipse(290, 384, 232, 36, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(176, 137, 104, 0.55)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(290, 384, 216, 30, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+
+    // 6) 왼쪽 구석: 크리스마스 트리(겨울) 또는 몬스테라 화분
+    if (isXmas) {
+      drawChristmasTree(ctx, 36, 336, 0.86, t, true, true);
+    } else {
+      ctx.save();
+      ctx.translate(36, 336);
+      ctx.fillStyle = '#E7E5E4';
+      ctx.beginPath();
+      ctx.moveTo(-16, -30);
+      ctx.lineTo(16, -30);
+      ctx.lineTo(12, 0);
+      ctx.lineTo(-12, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#15803D';
+      const leafSway = Math.sin(t * 0.6) * 0.04;
+      [[-0.9, 44], [-0.35, 52], [0.25, 50], [0.8, 42], [0, 34]].forEach(([ang, len]) => {
+        ctx.save();
+        ctx.translate(0, -30);
+        ctx.rotate(ang + leafSway);
+        ctx.beginPath();
+        ctx.ellipse(0, -len * 0.6, 12, len * 0.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+      ctx.restore();
+    }
+
+    // 7) 오른쪽: 거실 소파 (앉기 위치 x=446, 좌판 y≈327) + 스탠드 조명
+    ctx.save();
+    ctx.translate(446, 348);
+    ctx.fillStyle = 'rgba(60, 35, 15, 0.22)';
+    ctx.beginPath();
+    ctx.ellipse(0, 2, 70, 9, 0, 0, Math.PI * 2);
+    ctx.fill();
+    const sofaColor = '#5B7DB1';
+    const sofaDark = '#45679A';
+    // 등받이
+    ctx.fillStyle = sofaDark;
+    ctx.beginPath();
+    ctx.roundRect(-62, -66, 124, 48, 12);
+    ctx.fill();
+    // 쿠션 2개
+    ctx.fillStyle = sofaColor;
+    ctx.beginPath();
+    ctx.roundRect(-56, -60, 54, 38, 9);
+    ctx.roundRect(2, -60, 54, 38, 9);
+    ctx.fill();
+    // 좌판
+    ctx.fillStyle = '#6A8CC0';
+    ctx.beginPath();
+    ctx.roundRect(-60, -26, 120, 18, 7);
+    ctx.fill();
+    // 팔걸이
+    ctx.fillStyle = sofaDark;
+    ctx.beginPath();
+    ctx.roundRect(-72, -44, 16, 38, 7);
+    ctx.roundRect(56, -44, 16, 38, 7);
+    ctx.fill();
+    // 다리
+    ctx.fillStyle = '#3F2A1A';
+    ctx.fillRect(-62, -8, 5, 9);
+    ctx.fillRect(57, -8, 5, 9);
+    // 포인트 쿠션
+    ctx.fillStyle = isXmas ? '#DC2626' : '#FBBF24';
+    ctx.beginPath();
+    ctx.roundRect(-54, -46, 18, 18, 5);
+    ctx.fill();
+    ctx.restore();
+
+    // 플로어 스탠드 (따뜻한 노란 불빛)
+    ctx.save();
+    ctx.strokeStyle = '#44403C';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(548, 344);
+    ctx.lineTo(548, 214);
+    ctx.stroke();
+    ctx.fillStyle = '#44403C';
+    ctx.beginPath();
+    ctx.ellipse(548, 344, 12, 3.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    const lampGlow = ctx.createRadialGradient(548, 214, 4, 548, 230, 110);
+    lampGlow.addColorStop(0, 'rgba(253, 224, 138, 0.55)');
+    lampGlow.addColorStop(1, 'rgba(253, 224, 138, 0)');
+    ctx.fillStyle = lampGlow;
+    ctx.beginPath();
+    ctx.arc(548, 230, 110, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#FEF3C7';
+    ctx.beginPath();
+    ctx.moveTo(532, 214);
+    ctx.lineTo(564, 214);
+    ctx.lineTo(556, 192);
+    ctx.lineTo(540, 192);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // 8) 천장 펜던트 조명의 포근한 실내광 + 가장자리 비네팅
+    ctx.save();
+    ctx.strokeStyle = '#57534E';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(290, 17);
+    ctx.lineTo(290, 30);
+    ctx.stroke();
+    ctx.fillStyle = '#FDE68A';
+    ctx.beginPath();
+    ctx.ellipse(290, 32, 14, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    const roomLight = ctx.createRadialGradient(290, 60, 20, 290, 220, 380);
+    roomLight.addColorStop(0, 'rgba(255, 237, 180, 0.22)');
+    roomLight.addColorStop(0.6, 'rgba(255, 237, 180, 0.05)');
+    roomLight.addColorStop(1, 'rgba(30, 20, 10, 0.22)');
+    ctx.fillStyle = roomLight;
+    ctx.fillRect(0, 0, W, H);
     ctx.restore();
   }
 
@@ -2261,7 +2835,7 @@
     let savedBrief = null;
     try { savedBrief = JSON.parse(localStorage.getItem('wxBrief') || 'null'); } catch (e) { savedBrief = null; }
     let previewPreset = null;
-    const PRESETS = [null, 'drizzle', 'rain', 'cold', 'snow', 'hot', 'spring'];
+    const PRESETS = [null, 'drizzle', 'rain', 'cold', 'snow', 'hot', 'spring', 'night', 'nightRain', 'nightSnow'];
     let presetIdx = 0;
 
     let wx = parseWeatherState(savedBrief, previewPreset);
@@ -2713,12 +3287,24 @@
     }));
 
     let rafId = null;
+    let lastNightCheck = 0;
     function renderLoop(now) {
       if (!cv.isConnected) {
         if (rafId) cancelAnimationFrame(rafId);
         return;
       }
       const t = now * 0.001;
+
+      // 1분마다 낮/밤 재확인 → 저녁 7시가 되면 자동으로 거실 배경으로 전환 (아침 6시엔 공원으로)
+      if (!previewPreset && now - lastNightCheck > 60000) {
+        lastNightCheck = now;
+        const nextWx = parseWeatherState(savedBrief, null);
+        if (nextWx.isNight !== wx.isNight) {
+          wx = nextWx;
+          wxPillEl.textContent = wx.badge;
+          say(wx.line, 3200);
+        }
+      }
 
       ['610708', '691105', 'mutul', 'puppy'].forEach((id) => {
         const isMini = id === 'mutul' || id === 'puppy';
