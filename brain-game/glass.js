@@ -419,7 +419,7 @@
     view.insertBefore(b, view.firstChild);
   }
 
-  const EV_TEXT = { feed_open: '소식 화면 열기', glass_seen_locked: '잠긴 유리 봄', glass_locked_tap: '잠긴 유리 누름', glass_seen_ready: '깰 수 있는 유리 봄', glass_auto_after_reward: '보상 후 유리화면 자동열림', glass_break: '유리 깸', glass_btn_result: '결과화면 유리 버튼', article: '기사 읽기', video_play: '유튜브 영상', radio_play: '라디오 듣기', tab_weather: '날씨 보기' };
+  const EV_TEXT = { feed_open: '소식 화면 열기', glass_seen_locked: '잠긴 유리 봄', glass_locked_tap: '잠긴 유리 누름', glass_seen_ready: '깰 수 있는 유리 봄', glass_auto_after_reward: '보상 후 유리화면 자동열림', glass_auto_after_measure: '측정 후 유리화면 열림', glass_break: '유리 깸', glass_btn_result: '결과화면 유리 버튼', article: '기사 읽기', video_play: '유튜브 영상', radio_play: '라디오 듣기', tab_weather: '날씨 보기' };
   function usageHtml(member) {
     const since = Date.now() - 7 * 86400e3;
     const recent = (member.usageLog || []).filter(r => new Date(r.ts).getTime() >= since);

@@ -1023,6 +1023,17 @@ function markPlayedToday(){
   currentMember.lastDay=today; saveMember();
 }
 
+// 두뇌 건강 측정은 두뇌운동의 심화 과정이다. 측정을 끝낸 날도 오늘 운동을 한 것으로 쳐서
+// 연속 일수·완료 기록에 넣고, 유리 깨기가 바로 열리게 한다. measureClearLog는 "측정으로 클리어한 날"을 구분하려고 따로 남긴다.
+function recordClearToday(kind){
+  if(!currentMember) return;
+  const ts=new Date().toISOString();
+  markPlayedToday();
+  currentMember.completedLog=pushCapped(currentMember.completedLog||[], ts);
+  if(kind==='measure') currentMember.measureClearLog=pushCapped(currentMember.measureClearLog||[], ts);
+  saveMember();
+}
+
 // ---------- HELPERS ----------
 const EMOJIS=['🐱','🐶','🌸','🍎','🌞','🐰','🦋','🐢','🍊','⭐','🌷','🐤','🍉','🐠','🌻','🐻'];
 // ---------- 순서 기억(사물/동물 버전)용 아이콘 풀 ----------
@@ -4785,8 +4796,9 @@ async function renderMemberDetail(member){
       <div style="padding:9px 0;border-bottom:1px solid var(--line);font-size:14px;">${fmtDateTime(ts)}</div>
     `).join('') : '<div style="color:var(--ink-soft);font-size:14px;padding:8px 0;">로그인 기록이 없어요</div>';
 
+  const measureClears=new Set(member.measureClearLog||[]);
   const completedHtml=completedLog.length? completedLog.slice(0,30).map(ts=>`
-      <div style="padding:9px 0;border-bottom:1px solid var(--line);font-size:14px;color:var(--ok);">${fmtDateTime(ts)}</div>
+      <div style="padding:9px 0;border-bottom:1px solid var(--line);font-size:14px;color:var(--ok);">${fmtDateTime(ts)}${measureClears.has(ts)?' <span style="color:#4A7FD4;">· 📋 측정으로 클리어</span>':''}</div>
     `).join('') : '<div style="color:var(--ink-soft);font-size:14px;padding:8px 0;">완료 기록이 없어요</div>';
 
   const scoreHtml=scoreLog.length? scoreLog.slice(0,30).map(s=>`
@@ -4897,11 +4909,11 @@ function clearBackground() {
 // ---------- INIT ----------
 (function init(){ renderLoginScreen(); })();
 </script>
-<script src="benchmark.js?v=6"></script>
+<script src="benchmark.js?v=7"></script>
 <script src="coop.js?v=4"></script>
 <script src="recall.js?v=1"></script>
 <script src="radio.js?v=3"></script>
-<script src="glass.js?v=6"></script>
+<script src="glass.js?v=7"></script>
 <script src="weather.js?v=3"></script>
 <script src="pet.js?v=9"></script>
 <script src="video.js?v=2"></script>

@@ -87,7 +87,7 @@
       <div class="panel" style="text-align:center;padding:30px 22px;">
         <div style="font-size:54px;">📋</div>
         <div style="font-family:'Jua';font-size:26px;margin:8px 0;">오늘은 일요일,<br>두뇌 건강 측정하는 날이에요</div>
-        <div style="font-size:18px;line-height:1.7;">약 5분이면 끝나요.<br>끝나면 바로 <b>오늘의 두뇌운동</b>으로 이어져요.</div>
+        <div style="font-size:18px;line-height:1.7;">약 5~10분이면 끝나요.<br>측정을 마치면 <b>오늘 운동을 한 것</b>으로 쳐요.<br>바로 유리를 깰 수 있어요!</div>
         <button class="btn btn-primary" id="bmGo" style="margin-top:22px;font-size:22px;padding:18px;">측정 시작하기</button>
         <button class="footer-link" id="bmSkip" style="margin-top:14px;">오늘은 건너뛰고 두뇌운동만 할게요</button>
       </div>`);
@@ -325,30 +325,40 @@
     showDone(onDone);
   }
 
+  // 측정은 두뇌운동의 심화 과정이라, 끝내면 오늘 운동을 클리어한 것으로 치고 바로 유리를 깨러 간다.
+  // 오늘 게임을 더 하고 싶으면 아래 버튼으로 이어서 할 수 있다.
+  const GLASS_WAIT_SEC = 5;
   function showDone(onDone) {
     if (typeof confetti === 'function') confetti(3);
-    if (onDone) {
-      const v = render(`
-        <div class="panel" style="text-align:center;padding:34px 22px;">
-          <div style="font-size:56px;">🎉</div>
-          <div style="font-family:'Jua';font-size:26px;margin:10px 0;">이번 주 측정을 마쳤어요</div>
-          <div style="font-size:18px;line-height:1.7;"><b style="color:#D9480F;">아직 오늘 게임이 남았어요!</b><br>잠시 뒤에 오늘 게임으로 넘어가요.</div>
-          <button class="btn btn-primary" id="bmNext" style="margin-top:24px;font-size:22px;padding:18px;">오늘 게임 하러 가기 ▶ <span id="bmCount">5</span></button>
-        </div>`);
-      let n = 5, done = false;
-      const go = () => { if (done) return; done = true; clearInterval(t); onDone(); };
-      const t = setInterval(() => { n--; const c = v.querySelector('#bmCount'); if (c) c.textContent = n; if (n <= 0) go(); }, 1000);
-      v.querySelector('#bmNext').addEventListener('click', go);
-      return;
-    }
+    if (typeof recordClearToday === 'function') recordClearToday('measure');
+    const games = typeof onDone === 'function' ? onDone : null;
+    const ready = typeof isGlassReadyToBreak === 'function' && isGlassReadyToBreak();
     const v = render(`
       <div class="panel" style="text-align:center;padding:34px 22px;">
         <div style="font-size:56px;">🎉</div>
-        <div style="font-family:'Jua';font-size:26px;margin:10px 0;">수고하셨어요!</div>
-        <div style="font-size:18px;line-height:1.7;color:var(--ink);">이번 주 측정이 저장됐어요.<br>다음 측정은 <b>${nextDueDate(currentMember)}</b>부터 할 수 있어요.</div>
-        <button class="btn btn-primary" id="bmHome" style="margin-top:24px;font-size:22px;padding:18px;">홈으로</button>
+        <div style="font-family:'Jua';font-size:28px;margin:10px 0;">오늘 운동 클리어!</div>
+        <div style="font-size:19px;line-height:1.7;color:var(--ink);">이번 주 두뇌 건강 측정을 마쳤어요.<br><b>오늘 할 일을 다 하셨어요. 정말 잘하셨어요!</b></div>
+        ${ready
+          ? `<button class="btn" id="bmGlass" style="margin-top:22px;font-size:22px;padding:18px;background:linear-gradient(135deg,#FF9F1C,#F04452);color:#fff;border:0;">🧊 얼음(유리) 깨러 가기 ▶ <span id="bmCount">${GLASS_WAIT_SEC}</span></button>
+             <div style="font-size:16px;line-height:1.6;color:var(--ink-soft);margin-top:8px;">깨면 오늘의 뉴스·라디오·유튜브가 열려요</div>`
+          : `<div style="font-size:16px;line-height:1.6;color:var(--ink-soft);margin-top:12px;">다음 측정은 <b>${nextDueDate(currentMember)}</b>부터 할 수 있어요.</div>`}
+        <button class="${ready ? 'footer-link' : 'btn btn-primary'}" id="bmMore" style="margin-top:${ready ? 18 : 22}px;${ready ? 'font-size:17px;' : 'font-size:21px;padding:16px;'}">${games ? '오늘 게임도 해 볼래요 ▶' : '홈으로'}</button>
       </div>`);
-    v.querySelector('#bmHome').addEventListener('click', () => renderHome());
+    let timer = null, left = GLASS_WAIT_SEC, moved = false;
+    const leave = fn => { if (moved) return; moved = true; clearInterval(timer); fn(); };
+    const toGlass = () => leave(() => {
+      if (window.GLASS) GLASS.track('glass_auto_after_measure');
+      NEWS.openFeed('right');
+    });
+    v.querySelector('#bmMore').addEventListener('click', () => leave(() => (games ? games() : renderHome())));
+    if (ready) {
+      v.querySelector('#bmGlass').addEventListener('click', toGlass);
+      timer = setInterval(() => {
+        left--;
+        const c = v.querySelector('#bmCount'); if (c) c.textContent = left;
+        if (left <= 0) toGlass();
+      }, 1000);
+    }
   }
 
   // ---------- 홈 화면 안내 카드 ----------
@@ -361,7 +371,7 @@
     card.style.cssText = 'padding:16px 20px;border-color:#BFDBFF;background:#F2F8FF;';
     card.innerHTML = `
       <div style="font-family:'Jua';font-size:20px;">📋 오늘은 두뇌 건강 측정하는 날 (일요일)</div>
-      <div style="font-size:15px;color:var(--ink-soft);margin:4px 0 10px;line-height:1.5;">아래 '시작하기'를 누르면 측정(약 5분)부터 하고<br>바로 두뇌운동으로 이어져요.</div>
+      <div style="font-size:15px;color:var(--ink-soft);margin:4px 0 10px;line-height:1.5;">아래 '시작하기'를 눌러 측정(약 5~10분)을 마치면<br>오늘 운동을 한 것으로 쳐요. 바로 유리를 깰 수 있어요!</div>
       <button class="btn" id="bmStart" style="margin:0;background:#4A7FD4;font-size:20px;padding:14px;">측정 시작하기</button>`;
     anchor.parentNode.insertBefore(card, anchor);
     card.querySelector('#bmStart').addEventListener('click', start);
@@ -418,5 +428,5 @@
     else detailView.appendChild(panel);
   }
 
-  window.BM = { start, isDue, runBeforeSession, injectHomeCard, injectAdminPanel, VERSION: BM_VERSION };
+  window.BM = { start, isDue, runBeforeSession, injectHomeCard, injectAdminPanel, showDone, VERSION: BM_VERSION };
 })();
