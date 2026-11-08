@@ -1,12 +1,13 @@
 // ==========================================================
-// 날씨 아래 닌텐도 Wii (Mii) 3D 캐릭터 광장 & 두 화면 실시간 연동 (window.PET)
-// - 왼쪽: 610708 닌텐도 Wii(Mii) 3D 캐릭터 (정면: char_610708.png / 좌·우 측면 보행: char_610708_side.png)
-// - 오른쪽: 691105 닌텐도 Wii(Mii) 3D 캐릭터 (정면: char_691105.png / 좌·우 측면 보행: char_691105_side.png)
-// 1) 정면·좌측·우측 3D 전환 및 자율 산책: 광장을 걸어 다니며 이동 방향에 따라 정면·좌측면·우측면 3D 모습이 자연스럽게 전환됨
-// 2) 잔디밭 터치 이동: 화면 잔디밭 어디든 터치하면 캐릭터가 그 방향으로 몸을 돌려 걸어감
-// 3) 610708 ↔ 691105 실시간 화면 연동 (Firestore onSnapshot):
-//    - 상대방 접속 여부 실시간 표시 (💑 함께 접속 중)
-//    - 한쪽에서 걸어가거나 [👋 반갑게 인사] / [💐 축하 꽃다발] / [🍵 다과 나누기]를 누르면 상대방 화면에서도 즉시 똑같이 걸어가고 반응함
+// 날씨·계절 연동 3D Mii 캐릭터 산책 광장 & 실시간 화면 연동 (window.PET)
+// - 다마고치 버튼 제거 (순수 3D 산책 & 날씨·계절 공간)
+// - 날씨별 복장 & 소품 자동 변화:
+//   1) 더우면 / 맑고 따뜻하면: 반팔 (char_610708 / char_691105)
+//   2) 비오면: 우산 들고 산책
+//   3) 추우면: 코트와 목도리 착용 (char_*_coat)
+//   4) 눈오면: 패딩 입고 우산 들고 산책 (char_*_pad + 우산)
+// - 계절(봄·여름·가을·겨울) 및 날씨(맑음·비·눈·추위·더위·밤)가 입체적으로 표현되는 배경 공간
+// - 정면·좌측면·우측면 3D 보행 및 610708 ↔ 691105 실시간 화면 연동
 // ==========================================================
 (function () {
   const SHARED_DOC_ID = 'pet-plaza-610708-691105';
@@ -14,10 +15,20 @@
   const HEARTBEAT_MS = 10000;
 
   const CHAR_ASSETS = {
-    '610708_front': 'assets/pet/char_610708.png?v=3',
-    '610708_side': 'assets/pet/char_610708_side.png?v=3',
-    '691105_front': 'assets/pet/char_691105.png?v=3',
-    '691105_side': 'assets/pet/char_691105_side.png?v=3',
+    '610708_short_front': 'assets/pet/char_610708.png?v=5',
+    '610708_short_side': 'assets/pet/char_610708_side.png?v=5',
+    '691105_short_front': 'assets/pet/char_691105.png?v=5',
+    '691105_short_side': 'assets/pet/char_691105_side.png?v=5',
+
+    '610708_coat_front': 'assets/pet/char_610708_coat.png?v=5',
+    '610708_coat_side': 'assets/pet/char_610708_coat_side.png?v=5',
+    '691105_coat_front': 'assets/pet/char_691105_coat.png?v=5',
+    '691105_coat_side': 'assets/pet/char_691105_coat_side.png?v=5',
+
+    '610708_pad_front': 'assets/pet/char_610708_pad.png?v=5',
+    '610708_pad_side': 'assets/pet/char_610708_pad_side.png?v=5',
+    '691105_pad_front': 'assets/pet/char_691105_pad.png?v=5',
+    '691105_pad_side': 'assets/pet/char_691105_pad_side.png?v=5',
   };
   const loadedSprites = {};
 
@@ -31,11 +42,6 @@
   }
   preloadSprites();
 
-  const todayKey = () => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  };
-
   function getMyId() {
     const m = typeof currentMember !== 'undefined' ? currentMember : null;
     const mid = m && String(m.birthdate || m.id || '');
@@ -45,31 +51,8 @@
 
   function getPetState() {
     const m = typeof currentMember !== 'undefined' ? currentMember : null;
-    if (m) {
-      if (!m.petState || typeof m.petState !== 'object') {
-        const baseLv = Math.max(1, Math.min(10, Math.floor((m.streak || 1) / 2) + 1));
-        m.petState = {
-          lv: baseLv,
-          exp: 30,
-          fedDay: null,
-          snackDay: null,
-          petCount: 0,
-        };
-      }
-      return m.petState;
-    }
-    return { lv: 1, exp: 30, fedDay: null, snackDay: null, petCount: 0 };
-  }
-
-  function savePetState() {
-    if (typeof saveMember === 'function') saveMember();
-  }
-
-  function isSessionDoneToday() {
-    if (window.GLASS && typeof GLASS.todayDone === 'function') return GLASS.todayDone();
-    const m = typeof currentMember !== 'undefined' ? currentMember : null;
-    if (!m) return false;
-    return m.lastDay === todayKey();
+    if (m && m.petState && typeof m.petState === 'object') return m.petState;
+    return { lv: 1, exp: 30 };
   }
 
   function injectStyle() {
@@ -81,63 +64,105 @@
       .hero-compact-stats span{display:inline-flex;align-items:center;gap:3px;}
       .hero-compact-stats .stat-div{color:#CBD5E1;font-weight:400;}
       .hero-compact-stats .stat-card-link{background:#FFF3E0;color:#D97706;padding:2px 8px;border-radius:999px;cursor:pointer;border:1px solid #FDE68A;}
-      .pet-stage-box{position:relative;margin-top:12px;border-radius:20px;overflow:hidden;border:2.5px solid rgba(255,255,255,.85);box-shadow:inset 0 2px 12px rgba(255,255,255,.45),0 8px 20px rgba(15,23,42,.12);background:linear-gradient(180deg,#8EC5FC 0%,#E0C3FC 58%,#B8E994 58%,#78E08F 100%);transition:background .5s ease;user-select:none;-webkit-user-select:none;}
-      .pet-stage-box.wx-rain{background:linear-gradient(180deg,#536976 0%,#BBD2C5 58%,#7F9F80 58%,#5B7A5C 100%);}
-      .pet-stage-box.wx-snow{background:linear-gradient(180deg,#83A4D4 0%,#D7E1EC 58%,#F1F5F9 58%,#E2E8F0 100%);}
-      .pet-stage-box.wx-night{background:linear-gradient(180deg,#141E30 0%,#243B55 58%,#3A5A40 58%,#2D4732 100%);}
-      .pet-hud{position:relative;z-index:4;display:flex;justify-content:space-between;align-items:center;padding:8px 11px 0;gap:6px;flex-wrap:nowrap;}
-      .pet-lv-pill{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.92);backdrop-filter:blur(6px);padding:4px 9px;border-radius:999px;font-family:'Jua';font-size:13.5px;color:#1E293B;box-shadow:0 2px 8px rgba(0,0,0,.1);white-space:nowrap;}
-      .pet-exp-track{width:48px;height:8px;background:#E2E8F0;border-radius:999px;overflow:hidden;}
-      .pet-exp-fill{height:100%;background:linear-gradient(90deg,#FF6B6B,#FF8E53);border-radius:999px;transition:width .35s ease;}
-      .pet-sync-pill{display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,.9);color:#0F172A;font-size:11.5px;font-weight:800;padding:4px 9px;border-radius:999px;box-shadow:0 2px 6px rgba(0,0,0,.08);white-space:nowrap;}
+      .pet-stage-box{position:relative;margin-top:12px;border-radius:20px;overflow:hidden;border:2.5px solid rgba(255,255,255,.9);box-shadow:0 8px 22px rgba(15,23,42,.13);background:#BAE6FD;user-select:none;-webkit-user-select:none;}
+      .pet-hud{position:absolute;top:8px;left:10px;right:10px;z-index:4;display:flex;justify-content:space-between;align-items:center;gap:6px;pointer-events:none;}
+      .pet-sync-pill{pointer-events:auto;display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.92);backdrop-filter:blur(6px);color:#0F172A;font-size:12px;font-weight:800;padding:4px 10px;border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,.1);white-space:nowrap;}
       .pet-sync-dot{width:7px;height:7px;border-radius:50%;background:#10B981;display:inline-block;box-shadow:0 0 0 2px rgba(16,185,129,.25);}
-      .pet-wx-pill{background:rgba(15,23,42,.62);backdrop-filter:blur(6px);color:#fff;font-size:11.5px;font-weight:700;padding:4px 9px;border-radius:999px;display:inline-flex;align-items:center;gap:3px;white-space:nowrap;}
-      .pet-bubble-wrap{position:relative;z-index:4;padding:6px 12px 0;display:flex;justify-content:center;}
-      .pet-bubble{background:rgba(255,255,255,.96);border:2px solid #FDE68A;border-radius:16px;padding:6px 12px;font-family:'Jua';font-size:14.5px;color:#1E293B;line-height:1.35;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,.1);max-width:96%;word-break:keep-all;position:relative;animation:pop .25s ease;}
-      .pet-bubble::after{content:'';position:absolute;bottom:-7px;left:50%;transform:translateX(-50%) rotate(45deg);width:11px;height:11px;background:#fff;border-right:2px solid #FDE68A;border-bottom:2px solid #FDE68A;}
-      .pet-canvas-wrap{position:relative;z-index:3;height:225px;display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:manipulation;}
-      .pet-canvas{width:100%;max-width:360px;height:225px;display:block;}
-      .pet-walk-hint{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,.48);color:#fff;font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;pointer-events:none;white-space:nowrap;z-index:4;}
+      .pet-wx-pill{pointer-events:auto;background:rgba(15,23,42,.68);backdrop-filter:blur(6px);color:#fff;font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.12);}
+      .pet-bubble-wrap{position:absolute;top:36px;left:12px;right:12px;z-index:4;display:flex;justify-content:center;pointer-events:none;}
+      .pet-bubble{background:rgba(255,255,255,.92);backdrop-filter:blur(6px);border:1.5px solid #FDE68A;border-radius:999px;padding:4px 12px;font-family:'Jua';font-size:12.5px;color:#1E293B;line-height:1.25;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,.08);max-width:96%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative;transition:opacity .35s ease,transform .35s ease;}
+      .pet-bubble.is-hidden{opacity:0;transform:translateY(-6px);}
+      .pet-canvas-wrap{position:relative;z-index:3;height:265px;display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:manipulation;}
+      .pet-canvas{width:100%;height:265px;display:block;}
+      .pet-walk-hint{position:absolute;bottom:7px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,.45);backdrop-filter:blur(4px);color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;pointer-events:none;white-space:nowrap;z-index:4;}
       .pet-fx-layer{position:absolute;inset:0;pointer-events:none;z-index:5;overflow:hidden;}
       .pet-float-item{position:absolute;font-size:24px;animation:petFloatUp .95s ease-out forwards;pointer-events:none;filter:drop-shadow(0 2px 6px rgba(0,0,0,.2));}
       @keyframes petFloatUp{0%{opacity:1;transform:translate(-50%,0) scale(.6);}40%{opacity:1;transform:translate(-50%,-28px) scale(1.2);}100%{opacity:0;transform:translate(-50%,-64px) scale(.9);}}
-      .pet-actions{position:relative;z-index:4;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:6px 10px 10px;background:rgba(255,255,255,.55);backdrop-filter:blur(6px);}
-      .pet-act-btn{border:2px solid rgba(255,255,255,.9);background:rgba(255,255,255,.92);border-radius:13px;padding:8px 4px;font-family:'Jua';font-size:15px;color:#1E293B;cursor:pointer;box-shadow:0 3px 8px rgba(0,0,0,.08);display:flex;align-items:center;justify-content:center;gap:4px;transition:transform .12s,background .15s;}
-      .pet-act-btn:active{transform:scale(.94);}
-      .pet-act-btn.ready-feed{background:linear-gradient(135deg,#FFF3BF,#FFE066);border-color:#FCC419;color:#7C4A00;animation:petFeedGlow 1.4s ease-in-out infinite;}
-      @keyframes petFeedGlow{0%,100%{box-shadow:0 0 0 0 rgba(252,196,25,.55);}50%{box-shadow:0 0 0 7px rgba(252,196,25,0);}}
-      .pet-act-btn.done-feed{opacity:.75;}
     `;
     document.head.appendChild(st);
   }
 
   let activeMount = null;
 
-  function parseWeatherState(brief) {
+  // 현재 월 기준 기본 계절 판별 (3~5: spring, 6~8: summer, 9~11: autumn, 12~2: winter)
+  function getCurrentSeason() {
+    const m = new Date().getMonth() + 1;
+    if (m >= 3 && m <= 5) return 'spring';
+    if (m >= 6 && m <= 8) return 'summer';
+    if (m >= 9 && m <= 11) return 'autumn';
+    return 'winter';
+  }
+
+  // 날씨 코드/기온에서 복장(short / coat / pad) · 우산(hasUmbrella) · 계절 배경(season) 결정
+  function parseWeatherState(brief, previewPreset) {
+    if (previewPreset) {
+      if (previewPreset === 'rain') {
+        return { season: getCurrentSeason(), isRain: true, isSnow: false, isCold: false, isHot: false, isNight: false, outfit: 'short', hasUmbrella: true, badge: '☂️ 비 · 우산 산책', line: '☂️ 비가 내려서 두 분 다 우산을 챙겨 들고 산책 중이에요!' };
+      }
+      if (previewPreset === 'cold') {
+        return { season: 'autumn', isRain: false, isSnow: false, isCold: true, isHot: false, isNight: false, outfit: 'coat', hasUmbrella: false, badge: '🧣 추위 · 코트와 목도리', line: '🧣 날씨가 쌀쌀해서 따뜻한 코트와 목도리를 두르고 산책 중이에요!' };
+      }
+      if (previewPreset === 'snow') {
+        return { season: 'winter', isRain: false, isSnow: true, isCold: true, isHot: false, isNight: false, outfit: 'pad', hasUmbrella: true, badge: '⛄ 눈 · 우산과 패딩', line: '⛄ 함박눈이 내려서 따뜻한 패딩을 입고 우산을 쓰고 걸어요!' };
+      }
+      if (previewPreset === 'hot') {
+        return { season: 'summer', isRain: false, isSnow: false, isCold: false, isHot: true, isNight: false, outfit: 'short', hasUmbrella: false, badge: '☀️ 더움 · 시원한 반팔', line: '☀️ 햇살이 따뜻한 날이라 시원한 반팔 차림으로 산책 중이에요!' };
+      }
+      if (previewPreset === 'spring') {
+        return { season: 'spring', isRain: false, isSnow: false, isCold: false, isHot: false, isNight: false, outfit: 'short', hasUmbrella: false, badge: '🌸 봄꽃 공원 · 반팔', line: '🌸 벚꽃이 살랑살랑 흩날리는 봄날 공원을 함께 걸어요!' };
+      }
+    }
+
     const hour = new Date().getHours();
     const isNight = brief && brief.isDay !== undefined ? !brief.isDay : (hour >= 19 || hour < 6);
     const code = brief && Number.isFinite(brief.code) ? brief.code : 0;
     const temp = brief && Number.isFinite(brief.temp) ? brief.temp : 16;
+
     const isRain = [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99].includes(code);
     const isSnow = [71, 73, 75, 77, 85, 86].includes(code);
-    const isCold = temp <= 6;
-    const isHot = temp >= 28;
-    const prop = isRain ? 'umbrella' : null;
+    const isCold = !isSnow && temp <= 10;
+    const isHot = temp >= 23;
 
-    let skyClass = '';
-    if (isRain) skyClass = 'wx-rain';
-    else if (isSnow) skyClass = 'wx-snow';
-    else if (isNight) skyClass = 'wx-night';
+    let season = getCurrentSeason();
+    if (isSnow || temp <= 2) season = 'winter';
+    else if (isHot) season = 'summer';
+    else if (isCold) season = 'autumn';
 
-    let badge = '☀️ 맑음';
-    if (isRain) badge = '☂️ 비 · 우산';
-    else if (isSnow) badge = '⛄ 눈 조심';
-    else if (isCold) badge = `🧣 ${temp}° 쌀쌀`;
-    else if (isHot) badge = `🕶️ ${temp}° 더움`;
-    else if (isNight) badge = `🌙 ${temp}° 밤`;
-    else if (brief && Number.isFinite(brief.temp)) badge = `🌤️ ${temp}° 맑음`;
+    // 복장 규칙:
+    // 1) 눈오면: 패딩(pad) + 우산(hasUmbrella = true)
+    // 2) 추우면: 코트와 목도리(coat) + (비 동반 시 우산)
+    // 3) 비오면: 우산(hasUmbrella = true) + 기온에 맞는 복장
+    // 4) 더우면/온화하면: 반팔(short)
+    let outfit = 'short';
+    if (isSnow) outfit = 'pad';
+    else if (isCold) outfit = 'coat';
+    else outfit = 'short';
 
-    return { isNight, isRain, isSnow, isCold, isHot, prop, skyClass, badge, temp };
+    const hasUmbrella = isRain || isSnow;
+
+    let badge = '🌤️ 산책하기 좋은 날';
+    let line = '😊 잔디밭을 터치하면 두 분이 나란히 걸어가며 실시간으로 연동됩니다!';
+    if (isSnow) {
+      badge = `⛄ 눈 (${temp}°) · 패딩과 우산`;
+      line = '⛄ 눈 소식이 있어 따뜻한 패딩에 우산을 챙겨 들고 산책해요!';
+    } else if (isRain && isCold) {
+      badge = `☂️ 찬비 (${temp}°) · 코트와 우산`;
+      line = '☂️ 비가 내리고 쌀쌀해서 코트와 목도리에 우산까지 챙겼어요!';
+    } else if (isRain) {
+      badge = `☂️ 비 (${temp}°) · 우산 산책`;
+      line = '☂️ 오늘은 비 소식이 있어요! 외출하실 때 우산 꼭 챙기세요 😊';
+    } else if (isCold) {
+      badge = `🧣 쌀쌀함 (${temp}°) · 코트와 목도리`;
+      line = '🧣 날씨가 쌀쌀해서 두 분 다 따뜻한 코트와 목도리를 착용하셨어요!';
+    } else if (isHot) {
+      badge = `☀️ 따뜻함 (${temp}°) · 반팔 산책`;
+      line = '☀️ 날씨가 따뜻해서 가벼운 반팔 차림으로 상쾌하게 산책해요!';
+    } else if (brief && Number.isFinite(brief.temp)) {
+      const seasonKor = { spring: '🌸 봄', summer: '🌿 여름', autumn: '🍁 가을', winter: '❄️ 겨울' }[season];
+      badge = `${seasonKor} ${temp}° · 산책 광장`;
+    }
+
+    return { season, isNight, isRain, isSnow, isCold, isHot, outfit, hasUmbrella, badge, line, temp };
   }
 
   function normAngle(a) {
@@ -151,18 +176,398 @@
   }
 
   // ==========================================================
-  // 정면(Front) · 좌측면(Left) · 우측면(Right) 3D Mii 캐릭터 렌더링
+  // 계절(봄·여름·가을·겨울) & 날씨(맑음·비·눈·밤) 배경 공간 렌더러
+  // ==========================================================
+  function drawSceneryBackground(ctx, t, wx, bgParticles, ripples) {
+    const W = 580, H = 430;
+    const horizonY = 252;
+
+    // 1. 하늘 그라데이션
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, horizonY);
+    if (wx.isNight) {
+      skyGrad.addColorStop(0, '#0F172A');
+      skyGrad.addColorStop(1, '#1E3A5F');
+    } else if (wx.isRain) {
+      skyGrad.addColorStop(0, '#475569');
+      skyGrad.addColorStop(1, '#94A3B8');
+    } else if (wx.isSnow || wx.season === 'winter') {
+      skyGrad.addColorStop(0, '#7DD3FC');
+      skyGrad.addColorStop(0.55, '#BAE6FD');
+      skyGrad.addColorStop(1, '#F1F5F9');
+    } else if (wx.season === 'autumn') {
+      skyGrad.addColorStop(0, '#38BDF8');
+      skyGrad.addColorStop(0.65, '#BAE6FD');
+      skyGrad.addColorStop(1, '#FDE68A');
+    } else if (wx.season === 'spring') {
+      skyGrad.addColorStop(0, '#60A5FA');
+      skyGrad.addColorStop(0.6, '#BFDBFE');
+      skyGrad.addColorStop(1, '#FCE7F3');
+    } else {
+      // summer
+      skyGrad.addColorStop(0, '#0284C7');
+      skyGrad.addColorStop(0.65, '#7DD3FC');
+      skyGrad.addColorStop(1, '#E0F2FE');
+    }
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, W, horizonY + 10);
+
+    // 2. 해 / 달 / 구름
+    ctx.save();
+    if (wx.isNight) {
+      // 초승달/보름달 & 별
+      ctx.fillStyle = '#FEF08A';
+      ctx.shadowColor = '#FEF08A';
+      ctx.shadowBlur = 18;
+      ctx.beginPath();
+      ctx.arc(485, 82, 22, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (!wx.isRain && !wx.isSnow) {
+      // 따뜻한 태양과 빛무리
+      const sunPulse = 1 + Math.sin(t * 2) * 0.05;
+      const sunGrad = ctx.createRadialGradient(485, 82, 6, 485, 82, 54 * sunPulse);
+      sunGrad.addColorStop(0, 'rgba(255, 251, 235, 1)');
+      sunGrad.addColorStop(0.4, 'rgba(253, 224, 71, 0.85)');
+      sunGrad.addColorStop(1, 'rgba(253, 224, 71, 0)');
+      ctx.fillStyle = sunGrad;
+      ctx.beginPath();
+      ctx.arc(485, 82, 54 * sunPulse, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 뭉게구름 / 비구름
+    const cloudColor = wx.isRain
+      ? 'rgba(100, 116, 139, 0.82)'
+      : wx.isNight
+        ? 'rgba(148, 163, 184, 0.25)'
+        : 'rgba(255, 255, 255, 0.82)';
+    ctx.fillStyle = cloudColor;
+    [
+      { baseX: 110, y: 88, s: 1.0, spd: 4 },
+      { baseX: 340, y: 72, s: 0.85, spd: 3 },
+      { baseX: 470, y: 105, s: 0.75, spd: 5 },
+    ].forEach((cl) => {
+      const cx = ((cl.baseX + t * cl.spd) % (W + 120)) - 60;
+      ctx.save();
+      ctx.translate(cx, cl.y);
+      ctx.scale(cl.s, cl.s);
+      ctx.beginPath();
+      ctx.arc(0, 0, 22, 0, Math.PI * 2);
+      ctx.arc(20, -6, 26, 0, Math.PI * 2);
+      ctx.arc(44, 0, 20, 0, Math.PI * 2);
+      ctx.arc(22, 8, 22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
+    ctx.restore();
+
+    // 3. 원경 산자락 & 언덕 (계절별 색상)
+    ctx.save();
+    let farHillColor = '#86EFAC';
+    let nearHillColor = '#4ADE80';
+    let lawnTopColor = '#86EFAC';
+    let lawnBotColor = '#4ADE80';
+    let pathColor = '#E2E8F0';
+
+    if (wx.isSnow || wx.season === 'winter') {
+      farHillColor = '#CBD5E1';
+      nearHillColor = '#E2E8F0';
+      lawnTopColor = '#F8FAFC';
+      lawnBotColor = '#E2E8F0';
+      pathColor = '#CBD5E1';
+    } else if (wx.season === 'autumn') {
+      farHillColor = '#FCD34D';
+      nearHillColor = '#BBF7D0';
+      lawnTopColor = '#BEF264';
+      lawnBotColor = '#84CC16';
+      pathColor = '#FEF3C7';
+    } else if (wx.season === 'spring') {
+      farHillColor = '#A7F3D0';
+      nearHillColor = '#6EE7B7';
+      lawnTopColor = '#A7F3D0';
+      lawnBotColor = '#34D399';
+      pathColor = '#FDF2F8';
+    } else if (wx.isRain) {
+      farHillColor = '#64748B';
+      nearHillColor = '#6EE7B7';
+      lawnTopColor = '#6EE7B7';
+      lawnBotColor = '#34D399';
+      pathColor = '#94A3B8';
+    } else {
+      // summer
+      farHillColor = '#4ADE80';
+      nearHillColor = '#22C55E';
+      lawnTopColor = '#86EFAC';
+      lawnBotColor = '#22C55E';
+      pathColor = '#F1F5F9';
+    }
+
+    // 뒤쪽 먼 언덕
+    ctx.fillStyle = farHillColor;
+    ctx.beginPath();
+    ctx.moveTo(0, horizonY + 12);
+    ctx.quadraticCurveTo(145, horizonY - 48, 310, horizonY + 4);
+    ctx.quadraticCurveTo(455, horizonY - 38, W, horizonY + 8);
+    ctx.lineTo(W, H);
+    ctx.lineTo(0, H);
+    ctx.closePath();
+    ctx.fill();
+
+    // 앞쪽 완만한 언덕
+    ctx.fillStyle = nearHillColor;
+    ctx.beginPath();
+    ctx.moveTo(0, horizonY + 8);
+    ctx.quadraticCurveTo(210, horizonY - 22, 410, horizonY + 10);
+    ctx.quadraticCurveTo(510, horizonY - 10, W, horizonY + 12);
+    ctx.lineTo(W, H);
+    ctx.lineTo(0, H);
+    ctx.closePath();
+    ctx.fill();
+
+    // 잔디 광장 바닥
+    const lawnGrad = ctx.createLinearGradient(0, horizonY, 0, H);
+    lawnGrad.addColorStop(0, lawnTopColor);
+    lawnGrad.addColorStop(1, lawnBotColor);
+    ctx.fillStyle = lawnGrad;
+    ctx.fillRect(0, horizonY + 6, W, H - horizonY);
+
+    // 광장 산책로 트랙
+    ctx.fillStyle = pathColor;
+    ctx.globalAlpha = wx.isRain ? 0.55 : 0.72;
+    ctx.beginPath();
+    ctx.ellipse(290, 384, 248, 38, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    // 4. 계절별 나무 & 공원 소품 (좌·우 배치)
+    // 왼쪽 나무 (x=64, y=262), 오른쪽 나무 (x=516, y=266)
+    drawSeasonTree(ctx, 62, 268, 1.0, wx, t);
+    drawSeasonTree(ctx, 518, 272, 0.92, wx, t + 1.5);
+
+    // 공원 벤치 & 가로등 (x=455, y=264)
+    drawParkBenchAndLamp(ctx, 448, 266, wx);
+
+    // 눈 오는 날 / 겨울에는 귀여운 눈사람 추가 (x=122, y=274)
+    if (wx.isSnow || wx.season === 'winter') {
+      drawSnowman(ctx, 122, 276);
+    }
+
+    // 비 오는 날 바닥 물웅덩이 파장(Ripples)
+    if (wx.isRain && ripples) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+      ctx.lineWidth = 1.5;
+      for (const rp of ripples) {
+        rp.r += 0.45;
+        if (rp.r > 22) {
+          rp.r = 2;
+          rp.x = 90 + Math.random() * 400;
+          rp.y = 355 + Math.random() * 55;
+        }
+        const alpha = Math.max(0, 1 - rp.r / 22) * 0.65;
+        ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+        ctx.beginPath();
+        ctx.ellipse(rp.x, rp.y, rp.r, rp.r * 0.32, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // 5. 계절·날씨 하늘 입자 (빗줄기 / 눈송이 / 벚꽃잎 / 단풍잎 / 반짝이)
+    ctx.save();
+    if (wx.isRain) {
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.62)';
+      ctx.lineWidth = 2.0;
+      for (const p of bgParticles) {
+        p.y = (p.y + p.v * 3.8) % H;
+        p.x = (p.x - 1.1 + W) % W;
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x - 4, p.y + 15);
+        ctx.stroke();
+      }
+    } else if (wx.isSnow || wx.season === 'winter') {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+      for (const p of bgParticles) {
+        p.y = (p.y + p.v * 0.85) % H;
+        p.x = (p.x + Math.sin(t + p.y * 0.03) * 0.8 + W) % W;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.s * 2.1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (wx.season === 'spring') {
+      // 흩날리는 분홍 벚꽃잎
+      ctx.fillStyle = '#F9A8D4';
+      for (const p of bgParticles) {
+        p.y = (p.y + p.v * 0.65) % H;
+        p.x = (p.x + Math.sin(t * 1.5 + p.y * 0.04) * 1.1 + W) % W;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(t + p.x * 0.05);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, p.s * 2.4, p.s * 1.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    } else if (wx.season === 'autumn') {
+      // 떨어지는 은행잎·단풍잎
+      for (let i = 0; i < bgParticles.length; i++) {
+        const p = bgParticles[i];
+        p.y = (p.y + p.v * 0.7) % H;
+        p.x = (p.x + Math.sin(t * 1.3 + i) * 1.1 + W) % W;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(t * 1.2 + i);
+        ctx.fillStyle = i % 2 === 0 ? '#F59E0B' : '#EF4444';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, p.s * 2.6, p.s * 1.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    } else {
+      // 여름 햇살 반짝이
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      for (let i = 0; i < 12; i++) {
+        const p = bgParticles[i];
+        const pulse = 0.5 + 0.5 * Math.sin(t * 2 + i);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y * 0.55, p.s * (1 + pulse), 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawSeasonTree(ctx, x, y, scale, wx, t) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+    const sway = Math.sin(t * 1.6) * 0.025;
+    ctx.rotate(sway);
+
+    // 나무 기둥
+    ctx.fillStyle = '#78350F';
+    ctx.beginPath();
+    ctx.roundRect(-8, -58, 16, 62, 5);
+    ctx.fill();
+
+    // 계절별 수관(나뭇잎) 색상
+    let c1 = '#22C55E', c2 = '#16A34A';
+    if (wx.isSnow || wx.season === 'winter') {
+      c1 = '#15803D';
+      c2 = '#166534';
+    } else if (wx.season === 'spring') {
+      c1 = '#FBCFE8';
+      c2 = '#F472B6';
+    } else if (wx.season === 'autumn') {
+      // 왼쪽 나무는 노란 은행나무, 오른쪽 나무는 붉은 단풍나무
+      c1 = x < 290 ? '#FBBF24' : '#F87171';
+      c2 = x < 290 ? '#D97706' : '#DC2626';
+    }
+
+    const puffs = [
+      { dx: 0, dy: -92, r: 32 },
+      { dx: -24, dy: -72, r: 26 },
+      { dx: 24, dy: -72, r: 26 },
+      { dx: -14, dy: -56, r: 24 },
+      { dx: 14, dy: -56, r: 24 },
+    ];
+    puffs.forEach((pf) => {
+      const g = ctx.createRadialGradient(pf.dx - 6, pf.dy - 6, 3, pf.dx, pf.dy, pf.r);
+      g.addColorStop(0, c1);
+      g.addColorStop(1, c2);
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(pf.dx, pf.dy, pf.r, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 겨울/눈 오는 날 나뭇가지 위 소복한 눈 모자
+      if (wx.isSnow || wx.season === 'winter') {
+        ctx.fillStyle = '#FFFFFF';
+        ctx.beginPath();
+        ctx.arc(pf.dx, pf.dy - 4, pf.r * 0.85, Math.PI * 1.08, Math.PI * 1.92);
+        ctx.fill();
+      }
+    });
+    ctx.restore();
+  }
+
+  function drawParkBenchAndLamp(ctx, x, y, wx) {
+    ctx.save();
+    ctx.translate(x, y);
+    // 가로등 기둥
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.moveTo(28, 0);
+    ctx.lineTo(28, -78);
+    ctx.stroke();
+    // 가로등 램프 불빛
+    ctx.fillStyle = (wx.isNight || wx.isRain || wx.isSnow) ? '#FDE047' : '#F8FAFC';
+    if (wx.isNight || wx.isRain || wx.isSnow) {
+      ctx.shadowColor = '#FDE047';
+      ctx.shadowBlur = 14;
+    }
+    ctx.beginPath();
+    ctx.arc(28, -82, 7.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // 나무 벤치
+    ctx.fillStyle = '#92400E';
+    ctx.fillRect(-24, -18, 42, 6);
+    ctx.fillRect(-24, -10, 42, 5);
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(-18, -5, 4, 8);
+    ctx.fillRect(10, -5, 4, 8);
+    if (wx.isSnow || wx.season === 'winter') {
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(-24, -20, 42, 3);
+    }
+    ctx.restore();
+  }
+
+  function drawSnowman(ctx, x, y) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.strokeStyle = '#CBD5E1';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(0, -12, 14, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, -31, 10, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    // 빨간 목도리 & 당근 코
+    ctx.fillStyle = '#EF4444';
+    ctx.fillRect(-9, -23, 18, 4.5);
+    ctx.fillStyle = '#F97316';
+    ctx.beginPath();
+    ctx.moveTo(0, -31);
+    ctx.lineTo(7, -29);
+    ctx.lineTo(0, -28);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // ==========================================================
+  // 정면(Front) · 좌측면(Left) · 우측면(Right) + 날씨별 복장(반팔/코트+목도리/패딩) + 우산 렌더링
   // ==========================================================
   function drawMii3DCharacter(ctx, charId, ch, t, wx) {
     const isFather = charId === '610708';
-    const yaw = ch.yaw; // 0: 정면, -PI/2: 좌측, +PI/2: 우측
+    const yaw = ch.yaw;
     const isWalking = ch.speed > 0.12;
     const isSideView = Math.abs(yaw) > 0.35 || isWalking;
     const facingLeft = yaw < -0.15;
 
-    const frontImg = loadedSprites[`${charId}_front`];
-    const sideImg = loadedSprites[`${charId}_side`];
-    const img = isSideView ? (sideImg || frontImg) : (frontImg || sideImg);
+    const outfit = wx.outfit || 'short'; // 'short' | 'coat' | 'pad'
+    const viewKey = isSideView ? 'side' : 'front';
+    const spriteKey = `${charId}_${outfit}_${viewKey}`;
+    const fallbackKey = `${charId}_short_${viewKey}`;
+    const img = loadedSprites[spriteKey] || loadedSprites[fallbackKey];
     if (!img || !img.complete || !img.naturalWidth) return;
 
     const walkPhase = ch.walkPhase;
@@ -170,81 +575,119 @@
       ? -Math.abs(Math.sin(walkPhase)) * 8.5
       : Math.sin(t * 2.8 + (isFather ? 0 : 1.2)) * 2.5;
     const walkTilt = isWalking
-      ? Math.sin(walkPhase) * 0.065
-      : Math.sin(t * 2.2 + (isFather ? 0 : 1.0)) * 0.018;
+      ? Math.sin(walkPhase) * 0.06
+      : Math.sin(t * 2.2 + (isFather ? 0 : 1.0)) * 0.016;
     const stepSquashX = isWalking
-      ? 1 + Math.cos(walkPhase * 2) * 0.035
+      ? 1 + Math.cos(walkPhase * 2) * 0.032
       : 1 + Math.sin(t * 3.0) * 0.012;
     const stepSquashY = isWalking
-      ? 1 - Math.cos(walkPhase * 2) * 0.035
+      ? 1 - Math.cos(walkPhase * 2) * 0.032
       : 1 - Math.sin(t * 3.0) * 0.012;
 
     const jumpY = ch.y || 0;
     const depthScale = 1 + (ch.z || 0) * 0.003;
-    const groundY = 382 + (ch.z || 0) * 0.85;
+    const groundY = 398 + (ch.z || 0) * 0.85;
     const cx = ch.x;
 
-    const targetH = (isFather ? 316 : 306) * depthScale;
+    const targetH = (isFather ? 264 : 254) * depthScale;
     const targetW = (img.naturalWidth / img.naturalHeight) * targetH;
 
     // 1. 바닥 입체 그림자
     const jumpFactor = Math.max(0.55, 1 + (jumpY + bobY) / 140);
     ctx.save();
-    const pedGrad = ctx.createRadialGradient(cx, groundY - 4, 4, cx, groundY - 4, 56 * depthScale * jumpFactor);
+    const pedGrad = ctx.createRadialGradient(cx, groundY - 4, 4, cx, groundY - 4, 54 * depthScale * jumpFactor);
     pedGrad.addColorStop(0, 'rgba(15, 23, 42, 0.28)');
     pedGrad.addColorStop(0.6, 'rgba(15, 23, 42, 0.14)');
     pedGrad.addColorStop(1, 'rgba(15, 23, 42, 0)');
     ctx.fillStyle = pedGrad;
     ctx.beginPath();
-    ctx.ellipse(cx, groundY - 4, 54 * depthScale * jumpFactor, 12 * depthScale * jumpFactor, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, groundY - 4, 52 * depthScale * jumpFactor, 12 * depthScale * jumpFactor, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
-    // 2. 3D Mii 캐릭터 본체 (정면 / 좌측면 / 우측면 3D 회전 전환)
+    // 2. 3D Mii 캐릭터 본체 (정면 / 좌측면 / 우측면)
     ctx.save();
     ctx.translate(cx, groundY + jumpY + bobY);
     ctx.rotate(walkTilt);
 
-    // 좌측을 볼 때는 측면 에셋을 좌우 반전(-1), 회전 중에는 자연스러운 3D 원근 스케일 적용
     const flipX = (isSideView && facingLeft) ? -1 : 1;
     const turnPerspective = isSideView
-      ? Math.max(0.84, Math.min(1.0, 0.78 + Math.abs(Math.sin(yaw)) * 0.25))
-      : Math.max(0.86, Math.cos(yaw));
+      ? Math.max(0.86, Math.min(1.0, 0.80 + Math.abs(Math.sin(yaw)) * 0.22))
+      : Math.max(0.88, Math.cos(yaw));
     ctx.scale(flipX * stepSquashX * turnPerspective, stepSquashY);
 
-    ctx.shadowColor = 'rgba(15, 23, 42, 0.28)';
+    ctx.shadowColor = 'rgba(15, 23, 42, 0.26)';
     ctx.shadowBlur = 14;
-    ctx.shadowOffsetY = 6;
+    ctx.shadowOffsetY = 5;
     ctx.drawImage(img, -targetW / 2, -targetH + 6, targetW, targetH);
-    ctx.restore();
 
-    // 3. 비 오는 날 우산 소품
-    if (wx.prop === 'umbrella' && isFather) {
-      ctx.save();
-      ctx.translate(cx, groundY + jumpY + bobY - 145);
-      draw3DUmbrella(ctx, t);
-      ctx.restore();
+    // 3. 비 오거나 눈 올 때 손에 들고 쓰는 3D 우산 (두 캐릭터 각각 착용!)
+    if (wx.hasUmbrella) {
+      drawHeldUmbrella(ctx, t, isFather, isSideView, outfit);
     }
+
+    ctx.restore();
   }
 
-  function draw3DUmbrella(ctx, t) {
+  function drawHeldUmbrella(ctx, t, isFather, isSideView, outfit) {
     ctx.save();
-    ctx.translate(35, -140 + Math.sin(t * 3) * 2);
-    ctx.rotate(0.06);
-    ctx.strokeStyle = '#7C4A00';
-    ctx.lineWidth = 4;
+    // 바깥쪽 손 위치에서 얼굴을 가리지 않고 머리 위로 자연스럽게 뻗는 3D 우산
+    const handX = isSideView ? 32 : (isFather ? -48 : 44);
+    const handY = (isFather && !isSideView && outfit === 'short') ? -152 : -112;
+    const canopyCenterX = isSideView ? 8 : (isFather ? -14 : 12);
+    const canopyTopY = (isFather ? -274 : -266) + Math.sin(t * 3.2) * 2;
+
+    const dx = handX - canopyCenterX;
+    const dy = handY - (canopyTopY + 18);
+    const shaftAngle = Math.atan2(dx, dy);
+    const shaftLen = Math.hypot(dx, dy);
+
+    ctx.translate(canopyCenterX, canopyTopY);
+    ctx.rotate(-shaftAngle);
+
+    // 우산대 (캐노피 안쪽에서 손 위치까지 연결)
+    ctx.strokeStyle = '#475569';
+    ctx.lineWidth = 3.4;
+    ctx.lineCap = 'round';
     ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(0, 105);
-    ctx.arc(-7, 105, 7, 0, Math.PI);
+    ctx.moveTo(0, 6);
+    ctx.lineTo(0, 18 + shaftLen);
     ctx.stroke();
-    const uGrad = ctx.createRadialGradient(-18, -12, 6, 0, 0, 90);
-    uGrad.addColorStop(0, '#FF9F1C');
-    uGrad.addColorStop(1, '#E03131');
-    ctx.fillStyle = uGrad;
+
+    // J자 우산 손잡이 (손 아래에서 감싸쥐는 형태)
+    ctx.strokeStyle = '#78350F';
+    ctx.lineWidth = 4.0;
     ctx.beginPath();
-    ctx.arc(0, 10, 88, Math.PI, 0);
+    ctx.moveTo(0, 14 + shaftLen);
+    ctx.lineTo(0, 24 + shaftLen);
+    ctx.arc(isFather ? -5.5 : 5.5, 24 + shaftLen, 5.5, isFather ? 0 : Math.PI, isFather ? Math.PI : 0, !isFather);
+    ctx.stroke();
+
+    // 3D 입체 우산 돔 (아버님은 클래식 로열블루, 어머님은 화사한 로즈코랄)
+    const domeGrad = ctx.createRadialGradient(-16, -6, 6, 0, 8, 70);
+    if (isFather) {
+      domeGrad.addColorStop(0, '#60A5FA');
+      domeGrad.addColorStop(0.6, '#2563EB');
+      domeGrad.addColorStop(1, '#1E3A8A');
+    } else {
+      domeGrad.addColorStop(0, '#FDA4AF');
+      domeGrad.addColorStop(0.6, '#F43F5E');
+      domeGrad.addColorStop(1, '#BE123C');
+    }
+    ctx.fillStyle = domeGrad;
+    ctx.beginPath();
+    ctx.arc(0, 20, 66, Math.PI, 0);
+    // 우산 아래 물결 스캘럽 라인
+    ctx.quadraticCurveTo(44, 12, 22, 20);
+    ctx.quadraticCurveTo(0, 12, -22, 20);
+    ctx.quadraticCurveTo(-44, 12, -66, 20);
     ctx.closePath();
+    ctx.fill();
+
+    // 우산 꼭지
+    ctx.fillStyle = '#F59E0B';
+    ctx.beginPath();
+    ctx.roundRect(-2.5, -52, 5, 7, 2);
     ctx.fill();
     ctx.restore();
   }
@@ -259,71 +702,50 @@
       activeMount.cleanup();
     }
 
-    const state = getPetState();
     const myId = getMyId();
     const partnerId = myId === '610708' ? '691105' : '610708';
-    const doneToday = isSessionDoneToday();
-    const today = todayKey();
-    const giftedToday = state.fedDay === today;
 
     let savedBrief = null;
     try { savedBrief = JSON.parse(localStorage.getItem('wxBrief') || 'null'); } catch (e) { savedBrief = null; }
-    let wx = parseWeatherState(savedBrief);
+    let previewPreset = null;
+    const PRESETS = [null, 'rain', 'cold', 'snow', 'hot', 'spring'];
+    let presetIdx = 0;
+
+    let wx = parseWeatherState(savedBrief, previewPreset);
 
     const stageBox = document.createElement('div');
-    stageBox.className = `pet-stage-box ${wx.skyClass}`;
+    stageBox.className = 'pet-stage-box';
     stageBox.id = 'petStageBox';
-
-    const initLine = () => {
-      if (doneToday && !giftedToday) return '🎉 오늘 두뇌운동을 멋지게 끝내셨네요! 아래 [💐 축하 꽃다발]을 눌러 보세요!';
-      if (wx.isRain) return '☂️ 오늘은 비 소식이 있어요! 외출하실 때 우산 꼭 챙기세요 😊';
-      if (wx.isCold || wx.isSnow) return '🧣 날씨가 쌀쌀해요! 따뜻하게 입으시고 감기 조심하세요 💕';
-      return '😊 잔디밭을 터치하면 좌·우로 걸어가고, 두 분의 화면이 실시간으로 연동됩니다!';
-    };
 
     stageBox.innerHTML = `
       <div class="pet-hud">
-        <div class="pet-lv-pill">
-          <span>✨ 활력 <b id="petLvTxt">Lv.${state.lv}</b></span>
-          <div class="pet-exp-track"><div class="pet-exp-fill" id="petExpFill" style="width:${Math.min(100, state.exp)}%"></div></div>
-        </div>
         <div class="pet-sync-pill" id="petSyncPill"><span class="pet-sync-dot"></span> 실시간 연동 광장</div>
-        <div class="pet-wx-pill" id="petWxPill">${wx.badge}</div>
+        <div class="pet-wx-pill" id="petWxPill" title="터치하면 날씨·계절별 복장과 배경을 미리 볼 수 있어요">${wx.badge}</div>
       </div>
       <div class="pet-bubble-wrap">
-        <div class="pet-bubble" id="petBubble">${initLine()}</div>
+        <div class="pet-bubble" id="petBubble">${wx.line}</div>
       </div>
       <div class="pet-canvas-wrap" id="petCanvasWrap">
         <canvas class="pet-canvas" id="petCanvas" width="580" height="430"></canvas>
-        <div class="pet-walk-hint">👆 잔디밭 어디든 터치하면 걸어갑니다</div>
+        <div class="pet-walk-hint">👆 잔디밭 어디든 터치하면 두 분이 함께 걸어갑니다</div>
         <div class="pet-fx-layer" id="petFxLayer"></div>
-      </div>
-      <div class="pet-actions">
-        <button type="button" class="pet-act-btn" id="petBtnStroke">👋 반갑게 인사</button>
-        <button type="button" class="pet-act-btn ${doneToday && !giftedToday ? 'ready-feed' : giftedToday ? 'done-feed' : ''}" id="petBtnFeed">
-          💐 ${giftedToday ? '축하 완료' : doneToday ? '축하 꽃다발!' : '꽃다발 선물'}
-        </button>
-        <button type="button" class="pet-act-btn" id="petBtnSnack">🍵 다과 나누기</button>
       </div>
     `;
 
     hero.appendChild(stageBox);
 
     const bubbleEl = stageBox.querySelector('#petBubble');
-    const lvTxtEl = stageBox.querySelector('#petLvTxt');
-    const expFillEl = stageBox.querySelector('#petExpFill');
     const syncPillEl = stageBox.querySelector('#petSyncPill');
     const wxPillEl = stageBox.querySelector('#petWxPill');
     const fxLayer = stageBox.querySelector('#petFxLayer');
     const cv = stageBox.querySelector('#petCanvas');
     const ctx = cv.getContext('2d');
-    const feedBtn = stageBox.querySelector('#petBtnFeed');
 
     const chars = {
       '610708': {
-        x: 200,
+        x: 205,
         z: 0,
-        targetX: 200,
+        targetX: 205,
         targetZ: 0,
         yaw: 0,
         targetYaw: 0,
@@ -332,12 +754,12 @@
         y: 0,
         vy: 0,
         pose: 'idle',
-        nextWanderAt: performance.now() + 2600,
+        nextWanderAt: performance.now() + 3400,
       },
       '691105': {
-        x: 380,
+        x: 375,
         z: 4,
-        targetX: 380,
+        targetX: 375,
         targetZ: 4,
         yaw: 0,
         targetYaw: 0,
@@ -346,46 +768,31 @@
         y: 0,
         vy: 0,
         pose: 'idle',
-        nextWanderAt: performance.now() + 3400,
+        nextWanderAt: performance.now() + 4200,
       },
     };
 
     const anim = {
-      foodEmoji: null,
-      foodProg: 0,
       tapRing: null,
     };
 
-    function say(text) {
-      bubbleEl.style.animation = 'none';
-      void bubbleEl.offsetWidth;
-      bubbleEl.style.animation = 'pop .25s ease';
+    let bubbleTimer = null;
+    function say(text, duration = 2600) {
+      bubbleEl.classList.remove('is-hidden');
       bubbleEl.textContent = text;
+      if (bubbleTimer) clearTimeout(bubbleTimer);
+      if (duration > 0) {
+        bubbleTimer = setTimeout(() => {
+          bubbleEl.classList.add('is-hidden');
+        }, duration);
+      }
     }
+    say(wx.line, 2600);
 
-    function triggerJumpBoth(pose = 'wave') {
+    function triggerJumpBoth() {
       ['610708', '691105'].forEach((id) => {
-        chars[id].vy = -6.2;
-        chars[id].pose = pose;
+        chars[id].vy = -5.8;
       });
-    }
-
-    function addExp(amount) {
-      state.exp = (state.exp || 0) + amount;
-      let leveledUp = false;
-      while (state.exp >= 100) {
-        state.exp -= 100;
-        state.lv = (state.lv || 1) + 1;
-        leveledUp = true;
-      }
-      lvTxtEl.textContent = `Lv.${state.lv}`;
-      expFillEl.style.width = `${Math.min(100, state.exp)}%`;
-      savePetState();
-      if (leveledUp) {
-        if (typeof confetti === 'function') confetti(6);
-        if (typeof beep === 'function') { beep(523, 0.1); setTimeout(() => beep(659, 0.1), 100); setTimeout(() => beep(784, 0.18), 200); }
-      }
-      return leveledUp;
     }
 
     function spawnParticles(emojis) {
@@ -394,12 +801,23 @@
         sp.className = 'pet-float-item';
         sp.textContent = emojis[i];
         sp.style.left = `${26 + Math.random() * 48}%`;
-        sp.style.top = `${28 + Math.random() * 28}%`;
+        sp.style.top = `${32 + Math.random() * 26}%`;
         sp.style.animationDelay = `${i * 0.08}s`;
         fxLayer.appendChild(sp);
         setTimeout(() => sp.remove(), 1100);
       }
     }
+
+    // 우측 상단 날씨 배지를 누르면 날씨·계절별 복장(우산/코트+목도리/패딩+우산/반팔) 미리보기 순환 가능
+    wxPillEl.addEventListener('click', (e) => {
+      e.stopPropagation();
+      presetIdx = (presetIdx + 1) % PRESETS.length;
+      previewPreset = PRESETS[presetIdx];
+      wx = parseWeatherState(savedBrief, previewPreset);
+      wxPillEl.textContent = wx.badge;
+      say(wx.line, 2600);
+      triggerJumpBoth();
+    });
 
     // ==========================================================
     // Firestore 실시간 양방향 화면 연동 (610708 <-> 691105)
@@ -411,12 +829,11 @@
     let initialPositionsSynced = false;
 
     function pushSharedAction(actionData) {
+      initialPositionsSynced = true;
       if (!sharedRef) return;
       const payload = {
         type: 'petPlaza',
         updatedAt: new Date().toISOString(),
-        lv: state.lv,
-        exp: state.exp,
         positions: {
           '610708': { x: Math.round(chars['610708'].targetX), z: Math.round(chars['610708'].targetZ) },
           '691105': { x: Math.round(chars['691105'].targetX), z: Math.round(chars['691105'].targetZ) },
@@ -457,15 +874,10 @@
             syncPillEl.innerHTML = `<span class="pet-sync-dot"></span> 실시간 연동 광장`;
           }
 
-          if (Number.isFinite(data.lv) && (data.lv > state.lv || (data.lv === state.lv && (data.exp || 0) > state.exp))) {
-            state.lv = data.lv;
-            state.exp = data.exp || 0;
-            lvTxtEl.textContent = `Lv.${state.lv}`;
-            expFillEl.style.width = `${Math.min(100, state.exp)}%`;
-          }
-
+          const act = data.lastAction;
+          const isFromMe = act && act.by === myId && initialPositionsSynced;
           const isRecentPos = data.updatedAt && (Date.now() - new Date(data.updatedAt).getTime() < 20000);
-          if (data.positions && (initialPositionsSynced || isRecentPos)) {
+          if (data.positions && !isFromMe && (!initialPositionsSynced || isRecentPos)) {
             ['610708', '691105'].forEach((id) => {
               const pos = data.positions[id];
               if (pos && Number.isFinite(pos.x)) {
@@ -483,7 +895,6 @@
                 chars[id].nextWanderAt = performance.now() + (initialPositionsSynced ? 6500 : 3800);
               }
             });
-            // 두 캐릭터가 서로 겹치지 않도록 최소 145px 간격 보장
             if (Math.abs(chars['691105'].targetX - chars['610708'].targetX) < 145) {
               const mid = (chars['610708'].targetX + chars['691105'].targetX) * 0.5;
               chars['610708'].targetX = Math.max(105, Math.min(330, mid - 75));
@@ -493,34 +904,18 @@
                 chars['691105'].x = chars['691105'].targetX;
               }
             }
-            initialPositionsSynced = true;
           }
+          initialPositionsSynced = true;
 
-          const act = data.lastAction;
           if (act && act.seq) {
             if (lastEventSeq === null) {
               lastEventSeq = act.seq;
             } else if (act.seq !== lastEventSeq) {
               lastEventSeq = act.seq;
               if (act.by !== myId) {
-                if (typeof beep === 'function') beep(660, 0.08);
-                triggerJumpBoth('wave');
-                if (act.kind === 'greet') {
-                  spawnParticles(['❤️', '👋', '✨']);
-                  say(`💌 ${act.by}님이 반갑게 인사를 보냈어요! "${act.text || '오늘도 화이팅!'}"`);
-                } else if (act.kind === 'flower') {
-                  anim.foodEmoji = '💐';
-                  anim.foodProg = 1;
-                  spawnParticles(['💐', '🎉', '❤️']);
-                  say(`💐 ${act.by}님이 축하 꽃다발을 보냈어요!`);
-                } else if (act.kind === 'tea') {
-                  anim.foodEmoji = act.emoji || '🍵';
-                  anim.foodProg = 1;
-                  spawnParticles([act.emoji || '🍵', '😊', '💕']);
-                  say(`${act.emoji || '🍵'} ${act.by}님이 따뜻한 다과를 대접했어요!`);
-                } else if (act.kind === 'walk') {
-                  say(`👟 ${act.by}님이 광장에서 산책 중이에요!`);
-                }
+                if (typeof beep === 'function') beep(580, 0.05);
+                spawnParticles(['❤️', '✨']);
+                say(`👟 ${act.by}님이 광장에서 함께 산책 중이에요!`, 2600);
               }
             }
           }
@@ -528,53 +923,23 @@
       }
     } catch (e) { /* 오프라인 무시 */ }
 
-    const GREET_LINES = [
-      '💑 두 분이 함께 걸으며 활짝 웃으시니 보기만 해도 기분이 좋아져요!',
-      '☝️ 하하하! 오늘도 활기차게 두뇌운동 화이팅입니다!',
-      '🌸 호호호~ 반갑게 인사 나누니 마음이 참 따뜻하네요 🥰',
-      '✨ 정면·측면 어디서 봐도 참 다정하고 멋지신 두 분이에요 💕',
-      '💪 오늘도 건강하고 웃음 가득한 하루 보내세요!',
+    const WALK_LINES = [
+      '💑 두 분이 나란히 걸으시니 보기만 해도 미소가 지어져요!',
+      '☝️ 하하하! 오늘도 상쾌하게 산책하며 두뇌운동 화이팅입니다!',
+      '🌸 호호호~ 다정하게 함께 걸으니 발걸음이 가벼워요 🥰',
+      '✨ 오늘 날씨에 딱 맞는 복장으로 기분 좋게 산책해요 💕',
     ];
-
-    function onGreet() {
-      if (typeof beep === 'function') beep(660, 0.08);
-      chars['610708'].x = 205;
-      chars['610708'].z = 4;
-      chars['610708'].targetX = 205;
-      chars['610708'].targetZ = 4;
-      chars['610708'].yaw = 0;
-      chars['610708'].targetYaw = 0;
-      chars['610708'].speed = 0;
-      chars['691105'].x = 375;
-      chars['691105'].z = 4;
-      chars['691105'].targetX = 375;
-      chars['691105'].targetZ = 4;
-      chars['691105'].yaw = 0;
-      chars['691105'].targetYaw = 0;
-      chars['691105'].speed = 0;
-      chars['610708'].nextWanderAt = performance.now() + 5000;
-      chars['691105'].nextWanderAt = performance.now() + 5000;
-      triggerJumpBoth('wave');
-      spawnParticles(['❤️', '👏', '✨']);
-      state.petCount = (state.petCount || 0) + 1;
-      const up = addExp(5);
-      const line = up
-        ? `🎊 우와! 오늘의 활력 지수가 Lv.${state.lv}로 올랐어요! 늘 건강하세요!`
-        : GREET_LINES[state.petCount % GREET_LINES.length];
-      say(line);
-      pushSharedAction({ kind: 'greet', text: line });
-    }
+    let walkClickCount = 0;
 
     stageBox.querySelector('#petCanvasWrap').addEventListener('click', (e) => {
       const rect = cv.getBoundingClientRect();
       const clickX = ((e.clientX - rect.left) / rect.width) * 580;
       const clickY = ((e.clientY - rect.top) / rect.height) * 430;
       const clampedX = Math.max(95, Math.min(485, clickX));
-      const clampedZ = Math.max(-24, Math.min(24, (clickY - 345) * 0.45));
+      const clampedZ = Math.max(-24, Math.min(24, (clickY - 350) * 0.45));
 
-      anim.tapRing = { x: clampedX, y: 382 + clampedZ * 0.85, r: 4, alpha: 1 };
+      anim.tapRing = { x: clampedX, y: 392 + clampedZ * 0.85, r: 4, alpha: 1 };
 
-      // 터치한 위치로 두 분이 겹치지 않게(150px 간격) 나란히 걸어감
       const centerTarget = Math.max(180, Math.min(400, clampedX));
       chars['610708'].targetX = centerTarget - 75;
       chars['610708'].targetZ = clampedZ;
@@ -585,75 +950,22 @@
 
       if (typeof beep === 'function') beep(580, 0.05);
       spawnParticles(['✨', '❤️']);
+      walkClickCount++;
+      say(WALK_LINES[walkClickCount % WALK_LINES.length]);
       pushSharedAction({ kind: 'walk' });
     });
 
-    stageBox.querySelector('#petBtnStroke').addEventListener('click', () => {
-      onGreet();
-    });
-
-    stageBox.querySelector('#petBtnFeed').addEventListener('click', () => {
-      const done = isSessionDoneToday();
-      const t = todayKey();
-      if (state.fedDay === t) {
-        if (typeof beep === 'function') beep(587, 0.08);
-        triggerJumpBoth('cheer');
-        spawnParticles(['💐', '🌺', '✨']);
-        say('💐 향기로운 축하 꽃다발 덕분에 오늘 하루가 더욱 특별해요!');
-        pushSharedAction({ kind: 'flower' });
-        return;
-      }
-      if (!done) {
-        if (typeof beep === 'function') beep(440, 0.1);
-        anim.foodEmoji = '🌷';
-        anim.foodProg = 1;
-        triggerJumpBoth('wave');
-        spawnParticles(['🌷', '💪']);
-        addExp(4);
-        say('🌷 응원의 꽃 한 송이! 아래 [시작하기]로 오늘 두뇌운동을 마치면 풍성한 축하 꽃다발을 드릴 수 있어요!');
-        pushSharedAction({ kind: 'flower' });
-        return;
-      }
-      state.fedDay = t;
-      feedBtn.classList.remove('ready-feed');
-      feedBtn.classList.add('done-feed');
-      feedBtn.innerHTML = '💐 축하 완료';
-      anim.foodEmoji = '💐';
-      anim.foodProg = 1;
-      triggerJumpBoth('cheer');
-      spawnParticles(['💐', '🎉', '❤️', '🌟']);
-      const up = addExp(45);
-      if (up) say(`🎉 오늘의 두뇌운동 완주 축하 꽃다발! 활력 지수가 Lv.${state.lv}로 올라갔어요!`);
-      else say('💐 오늘 두뇌운동 완주를 진심으로 축하드려요! 정말 멋지십니다!');
-      pushSharedAction({ kind: 'flower' });
-    });
-
-    stageBox.querySelector('#petBtnSnack').addEventListener('click', () => {
-      const t = todayKey();
-      const treats = ['🍵', '☕', '🍊', '🍎', '🍰'];
-      const pickTreat = treats[Math.floor(Math.random() * treats.length)];
-      if (typeof beep === 'function') beep(740, 0.08);
-      anim.foodEmoji = pickTreat;
-      anim.foodProg = 1;
-      triggerJumpBoth('wave');
-      spawnParticles([pickTreat, '😊', '💕']);
-      if (state.snackDay !== t) {
-        state.snackDay = t;
-        const up = addExp(18);
-        if (up) say(`🎊 따뜻한 다과 시간과 함께 활력 지수가 Lv.${state.lv}로 올랐어요!`);
-        else say(`${pickTreat} 향긋한 차와 다과를 함께 나누니 기분이 참 좋네요 🥰`);
-      } else {
-        addExp(3);
-        say(`${pickTreat} 여유롭게 차 한잔 나누며 오늘도 편안한 시간 보내세요 😊`);
-      }
-      pushSharedAction({ kind: 'tea', emoji: pickTreat });
-    });
-
-    const bgParticles = Array.from({ length: 20 }, () => ({
+    const bgParticles = Array.from({ length: 24 }, () => ({
       x: Math.random() * 580,
       y: Math.random() * 430,
       s: 1.2 + Math.random() * 2.2,
-      v: 1.5 + Math.random() * 2.5,
+      v: 1.4 + Math.random() * 2.4,
+    }));
+
+    const ripples = Array.from({ length: 8 }, () => ({
+      x: 90 + Math.random() * 400,
+      y: 355 + Math.random() * 55,
+      r: Math.random() * 20,
     }));
 
     let rafId = null;
@@ -685,16 +997,14 @@
         const dist = Math.hypot(dx, dz);
 
         if (dist > 3.5) {
-          const moveStep = Math.min(dist, 2.1);
+          const moveStep = Math.min(dist, 2.0);
           ch.x += (dx / dist) * moveStep;
           ch.z += (dz / dist) * moveStep;
           ch.speed = moveStep;
-          ch.walkPhase += 0.22;
-          // 이동 방향으로 3D 회전 (왼쪽 이동 시 -1.2 rad 좌측면, 오른쪽 이동 시 +1.2 rad 우측면)
+          ch.walkPhase += 0.21;
           ch.targetYaw = dx < -1 ? -1.2 : dx > 1 ? 1.2 : 0;
         } else {
           ch.speed = 0;
-          // 멈춰 있을 때는 정면(0)을 바라봄
           ch.targetYaw = 0;
         }
 
@@ -706,58 +1016,16 @@
           if (ch.y >= 0) {
             ch.y = 0;
             ch.vy = 0;
-            ch.pose = 'idle';
           }
         }
       });
 
-      if (anim.foodProg > 0) anim.foodProg = Math.max(0, anim.foodProg - 0.018);
-
       ctx.clearRect(0, 0, 580, 430);
 
-      // 1. 잔디밭 원형 산책 트랙
-      ctx.save();
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
-      ctx.beginPath();
-      ctx.ellipse(290, 380, 240, 36, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
+      // 1. 계절·날씨별 풍경 배경 공간 렌더링
+      drawSceneryBackground(ctx, t, wx, bgParticles, ripples);
 
-      // 2. 날씨 입자
-      ctx.save();
-      if (wx.isRain) {
-        ctx.strokeStyle = 'rgba(255,255,255,0.58)';
-        ctx.lineWidth = 2.2;
-        for (const p of bgParticles) {
-          p.y = (p.y + p.v * 3.4) % 430;
-          p.x = (p.x - 0.9 + 580) % 580;
-          ctx.beginPath();
-          ctx.moveTo(p.x, p.y);
-          ctx.lineTo(p.x - 3.5, p.y + 14);
-          ctx.stroke();
-        }
-      } else if (wx.isSnow) {
-        ctx.fillStyle = 'rgba(255,255,255,0.88)';
-        for (const p of bgParticles) {
-          p.y = (p.y + p.v * 0.75) % 430;
-          p.x = (p.x + Math.sin(t + p.y * 0.03) * 0.7 + 580) % 580;
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.s * 1.9, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      } else {
-        ctx.fillStyle = wx.isNight ? 'rgba(255,244,180,0.78)' : 'rgba(255,255,255,0.48)';
-        for (let i = 0; i < 12; i++) {
-          const p = bgParticles[i];
-          const pulse = 0.5 + 0.5 * Math.sin(t * 2 + i);
-          ctx.beginPath();
-          ctx.arc(p.x, p.y * 0.52, p.s * (1 + pulse), 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
-      ctx.restore();
-
-      // 터치 지점 링 표시
+      // 2. 터치 지점 물결 링 표시
       if (anim.tapRing && anim.tapRing.alpha > 0.02) {
         ctx.save();
         ctx.strokeStyle = `rgba(255, 255, 255, ${anim.tapRing.alpha})`;
@@ -778,24 +1046,12 @@
 
       // 4. 두 분 사이 하트
       const midX = (chars['610708'].x + chars['691105'].x) * 0.5;
-      const midY = 205 + Math.sin(t * 3.2) * 5;
+      const midY = 215 + Math.sin(t * 3.2) * 5;
       ctx.save();
-      ctx.font = '30px sans-serif';
+      ctx.font = '28px sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('❤️', midX, midY);
       ctx.restore();
-
-      // 5. 꽃다발/다과 전달 애니메이션
-      if (anim.foodProg > 0 && anim.foodEmoji) {
-        ctx.save();
-        const fx = midX + 85 * anim.foodProg;
-        const fy = 215 - Math.sin(anim.foodProg * Math.PI) * 45;
-        ctx.font = '50px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(anim.foodEmoji, fx, fy);
-        ctx.restore();
-      }
 
       rafId = requestAnimationFrame(renderLoop);
     }
@@ -804,9 +1060,18 @@
 
     activeMount = {
       updateWeather(brief) {
-        wx = parseWeatherState(brief);
-        stageBox.className = `pet-stage-box ${wx.skyClass}`;
+        savedBrief = brief;
+        if (!previewPreset) {
+          wx = parseWeatherState(savedBrief, null);
+          wxPillEl.textContent = wx.badge;
+          say(wx.line);
+        }
+      },
+      setPreview(preset) {
+        previewPreset = preset;
+        wx = parseWeatherState(savedBrief, previewPreset);
         wxPillEl.textContent = wx.badge;
+        say(wx.line);
       },
       cleanup() {
         if (rafId) cancelAnimationFrame(rafId);
@@ -822,5 +1087,11 @@
     }
   }
 
-  window.PET = { mountHomeTamagotchi, onWeather, getPetState };
+  function setPreview(preset) {
+    if (activeMount && typeof activeMount.setPreview === 'function') {
+      activeMount.setPreview(preset);
+    }
+  }
+
+  window.PET = { mountHomeTamagotchi, onWeather, setPreview, getPetState };
 })();
