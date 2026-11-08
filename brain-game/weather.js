@@ -242,11 +242,18 @@
     const place = city.name === '지금 있는 곳' ? '이곳은' : topic(city.name);
     const pm10 = air && air.current ? airGrade(air.current.pm10, 'pm10') : null;
     const pm25 = air && air.current ? airGrade(air.current.pm2_5, 'pm25') : null;
+    const tipShort = tips(fc, pm10, pm25)[0].short;
     return {
       city: city.name,
       at: Date.now(),
+      code: Number.isFinite(c.weather_code) ? c.weather_code : code,
+      temp: r(c.temperature_2m),
+      tmax: r(d.temperature_2m_max[0]),
+      tmin: r(d.temperature_2m_min[0]),
+      isDay: c.is_day !== undefined ? c.is_day : 1,
+      tip: tipShort,
       title: `${describe(code, 1).icon} 오늘 ${place} ${PREDICATE[code] || '날씨를 알 수 없어요'}`,
-      lines: [`지금 ${r(c.temperature_2m)}° · 최고 ${r(d.temperature_2m_max[0])}° · 최저 ${r(d.temperature_2m_min[0])}°`, tips(fc, pm10, pm25)[0].short],
+      lines: [`지금 ${r(c.temperature_2m)}° · 최고 ${r(d.temperature_2m_max[0])}° · 최저 ${r(d.temperature_2m_min[0])}° · ${tipShort}`],
     };
   }
 
@@ -256,7 +263,11 @@
     if (!hello || !sub || hello.textContent.includes('첫 방문')) return; // 처음 온 분께는 환영 인사를 그대로 둔다
     const orig = { hello: hello.innerHTML, sub: sub.innerHTML };
     const city = loadCity();
-    const show = b => { hello.textContent = b.title; sub.innerHTML = b.lines.map(esc).join('<br>'); };
+    const show = b => {
+      hello.textContent = b.title;
+      sub.innerHTML = b.lines.map(esc).join('<br>');
+      if (window.PET && typeof PET.onWeather === 'function') PET.onWeather(b);
+    };
     let saved = null;
     try { saved = JSON.parse(localStorage.getItem(BRIEF_KEY) || 'null'); } catch (e) { saved = null; }
     const usable = saved && saved.city === city.name && Array.isArray(saved.lines) && Date.now() - saved.at < BRIEF_MAX_MS;
