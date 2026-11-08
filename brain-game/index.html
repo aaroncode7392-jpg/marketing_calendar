@@ -1333,7 +1333,7 @@ function scoreColor(s){return s>=80?'var(--ok)':s>=60?'#E0A33B':'var(--warn)';}
 // ==========================================================
 // NUMPAD COMPONENT
 // ==========================================================
-function renderNumpadScreen({title, subtitle, length, mask=false, errorMsg='', onSubmit, footerHtml='', afterRender}){
+function renderNumpadScreen({title, subtitle, length, mask=false, errorMsg='', onSubmit, footerHtml='', afterRender, earlySubmit=null}){
   clear();
   let digits='';
 
@@ -1377,10 +1377,12 @@ function renderNumpadScreen({title, subtitle, length, mask=false, errorMsg='', o
       digitsEl.innerHTML=digitsHtml();
       const justTyped=digitsEl.querySelector('.just-typed');
       if(justTyped) celebrateAt(justTyped,{count:5});
-      if(digits.length===length){
+      // earlySubmit: 짧게 눌러도 되는 번호(예: 생일 4자리)면 긴 번호로 바꿔서 바로 넘긴다
+      const early=earlySubmit?earlySubmit(digits):null;
+      if(early || digits.length===length){
         locked=true;
         celebrateAt(digitsEl,{count:12});
-        setTimeout(()=>onSubmit(digits),220);
+        setTimeout(()=>onSubmit(early||digits, !!early),220);
       }
     });
   });
@@ -1422,12 +1424,36 @@ function renderSplashScreen(isNew = false){
 }
 
 // ---------- LOGIN ----------
+// 생일(달+날짜 4자리)만 눌러도 들어가는 회원: 4자리 → 생년월일 6자리
+const LOGIN_SHORTCUTS={'0708':'610708','1105':'691105','1128':'941128'};
+const shortcutOf=bd=>Object.keys(LOGIN_SHORTCUTS).find(k=>LOGIN_SHORTCUTS[k]===bd)||null;
+function showShortcutPopup(shortKey,onOk){
+  const ov=el(`
+    <div class="overlay" style="z-index:90;">
+      <div class="modal fade" style="text-align:center;padding:28px 20px;max-width:380px;">
+        <div style="font-size:46px;">👍</div>
+        <div style="font-family:'Jua';font-size:27px;line-height:1.4;margin:8px 0 6px;">앞으로는 <span style="color:#D9480F;">생일만</span><br>누르면 돼요!</div>
+        <div style="font-size:19px;line-height:1.6;color:var(--ink);">달과 날짜, 숫자 4개만 누르세요.</div>
+        <div style="font-family:'Jua';font-size:46px;letter-spacing:8px;margin:8px 0 14px;color:#3FA796;">${shortKey}</div>
+        <button class="btn" id="scOk" style="background:#3FA796;font-size:24px;padding:18px;">알겠어요</button>
+      </div>
+    </div>`);
+  document.body.appendChild(ov);
+  let done=false;
+  ov.querySelector('#scOk').addEventListener('click',()=>{ if(done) return; done=true; ov.remove(); onOk(); });
+}
+function loginFromKeypad(digits,viaShortcut){
+  const key=viaShortcut?null:shortcutOf(digits);
+  if(key) showShortcutPopup(key,()=>attemptLogin(digits));
+  else attemptLogin(digits);
+}
 function renderLoginScreen(errorMsg){
   renderNumpadScreen({
-    title:'생년월일을 입력하세요',
-    subtitle:'예) 1994년 11월 28일 → 941128 (6자리)',
+    title:'생일을 입력하세요',
+    subtitle:'예) 7월 8일생 → 0708 (달 2자리 + 날짜 2자리)<br><span style="font-size:13px;">안 열리면 생년월일 6자리로 눌러 주세요. 예) 941128</span>',
     length:6, mask:false, errorMsg,
-    onSubmit:attemptLogin,
+    earlySubmit:d=>LOGIN_SHORTCUTS[d]||null,
+    onSubmit:loginFromKeypad,
     footerHtml:`<button class="footer-link" id="toAdmin">관리자 페이지</button>`,
     afterRender:(v)=>{ v.querySelector('#toAdmin').addEventListener('click',()=>renderAdminPinScreen()); }
   });
