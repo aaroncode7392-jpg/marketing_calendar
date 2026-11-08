@@ -6,6 +6,11 @@
 //   2) 비오면: 우산 들고 산책
 //   3) 추우면: 코트와 목도리 착용 (char_*_coat)
 //   4) 눈오면: 패딩 입고 우산 들고 산책 (char_*_pad + 우산)
+// - 무작위 자율 행동:
+//   1) 자연스럽게 좌·우 걸어다니기 (walk)
+//   2) 이불 덮고 잠들기 (sleep)
+//   3) 의자에 앉아있기 (sit)
+//   4) 철봉 턱걸이 운동하기 (pullup)
 // - 계절(봄·여름·가을·겨울) 및 날씨(맑음·비·눈·추위·더위·밤)가 입체적으로 표현되는 배경 공간
 // - 정면·좌측면·우측면 3D 보행 및 610708 ↔ 691105 실시간 화면 연동
 // ==========================================================
@@ -79,8 +84,6 @@
       .pet-bubble.is-hidden{opacity:0;transform:translateY(-6px);}
       .pet-canvas-wrap{position:relative;z-index:3;height:280px;display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:manipulation;}
       .pet-canvas{width:100%;height:280px;display:block;}
-      .pet-walk-hint{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,.48);backdrop-filter:blur(4px);color:#fff;font-size:10.5px;font-weight:700;padding:2.5px 10px;border-radius:999px;pointer-events:none;white-space:nowrap;z-index:4;transition:opacity .4s ease;}
-      .pet-walk-hint.is-hidden{opacity:0;}
       .pet-fx-layer{position:absolute;inset:0;pointer-events:none;z-index:5;overflow:hidden;}
       .pet-float-item{position:absolute;font-size:24px;animation:petFloatUp .95s ease-out forwards;pointer-events:none;filter:drop-shadow(0 2px 6px rgba(0,0,0,.2));}
       @keyframes petFloatUp{0%{opacity:1;transform:translate(-50%,0) scale(.6);}40%{opacity:1;transform:translate(-50%,-28px) scale(1.2);}100%{opacity:0;transform:translate(-50%,-64px) scale(.9);}}
@@ -90,7 +93,6 @@
 
   let activeMount = null;
 
-  // 현재 월 기준 기본 계절 판별 (3~5: spring, 6~8: summer, 9~11: autumn, 12~2: winter)
   function getCurrentSeason() {
     const m = new Date().getMonth() + 1;
     if (m >= 3 && m <= 5) return 'spring';
@@ -99,7 +101,6 @@
     return 'winter';
   }
 
-  // 날씨 코드/기온에서 복장(short / coat / pad) · 우산(hasUmbrella) · 계절 배경(season) 결정
   function parseWeatherState(brief, previewPreset) {
     if (previewPreset) {
       if (previewPreset === 'rain') {
@@ -134,11 +135,6 @@
     else if (isHot) season = 'summer';
     else if (isCold) season = 'autumn';
 
-    // 복장 규칙:
-    // 1) 눈오면: 패딩(pad) + 우산(hasUmbrella = true)
-    // 2) 추우면: 코트와 목도리(coat) + (비 동반 시 우산)
-    // 3) 비오면: 우산(hasUmbrella = true) + 기온에 맞는 복장
-    // 4) 더우면/온화하면: 반팔(short)
     let outfit = 'short';
     if (isSnow) outfit = 'pad';
     else if (isCold) outfit = 'coat';
@@ -147,7 +143,7 @@
     const hasUmbrella = isRain || isSnow;
 
     let badge = '🌤️ 산책하기 좋은 날';
-    let line = '😊 잔디밭을 터치하면 두 분이 나란히 걸어가며 실시간으로 연동됩니다!';
+    let line = '😊 광장에서 산책·턱걸이 운동·의자 휴식·낮잠을 자유롭게 즐겨요!';
     if (isSnow) {
       badge = `⛄ 눈 (${temp}°) · 패딩과 우산`;
       line = '⛄ 눈 소식이 있어 따뜻한 패딩에 우산을 챙겨 들고 산책해요!';
@@ -209,7 +205,6 @@
       skyGrad.addColorStop(0.6, '#BFDBFE');
       skyGrad.addColorStop(1, '#FCE7F3');
     } else {
-      // summer
       skyGrad.addColorStop(0, '#0284C7');
       skyGrad.addColorStop(0.65, '#7DD3FC');
       skyGrad.addColorStop(1, '#E0F2FE');
@@ -220,7 +215,6 @@
     // 2. 해 / 달 / 구름
     ctx.save();
     if (wx.isNight) {
-      // 초승달/보름달 & 별
       ctx.fillStyle = '#FEF08A';
       ctx.shadowColor = '#FEF08A';
       ctx.shadowBlur = 18;
@@ -228,7 +222,6 @@
       ctx.arc(485, 82, 22, 0, Math.PI * 2);
       ctx.fill();
     } else if (!wx.isRain && !wx.isSnow) {
-      // 따뜻한 태양과 빛무리
       const sunPulse = 1 + Math.sin(t * 2) * 0.05;
       const sunGrad = ctx.createRadialGradient(485, 82, 6, 485, 82, 54 * sunPulse);
       sunGrad.addColorStop(0, 'rgba(255, 251, 235, 1)');
@@ -240,7 +233,6 @@
       ctx.fill();
     }
 
-    // 뭉게구름 / 비구름
     const cloudColor = wx.isRain
       ? 'rgba(100, 116, 139, 0.82)'
       : wx.isNight
@@ -299,7 +291,6 @@
       lawnBotColor = '#34D399';
       pathColor = '#94A3B8';
     } else {
-      // summer
       farHillColor = '#4ADE80';
       nearHillColor = '#22C55E';
       lawnTopColor = '#86EFAC';
@@ -307,7 +298,6 @@
       pathColor = '#F1F5F9';
     }
 
-    // 뒤쪽 먼 언덕
     ctx.fillStyle = farHillColor;
     ctx.beginPath();
     ctx.moveTo(0, horizonY + 12);
@@ -318,7 +308,6 @@
     ctx.closePath();
     ctx.fill();
 
-    // 앞쪽 완만한 언덕
     ctx.fillStyle = nearHillColor;
     ctx.beginPath();
     ctx.moveTo(0, horizonY + 8);
@@ -329,14 +318,12 @@
     ctx.closePath();
     ctx.fill();
 
-    // 잔디 광장 바닥
     const lawnGrad = ctx.createLinearGradient(0, horizonY, 0, H);
     lawnGrad.addColorStop(0, lawnTopColor);
     lawnGrad.addColorStop(1, lawnBotColor);
     ctx.fillStyle = lawnGrad;
     ctx.fillRect(0, horizonY + 6, W, H - horizonY);
 
-    // 광장 산책로 트랙
     ctx.fillStyle = pathColor;
     ctx.globalAlpha = wx.isRain ? 0.55 : 0.72;
     ctx.beginPath();
@@ -345,23 +332,24 @@
     ctx.globalAlpha = 1;
     ctx.restore();
 
-    // 4. 계절별 나무 & 공원 소품 (좌·우 배치)
-    // 왼쪽 나무 (x=64, y=262), 오른쪽 나무 (x=516, y=266)
-    drawSeasonTree(ctx, 62, 268, 1.0, wx, t);
-    drawSeasonTree(ctx, 518, 272, 0.92, wx, t + 1.5);
+    // 4. 계절별 나무 & 공원 운동기구(철봉) & 원목 의자/벤치 배치
+    drawSeasonTree(ctx, 46, 268, 0.94, wx, t);
+    drawSeasonTree(ctx, 528, 272, 0.92, wx, t + 1.5);
 
-    // 공원 벤치 & 가로등 (x=455, y=264)
-    drawParkBenchAndLamp(ctx, 448, 266, wx);
+    // 왼쪽 공원 턱걸이 철봉 기구 (x=126, y=348)
+    drawPullupBarStation(ctx, 126, 348, wx);
 
-    // 눈 오는 날 / 겨울에는 귀여운 눈사람 추가 (x=122, y=274)
+    // 오른쪽 공원 원목 의자/벤치 & 가로등 (x=446, y=348)
+    drawParkChairStation(ctx, 446, 348, wx);
+
+    // 눈 오는 날 / 겨울에는 귀여운 눈사람 추가 (x=216, y=274)
     if (wx.isSnow || wx.season === 'winter') {
-      drawSnowman(ctx, 122, 276);
+      drawSnowman(ctx, 216, 276);
     }
 
     // 비 오는 날 바닥 물웅덩이 파장(Ripples)
     if (wx.isRain && ripples) {
       ctx.save();
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
       ctx.lineWidth = 1.5;
       for (const rp of ripples) {
         rp.r += 0.45;
@@ -379,7 +367,7 @@
       ctx.restore();
     }
 
-    // 5. 계절·날씨 하늘 입자 (빗줄기 / 눈송이 / 벚꽃잎 / 단풍잎 / 반짝이)
+    // 5. 계절·날씨 하늘 입자
     ctx.save();
     if (wx.isRain) {
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.62)';
@@ -402,7 +390,6 @@
         ctx.fill();
       }
     } else if (wx.season === 'spring') {
-      // 흩날리는 분홍 벚꽃잎
       ctx.fillStyle = '#F9A8D4';
       for (const p of bgParticles) {
         p.y = (p.y + p.v * 0.65) % H;
@@ -416,7 +403,6 @@
         ctx.restore();
       }
     } else if (wx.season === 'autumn') {
-      // 떨어지는 은행잎·단풍잎
       for (let i = 0; i < bgParticles.length; i++) {
         const p = bgParticles[i];
         p.y = (p.y + p.v * 0.7) % H;
@@ -431,7 +417,6 @@
         ctx.restore();
       }
     } else {
-      // 여름 햇살 반짝이
       ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
       for (let i = 0; i < 12; i++) {
         const p = bgParticles[i];
@@ -451,13 +436,11 @@
     const sway = Math.sin(t * 1.6) * 0.025;
     ctx.rotate(sway);
 
-    // 나무 기둥
     ctx.fillStyle = '#78350F';
     ctx.beginPath();
     ctx.roundRect(-8, -58, 16, 62, 5);
     ctx.fill();
 
-    // 계절별 수관(나뭇잎) 색상
     let c1 = '#22C55E', c2 = '#16A34A';
     if (wx.isSnow || wx.season === 'winter') {
       c1 = '#15803D';
@@ -466,7 +449,6 @@
       c1 = '#FBCFE8';
       c2 = '#F472B6';
     } else if (wx.season === 'autumn') {
-      // 왼쪽 나무는 노란 은행나무, 오른쪽 나무는 붉은 단풍나무
       c1 = x < 290 ? '#FBBF24' : '#F87171';
       c2 = x < 290 ? '#D97706' : '#DC2626';
     }
@@ -487,7 +469,6 @@
       ctx.arc(pf.dx, pf.dy, pf.r, 0, Math.PI * 2);
       ctx.fill();
 
-      // 겨울/눈 오는 날 나뭇가지 위 소복한 눈 모자
       if (wx.isSnow || wx.season === 'winter') {
         ctx.fillStyle = '#FFFFFF';
         ctx.beginPath();
@@ -498,38 +479,208 @@
     ctx.restore();
   }
 
-  function drawParkBenchAndLamp(ctx, x, y, wx) {
+  // 왼쪽 턱걸이 운동기구 (철봉: 성인용 높은 바 + 미니 머털이용 낮은 바)
+  function drawPullupBarStation(ctx, x, y, wx) {
     ctx.save();
     ctx.translate(x, y);
+
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.16)';
+    ctx.beginPath();
+    ctx.ellipse(-6, 2, 58, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 미니 머털이용 왼쪽 보조 낮은 철봉 (x: -68 ~ -36, 높이 -138)
+    ctx.strokeStyle = '#64748B';
+    ctx.lineWidth = 4.5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-68, 0);
+    ctx.lineTo(-68, -138);
+    ctx.lineTo(-36, -138);
+    ctx.stroke();
+
+    // 성인용 메인 턱걸이 철봉 기둥 2개 (x: -36, +36, 높이 -238)
+    ctx.strokeStyle = '#1E293B';
+    ctx.lineWidth = 6.5;
+    ctx.beginPath();
+    ctx.moveTo(-36, 2);
+    ctx.lineTo(-36, -238);
+    ctx.moveTo(36, 2);
+    ctx.lineTo(36, -238);
+    ctx.stroke();
+
+    // 상단 수평 철봉 바 (은빛 크롬, 높이 -232)
+    ctx.strokeStyle = '#CBD5E1';
+    ctx.lineWidth = 5.5;
+    ctx.beginPath();
+    ctx.moveTo(-40, -232);
+    ctx.lineTo(40, -232);
+    ctx.stroke();
+
+    // 기둥 하단 노란 안전 캡
+    ctx.fillStyle = '#F59E0B';
+    ctx.fillRect(-41, -6, 10, 8);
+    ctx.fillRect(31, -6, 10, 8);
+    ctx.fillRect(-72, -5, 8, 7);
+
+    if (wx.isSnow || wx.season === 'winter') {
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(-38, -237, 76, 3);
+    }
+    ctx.restore();
+  }
+
+  // 오른쪽 공원 원목 의자/벤치 & 가로등
+  function drawParkChairStation(ctx, x, y, wx) {
+    ctx.save();
+    ctx.translate(x, y);
+
     // 가로등 기둥
     ctx.strokeStyle = '#334155';
-    ctx.lineWidth = 3.5;
+    ctx.lineWidth = 4.0;
     ctx.beginPath();
-    ctx.moveTo(28, 0);
-    ctx.lineTo(28, -78);
+    ctx.moveTo(58, 0);
+    ctx.lineTo(58, -135);
     ctx.stroke();
-    // 가로등 램프 불빛
-    ctx.fillStyle = (wx.isNight || wx.isRain || wx.isSnow) ? '#FDE047' : '#F8FAFC';
+
+    ctx.fillStyle = (wx.isNight || wx.isRain || wx.isSnow) ? '#FDE047' : '#FEF9C3';
     if (wx.isNight || wx.isRain || wx.isSnow) {
       ctx.shadowColor = '#FDE047';
-      ctx.shadowBlur = 14;
+      ctx.shadowBlur = 16;
     }
     ctx.beginPath();
-    ctx.arc(28, -82, 7.5, 0, Math.PI * 2);
+    ctx.arc(58, -140, 9, 0, Math.PI * 2);
     ctx.fill();
     ctx.shadowBlur = 0;
 
-    // 나무 벤치
-    ctx.fillStyle = '#92400E';
-    ctx.fillRect(-24, -18, 42, 6);
-    ctx.fillRect(-24, -10, 42, 5);
-    ctx.fillStyle = '#334155';
-    ctx.fillRect(-18, -5, 4, 8);
-    ctx.fillRect(10, -5, 4, 8);
+    // 벤치 그림자
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.16)';
+    ctx.beginPath();
+    ctx.ellipse(0, 2, 58, 9, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 벤치 다리 & 팔걸이
+    ctx.fillStyle = '#1E293B';
+    ctx.fillRect(-46, -16, 6, 18);
+    ctx.fillRect(40, -16, 6, 18);
+    ctx.fillRect(-50, -34, 6, 22);
+    ctx.fillRect(44, -34, 6, 22);
+
+    // 원목 등받이 판자 2줄
+    ctx.fillStyle = '#B45309';
+    ctx.beginPath();
+    ctx.roundRect(-48, -46, 96, 10, 3);
+    ctx.roundRect(-48, -33, 96, 10, 3);
+    ctx.fill();
+
+    // 원목 좌판
+    ctx.fillStyle = '#D97706';
+    ctx.beginPath();
+    ctx.roundRect(-50, -21, 100, 9, 3);
+    ctx.fill();
+
     if (wx.isSnow || wx.season === 'winter') {
       ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(-24, -20, 42, 3);
+      ctx.fillRect(-48, -48, 96, 3.5);
     }
+    ctx.restore();
+  }
+
+  // 이불 덮고 잠드는 침구(매트 + 베개 + 포근한 퀼팅 이불 + Zzz) 렌더링
+  function drawSleepingBedAndBlanket(ctx, charId, img, targetW, targetH, t, isMini) {
+    const breath = 1 + Math.sin(t * 2.5) * 0.028;
+    const lieScale = isMini ? 0.78 : 0.66;
+    const charLen = targetH * lieScale;
+    const matW = charLen * 1.06;
+    const matH = isMini ? 28 : 42;
+
+    // 1) 폭신한 매트리스 패드
+    ctx.save();
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.22)';
+    ctx.beginPath();
+    ctx.ellipse(0, 2, matW * 0.56, matH * 0.54, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#FEF3C7';
+    ctx.strokeStyle = '#F59E0B';
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.roundRect(-matW * 0.52, -matH * 0.78, matW * 1.04, matH, 12);
+    ctx.fill();
+    ctx.stroke();
+
+    // 2) 왼쪽 하얀 솜베개
+    const pillowX = -matW * 0.34;
+    const pillowY = -matH * 0.32;
+    ctx.fillStyle = '#FFFFFF';
+    ctx.strokeStyle = '#CBD5E1';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.roundRect(pillowX - (isMini ? 16 : 24), pillowY - (isMini ? 12 : 17), isMini ? 32 : 48, isMini ? 24 : 34, 8);
+    ctx.fill();
+    ctx.stroke();
+
+    // 3) 왼쪽 베개에 머리가 오고 오른쪽 이불 아래에 몸통·다리가 들어가도록 눕힘!
+    ctx.save();
+    ctx.translate(charLen * 0.46, -matH * 0.24);
+    ctx.rotate(-Math.PI * 0.48);
+    ctx.scale(lieScale, lieScale * breath);
+    ctx.drawImage(img, -targetW / 2, -targetH + 6, targetW, targetH);
+    ctx.restore();
+
+    // 4) 몸통과 다리 위에 덮인 포근한 3D 퀼팅 이불 (목 아래부터 발끝까지 완전히 덮음!)
+    const blanketX = -charLen * 0.06;
+    const blanketW = charLen * 0.58;
+    const blanketH = (isMini ? 32 : 46) * breath;
+    const blanketY = -matH * 0.28 - blanketH * 0.52;
+
+    const bGrad = ctx.createLinearGradient(blanketX, blanketY, blanketX, blanketY + blanketH);
+    if (charId === '610708') {
+      bGrad.addColorStop(0, '#60A5FA');
+      bGrad.addColorStop(1, '#2563EB');
+    } else if (charId === '691105') {
+      bGrad.addColorStop(0, '#FDA4AF');
+      bGrad.addColorStop(1, '#E11D48');
+    } else if (charId === 'mutul') {
+      bGrad.addColorStop(0, '#FBBF24');
+      bGrad.addColorStop(1, '#D97706');
+    } else {
+      bGrad.addColorStop(0, '#6EE7B7');
+      bGrad.addColorStop(1, '#059669');
+    }
+
+    ctx.fillStyle = bGrad;
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.roundRect(blanketX, blanketY, blanketW, blanketH, 11);
+    ctx.fill();
+    ctx.stroke();
+
+    // 이불 목 부분 하얀 접힘 깃
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    ctx.roundRect(blanketX, blanketY, isMini ? 10 : 14, blanketH, [10, 3, 3, 10]);
+    ctx.fill();
+
+    // 이불 퀼팅 스티치
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.44)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(blanketX + (isMini ? 14 : 20), blanketY + blanketH * 0.5);
+    ctx.lineTo(blanketX + blanketW - 6, blanketY + blanketH * 0.5);
+    ctx.moveTo(blanketX + blanketW * 0.55, blanketY + 4);
+    ctx.lineTo(blanketX + blanketW * 0.55, blanketY + blanketH - 4);
+    ctx.stroke();
+
+    // 5) 쿨쿨 잠드는 Zzz 애니메이션 방울
+    const zPhase = (t * 1.4) % 1;
+    ctx.font = `bold ${isMini ? 13 : 16}px sans-serif`;
+    ctx.fillStyle = '#1E293B';
+    ctx.fillText('💤', pillowX - 8, pillowY - 22 - zPhase * 12);
+    ctx.font = `bold ${isMini ? 10 : 12}px sans-serif`;
+    ctx.fillStyle = '#475569';
+    ctx.fillText('Zzz', pillowX + 12, pillowY - 30 - ((zPhase + 0.4) % 1) * 12);
     ctx.restore();
   }
 
@@ -547,7 +698,6 @@
     ctx.arc(0, -31, 10, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
-    // 빨간 목도리 & 당근 코
     ctx.fillStyle = '#EF4444';
     ctx.fillRect(-9, -23, 18, 4.5);
     ctx.fillStyle = '#F97316';
@@ -560,22 +710,136 @@
   }
 
   // ==========================================================
-  // 정면(Front) · 좌측면(Left) · 우측면(Right) + 날씨별 복장(반팔/코트+목도리/패딩) + 우산 렌더링
+  // 정면(Front) · 좌측면(Left) · 우측면(Right) + 무작위 행동(걸어다니기 / 이불 덮고 잠들기 / 의자에 앉기 / 턱걸이 운동) 렌더링
   // ==========================================================
   function drawMii3DCharacter(ctx, charId, ch, t, wx) {
     const isFather = charId === '610708';
     const yaw = ch.yaw;
     const isWalking = ch.speed > 0.12;
-    const isSideView = Math.abs(yaw) > 0.35 || isWalking;
+    const isAtTarget = Math.hypot(ch.targetX - ch.x, ch.targetZ - ch.z) <= 8;
+    const act = isAtTarget ? (ch.activity || 'walk') : 'walk';
+
+    const isSideView = act === 'walk' && (Math.abs(yaw) > 0.25 || isWalking);
     const facingLeft = yaw < -0.15;
 
-    const outfit = wx.outfit || 'short'; // 'short' | 'coat' | 'pad'
+    const outfit = wx.outfit || 'short';
     const viewKey = isSideView ? 'side' : 'front';
     const spriteKey = `${charId}_${outfit}_${viewKey}`;
     const fallbackKey = `${charId}_short_${viewKey}`;
     const img = loadedSprites[spriteKey] || loadedSprites[fallbackKey];
     if (!img || !img.complete || !img.naturalWidth) return;
 
+    const jumpY = ch.y || 0;
+    const depthScale = 1 + (ch.z || 0) * 0.003;
+    const groundY = 352 + (ch.z || 0) * 0.65;
+    const cx = ch.x;
+
+    const targetH = (isFather ? 226 : 216) * depthScale;
+    const targetW = (img.naturalWidth / img.naturalHeight) * targetH;
+
+    // [행동 A] 이불 덮고 잠들기 (sleep)
+    if (act === 'sleep') {
+      ctx.save();
+      ctx.translate(cx, groundY + jumpY);
+      drawSleepingBedAndBlanket(ctx, charId, img, targetW, targetH, t, false);
+      ctx.restore();
+      return;
+    }
+
+    // [행동 B] 철봉 턱걸이 운동하기 (pullup)
+    if (act === 'pullup') {
+      const pullCycle = t * 4.2 + (isFather ? 0 : 1.2);
+      const pullPhase = (Math.sin(pullCycle) + 1) * 0.5; // 0(매달림) ~ 1(턱걸이 정점)
+      const pullScale = 0.85;
+      const pH = targetH * pullScale;
+      const pW = targetW * pullScale;
+      const pullLiftY = -12 - pullPhase * 34;
+      const barLocalY = -232 - (groundY - 348); // 머리 위 철봉 가로바 높이
+
+      // 바닥 그림자
+      ctx.save();
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.2)';
+      ctx.beginPath();
+      ctx.ellipse(cx, groundY - 2, 34 * (1 - pullPhase * 0.25), 7.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      ctx.save();
+      ctx.translate(cx, groundY + jumpY);
+
+      // 어깨에서 머리 위 철봉 바깥쪽(±28)으로 뻗어 매달린 양팔
+      const shoulderY = pullLiftY - pH * 0.42;
+      const armColor = outfit === 'coat'
+        ? (isFather ? '#B47B48' : '#E5D5C5')
+        : outfit === 'pad'
+          ? (isFather ? '#1E3A5F' : '#F4B8C4')
+          : (isFather ? '#1E293B' : '#F1F5F9');
+      ctx.strokeStyle = armColor;
+      ctx.lineWidth = 10;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-18, shoulderY);
+      ctx.quadraticCurveTo(-34, (shoulderY + barLocalY) * 0.5, -28, barLocalY + 3);
+      ctx.moveTo(18, shoulderY);
+      ctx.quadraticCurveTo(34, (shoulderY + barLocalY) * 0.5, 28, barLocalY + 3);
+      ctx.stroke();
+
+      // 캐릭터 본체 (턱걸이 상하 리프트)
+      ctx.save();
+      ctx.translate(0, pullLiftY);
+      ctx.scale(1 + pullPhase * 0.03, 1 - pullPhase * 0.02);
+      ctx.shadowColor = 'rgba(15, 23, 42, 0.24)';
+      ctx.shadowBlur = 12;
+      ctx.drawImage(img, -pW / 2, -pH + 6, pW, pH);
+      ctx.restore();
+
+      // 머리 위 철봉 바를 꽉 쥔 두 손 (얼굴 바깥쪽 철봉 위치!)
+      ctx.fillStyle = '#FDBA8C';
+      ctx.strokeStyle = '#9A3412';
+      ctx.lineWidth = 1.5;
+      [-28, 28].forEach((hx) => {
+        ctx.beginPath();
+        ctx.arc(hx, barLocalY, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      });
+
+      // 턱걸이 구호 배지
+      ctx.font = 'bold 13px sans-serif';
+      ctx.fillStyle = '#DC2626';
+      ctx.textAlign = 'center';
+      ctx.fillText(pullPhase > 0.5 ? '💪 으랏차! 턱걸이!' : '💪 하나, 둘!', 0, barLocalY - 12);
+      ctx.restore();
+      return;
+    }
+
+    // [행동 C] 의자에 앉아있기 (sit)
+    if (act === 'sit') {
+      const seatSway = Math.sin(t * 2.4 + (isFather ? 0 : 1.3)) * 0.025;
+      const legSwing = Math.sin(t * 3.8 + (isFather ? 0 : 1.0)) * 3.5;
+      ctx.save();
+      ctx.translate(cx, groundY + jumpY + 12);
+      ctx.rotate(seatSway);
+      ctx.scale(1.02, 0.88);
+      ctx.shadowColor = 'rgba(15, 23, 42, 0.24)';
+      ctx.shadowBlur = 12;
+      ctx.drawImage(img, -targetW / 2, -targetH + 6 + legSwing * 0.2, targetW, targetH);
+
+      if (wx.hasUmbrella) {
+        ctx.save();
+        ctx.scale(0.88, 0.88);
+        drawHeldUmbrella(ctx, t, isFather, false, outfit);
+        ctx.restore();
+      }
+      ctx.font = '16px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('☕', isFather ? -36 : 36, -targetH * 0.55 + Math.sin(t * 3) * 3);
+      ctx.restore();
+      return;
+    }
+
+    // [행동 D] 자연스럽게 좌·우·정면으로 걸어다니기 (walk)
     const walkPhase = ch.walkPhase;
     const bobY = isWalking
       ? -Math.abs(Math.sin(walkPhase)) * 8.5
@@ -590,28 +854,18 @@
       ? 1 - Math.cos(walkPhase * 2) * 0.032
       : 1 - Math.sin(t * 3.0) * 0.012;
 
-    const jumpY = ch.y || 0;
-    const depthScale = 1 + (ch.z || 0) * 0.003;
-    const groundY = 360 + (ch.z || 0) * 0.65;
-    const cx = ch.x;
-
-    const targetH = (isFather ? 236 : 226) * depthScale;
-    const targetW = (img.naturalWidth / img.naturalHeight) * targetH;
-
-    // 1. 바닥 입체 그림자
     const jumpFactor = Math.max(0.55, 1 + (jumpY + bobY) / 140);
     ctx.save();
-    const pedGrad = ctx.createRadialGradient(cx, groundY - 4, 4, cx, groundY - 4, 50 * depthScale * jumpFactor);
+    const pedGrad = ctx.createRadialGradient(cx, groundY - 4, 4, cx, groundY - 4, 48 * depthScale * jumpFactor);
     pedGrad.addColorStop(0, 'rgba(15, 23, 42, 0.28)');
     pedGrad.addColorStop(0.6, 'rgba(15, 23, 42, 0.14)');
     pedGrad.addColorStop(1, 'rgba(15, 23, 42, 0)');
     ctx.fillStyle = pedGrad;
     ctx.beginPath();
-    ctx.ellipse(cx, groundY - 4, 48 * depthScale * jumpFactor, 11 * depthScale * jumpFactor, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, groundY - 4, 46 * depthScale * jumpFactor, 10.5 * depthScale * jumpFactor, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
-    // 2. 3D Mii 캐릭터 본체 (정면 / 좌측면 / 우측면)
     ctx.save();
     ctx.translate(cx, groundY + jumpY + bobY);
     ctx.rotate(walkTilt);
@@ -627,7 +881,6 @@
     ctx.shadowOffsetY = 5;
     ctx.drawImage(img, -targetW / 2, -targetH + 6, targetW, targetH);
 
-    // 3. 비 오거나 눈 올 때 손에 들고 쓰는 3D 우산 (두 캐릭터 각각 착용!)
     if (wx.hasUmbrella) {
       ctx.save();
       ctx.scale(0.9, 0.9);
@@ -639,19 +892,94 @@
   }
 
   // ==========================================================
-  // 두 분 아래쪽 앞마당을 돌아다니는 미니미 머털도사 & 말라뮤트 강아지 3D 렌더링
+  // 두 분 아래쪽 앞마당을 돌아다니는 미니미 머털도사 & 말라뮤트 강아지 (걸어다니기 / 잠들기 / 의자 앉기 / 턱걸이)
   // ==========================================================
   function drawMiniCompanion(ctx, compId, ch, t, wx) {
     const isMutul = compId === 'mutul';
     const yaw = ch.yaw;
     const isWalking = ch.speed > 0.1;
-    const isSideView = Math.abs(yaw) > 0.28 || isWalking;
+    const isAtTarget = Math.hypot(ch.targetX - ch.x, ch.targetZ - ch.z) <= 8;
+    const act = isAtTarget ? (ch.activity || 'walk') : 'walk';
+
+    const isSideView = act === 'walk' && (Math.abs(yaw) > 0.22 || isWalking);
     const facingLeft = yaw < -0.12;
 
     const viewKey = isSideView ? 'side' : 'front';
     const img = loadedSprites[`${compId}_${viewKey}`] || loadedSprites[`${compId}_front`];
     if (!img || !img.complete || !img.naturalWidth) return;
 
+    const jumpY = ch.y || 0;
+    const depthScale = 1 + (ch.z || 0) * 0.0025;
+    const groundY = (act === 'pullup' || act === 'sit' ? 352 : 408) + (ch.z || 0) * 0.45;
+    const cx = ch.x;
+
+    const targetH = (isMutul ? 116 : 86) * depthScale;
+    const targetW = (img.naturalWidth / img.naturalHeight) * targetH;
+
+    // [행동 A] 이불 덮고 잠들기 (sleep)
+    if (act === 'sleep') {
+      ctx.save();
+      ctx.translate(cx, groundY + jumpY);
+      drawSleepingBedAndBlanket(ctx, compId, img, targetW, targetH, t, true);
+      ctx.restore();
+      return;
+    }
+
+    // [행동 B] 미니 철봉 턱걸이 운동하기 (pullup - 미니 머털도사)
+    if (act === 'pullup' && isMutul) {
+      const pullPhase = (Math.sin(t * 4.8 + 0.7) + 1) * 0.5;
+      const pullScale = 0.85;
+      const pH = targetH * pullScale;
+      const pW = targetW * pullScale;
+      const pullLiftY = -8 - pullPhase * 22;
+      const barLocalY = -138 - (groundY - 348);
+
+      ctx.save();
+      ctx.translate(cx, groundY + jumpY);
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 6.5;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-10, pullLiftY - pH * 0.38);
+      ctx.quadraticCurveTo(-20, (pullLiftY - pH * 0.38 + barLocalY) * 0.5, -15, barLocalY + 2);
+      ctx.moveTo(10, pullLiftY - pH * 0.38);
+      ctx.quadraticCurveTo(20, (pullLiftY - pH * 0.38 + barLocalY) * 0.5, 15, barLocalY + 2);
+      ctx.stroke();
+
+      ctx.save();
+      ctx.translate(0, pullLiftY);
+      ctx.drawImage(img, -pW / 2, -pH + 4, pW, pH);
+      ctx.restore();
+
+      ctx.fillStyle = '#FDBA8C';
+      [-15, 15].forEach((hx) => {
+        ctx.beginPath();
+        ctx.arc(hx, barLocalY, 4.2, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.font = 'bold 11px sans-serif';
+      ctx.fillStyle = '#EA580C';
+      ctx.textAlign = 'center';
+      ctx.fillText('💪 영차!', 0, barLocalY - 10);
+      ctx.restore();
+      return;
+    }
+
+    // [행동 C] 의자에 앉아 쉬기 (sit)
+    if (act === 'sit') {
+      ctx.save();
+      ctx.translate(cx, groundY + jumpY + 6);
+      ctx.rotate(Math.sin(t * 2.8) * 0.03);
+      ctx.scale(1.03, 0.88);
+      ctx.drawImage(img, -targetW / 2, -targetH + 4, targetW, targetH);
+      ctx.font = '13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('🎵', 22, -targetH * 0.7);
+      ctx.restore();
+      return;
+    }
+
+    // [행동 D] 자연스럽게 좌·우로 걸어다니기 (walk)
     const walkPhase = ch.walkPhase;
     const bobY = isWalking
       ? -Math.abs(Math.sin(walkPhase)) * (isMutul ? 6.5 : 5.5)
@@ -666,15 +994,6 @@
       ? 1 - Math.cos(walkPhase * 2) * 0.035
       : 1 - Math.sin(t * 3.5) * 0.014;
 
-    const jumpY = ch.y || 0;
-    const depthScale = 1 + (ch.z || 0) * 0.0025;
-    const groundY = 408 + (ch.z || 0) * 0.45;
-    const cx = ch.x;
-
-    const targetH = (isMutul ? 118 : 88) * depthScale;
-    const targetW = (img.naturalWidth / img.naturalHeight) * targetH;
-
-    // 1. 앞마당 바닥 그림자
     const jumpFactor = Math.max(0.55, 1 + (jumpY + bobY) / 100);
     ctx.save();
     const shadowRx = (isMutul ? 28 : 34) * depthScale * jumpFactor;
@@ -688,7 +1007,6 @@
     ctx.fill();
     ctx.restore();
 
-    // 2. 미니미 머털도사 / 강아지 3D 본체 (정면 / 좌측면 / 우측면)
     ctx.save();
     ctx.translate(cx, groundY + jumpY + bobY);
     ctx.rotate(walkTilt);
@@ -701,7 +1019,6 @@
     ctx.shadowOffsetY = 4;
     ctx.drawImage(img, -targetW / 2, -targetH + 4, targetW, targetH);
 
-    // 3. 비·눈 올 때 미니미 머털도사도 귀여운 미니 노란 우산 착용!
     if (isMutul && wx.hasUmbrella) {
       ctx.save();
       ctx.translate(isSideView ? 12 : -18, -118 + Math.sin(t * 3.8) * 1.5);
@@ -729,7 +1046,6 @@
 
   function drawHeldUmbrella(ctx, t, isFather, isSideView, outfit) {
     ctx.save();
-    // 바깥쪽 손 위치에서 얼굴을 가리지 않고 머리 위로 자연스럽게 뻗는 3D 우산
     const handX = isSideView ? 32 : (isFather ? -48 : 44);
     const handY = (isFather && !isSideView && outfit === 'short') ? -152 : -112;
     const canopyCenterX = isSideView ? 8 : (isFather ? -14 : 12);
@@ -743,7 +1059,6 @@
     ctx.translate(canopyCenterX, canopyTopY);
     ctx.rotate(-shaftAngle);
 
-    // 우산대 (캐노피 안쪽에서 손 위치까지 연결)
     ctx.strokeStyle = '#475569';
     ctx.lineWidth = 3.4;
     ctx.lineCap = 'round';
@@ -752,7 +1067,6 @@
     ctx.lineTo(0, 18 + shaftLen);
     ctx.stroke();
 
-    // J자 우산 손잡이 (손 아래에서 감싸쥐는 형태)
     ctx.strokeStyle = '#78350F';
     ctx.lineWidth = 4.0;
     ctx.beginPath();
@@ -761,7 +1075,6 @@
     ctx.arc(isFather ? -5.5 : 5.5, 24 + shaftLen, 5.5, isFather ? 0 : Math.PI, isFather ? Math.PI : 0, !isFather);
     ctx.stroke();
 
-    // 3D 입체 우산 돔 (아버님은 클래식 로열블루, 어머님은 화사한 로즈코랄)
     const domeGrad = ctx.createRadialGradient(-16, -6, 6, 0, 8, 70);
     if (isFather) {
       domeGrad.addColorStop(0, '#60A5FA');
@@ -775,14 +1088,12 @@
     ctx.fillStyle = domeGrad;
     ctx.beginPath();
     ctx.arc(0, 20, 66, Math.PI, 0);
-    // 우산 아래 물결 스캘럽 라인
     ctx.quadraticCurveTo(44, 12, 22, 20);
     ctx.quadraticCurveTo(0, 12, -22, 20);
     ctx.quadraticCurveTo(-44, 12, -66, 20);
     ctx.closePath();
     ctx.fill();
 
-    // 우산 꼭지
     ctx.fillStyle = '#F59E0B';
     ctx.beginPath();
     ctx.roundRect(-2.5, -52, 5, 7, 2);
@@ -838,69 +1149,152 @@
     const cv = stageBox.querySelector('#petCanvas');
     const ctx = cv.getContext('2d');
 
-    const hintEl = stageBox.querySelector('.pet-walk-hint');
-    setTimeout(() => {
-      if (hintEl) hintEl.classList.add('is-hidden');
-    }, 3200);
-
     const chars = {
       '610708': {
-        x: 205,
-        z: 0,
-        targetX: 205,
-        targetZ: 0,
+        x: 126,
+        z: -4,
+        targetX: 126,
+        targetZ: -4,
         yaw: 0,
         targetYaw: 0,
         speed: 0,
         walkPhase: 0,
         y: 0,
         vy: 0,
-        pose: 'idle',
-        nextWanderAt: performance.now() + 3400,
+        activity: 'pullup',
+        nextActivityAt: performance.now() + 6200,
+        nextWanderAt: performance.now() + 2400,
       },
       '691105': {
-        x: 375,
-        z: 4,
-        targetX: 375,
-        targetZ: 4,
+        x: 454,
+        z: -4,
+        targetX: 454,
+        targetZ: -4,
         yaw: 0,
         targetYaw: 0,
         speed: 0,
         walkPhase: Math.PI,
         y: 0,
         vy: 0,
-        pose: 'idle',
-        nextWanderAt: performance.now() + 4200,
+        activity: 'sit',
+        nextActivityAt: performance.now() + 7100,
+        nextWanderAt: performance.now() + 2800,
       },
       mutul: {
-        x: 135,
-        z: 6,
-        targetX: 245,
-        targetZ: 8,
-        yaw: 1.2,
-        targetYaw: 1.2,
-        speed: 1.6,
+        x: 225,
+        z: 10,
+        targetX: 225,
+        targetZ: 10,
+        yaw: 0,
+        targetYaw: 0,
+        speed: 0,
         walkPhase: 0.4,
         y: 0,
         vy: 0,
-        pose: 'walk',
+        activity: 'sleep',
+        nextActivityAt: performance.now() + 5800,
         nextWanderAt: performance.now() + 1800,
       },
       puppy: {
-        x: 445,
-        z: 10,
-        targetX: 335,
+        x: 385,
+        z: 12,
+        targetX: 165,
         targetZ: 12,
         yaw: -1.2,
         targetYaw: -1.2,
-        speed: 1.9,
+        speed: 2.1,
         walkPhase: 2.1,
         y: 0,
         vy: 0,
-        pose: 'walk',
+        activity: 'walk',
+        nextActivityAt: performance.now() + 5200,
         nextWanderAt: performance.now() + 1500,
       },
     };
+
+    function applyActivityToChar(id, act, now, snapImmediate = false) {
+      const ch = chars[id];
+      if (!ch) return;
+      ch.activity = act;
+      ch.nextActivityAt = now + 5400 + Math.random() * 3400;
+
+      if (act === 'pullup') {
+        ch.targetX = id === 'mutul' ? 74 : 126;
+        ch.targetZ = -4;
+      } else if (act === 'sit') {
+        ch.targetX = id === '610708' ? 424 : id === '691105' ? 466 : id === 'mutul' ? 426 : 464;
+        ch.targetZ = -4;
+      } else if (act === 'sleep') {
+        ch.targetX = id === '610708' ? 245 : id === '691105' ? 325 : id === 'mutul' ? 220 : 355;
+        ch.targetZ = (id === '610708' || id === '691105') ? 4 : 10;
+      } else {
+        // 'walk': 각자 영역에서 좌·우로 겹치지 않게 걸어다님
+        const isLeftChar = id === '610708' || id === 'mutul';
+        const minLane = isLeftChar ? 95 : 305;
+        const maxLane = isLeftChar ? 275 : 485;
+        const midLane = (minLane + maxLane) * 0.5;
+        const goRight = ch.x < midLane;
+        ch.targetX = goRight ? (midLane + 35 + Math.random() * 50) : (minLane + Math.random() * 50);
+        ch.targetZ = (id === '610708' || id === '691105') ? (-8 + Math.random() * 14) : (6 + Math.random() * 10);
+        ch.nextWanderAt = now + 2200 + Math.random() * 1600;
+      }
+
+      if (snapImmediate) {
+        if (act === 'walk') {
+          const isLeftChar = id === '610708' || id === 'mutul';
+          ch.x = isLeftChar ? 145 : 345;
+          ch.z = (id === '610708' || id === '691105') ? -2 : 10;
+          ch.targetX = isLeftChar ? 265 : 465;
+          ch.yaw = 1.2;
+          ch.targetYaw = 1.2;
+          ch.speed = 1.9;
+        } else {
+          ch.x = ch.targetX;
+          ch.z = ch.targetZ;
+          ch.yaw = 0;
+          ch.targetYaw = 0;
+          ch.speed = 0;
+        }
+      }
+    }
+
+    function pickRandomActivityFor(id, now) {
+      const pool = id === 'puppy'
+        ? ['walk', 'walk', 'sleep', 'sit']
+        : ['walk', 'walk', 'pullup', 'sit', 'sleep'];
+      const otherIds = ['610708', '691105', 'mutul', 'puppy'].filter((k) => k !== id);
+
+      const candidates = pool.filter((cand) => {
+        if (cand === 'pullup') {
+          if (id === 'mutul') return true;
+          const otherAdult = id === '610708' ? '691105' : '610708';
+          return chars[otherAdult].activity !== 'pullup';
+        }
+        if (cand === 'sleep') {
+          const sleepingCount = otherIds.filter((k) => chars[k].activity === 'sleep').length;
+          return sleepingCount < 2;
+        }
+        return true;
+      });
+
+      const nextAct = candidates[Math.floor(Math.random() * candidates.length)] || 'walk';
+      applyActivityToChar(id, nextAct, now, false);
+    }
+
+    (function initRandomBehaviors() {
+      const now = performance.now();
+      const parentRoles = [
+        ['pullup', 'sit', 'sleep', 'walk'],
+        ['walk', 'pullup', 'sit', 'sleep'],
+        ['sleep', 'walk', 'pullup', 'sit'],
+        ['sit', 'sleep', 'walk', 'pullup'],
+      ];
+      const pick = parentRoles[Math.floor(Math.random() * parentRoles.length)];
+      applyActivityToChar('610708', pick[0], now, true);
+      applyActivityToChar('691105', pick[1], now, true);
+      applyActivityToChar('mutul', pick[2], now, true);
+      applyActivityToChar('puppy', pick[3] === 'pullup' ? 'walk' : pick[3], now, true);
+    })();
 
     const anim = {
       tapRing: null,
@@ -938,7 +1332,6 @@
       }
     }
 
-    // 우측 상단 날씨 배지를 누르면 날씨·계절별 복장(우산/코트+목도리/패딩+우산/반팔) 미리보기 순환 가능
     wxPillEl.addEventListener('click', (e) => {
       e.stopPropagation();
       presetIdx = (presetIdx + 1) % PRESETS.length;
@@ -965,10 +1358,10 @@
         type: 'petPlaza',
         updatedAt: new Date().toISOString(),
         positions: {
-          '610708': { x: Math.round(chars['610708'].targetX), z: Math.round(chars['610708'].targetZ) },
-          '691105': { x: Math.round(chars['691105'].targetX), z: Math.round(chars['691105'].targetZ) },
-          mutul: { x: Math.round(chars.mutul.targetX), z: Math.round(chars.mutul.targetZ) },
-          puppy: { x: Math.round(chars.puppy.targetX), z: Math.round(chars.puppy.targetZ) },
+          '610708': { x: Math.round(chars['610708'].targetX), z: Math.round(chars['610708'].targetZ), act: chars['610708'].activity },
+          '691105': { x: Math.round(chars['691105'].targetX), z: Math.round(chars['691105'].targetZ), act: chars['691105'].activity },
+          mutul: { x: Math.round(chars.mutul.targetX), z: Math.round(chars.mutul.targetZ), act: chars.mutul.activity },
+          puppy: { x: Math.round(chars.puppy.targetX), z: Math.round(chars.puppy.targetZ), act: chars.puppy.activity },
         },
       };
       if (actionData) {
@@ -1009,33 +1402,18 @@
           const act = data.lastAction;
           const isFromMe = act && act.by === myId && initialPositionsSynced;
           const isRecentPos = data.updatedAt && (Date.now() - new Date(data.updatedAt).getTime() < 20000);
-          if (data.positions && !isFromMe && (!initialPositionsSynced || isRecentPos)) {
+          if (data.positions && !isFromMe && isRecentPos) {
             ['610708', '691105', 'mutul', 'puppy'].forEach((id) => {
               const pos = data.positions[id];
               if (pos && Number.isFinite(pos.x) && chars[id]) {
-                const tx = Math.max(85, Math.min(495, pos.x));
+                const tx = Math.max(70, Math.min(495, pos.x));
                 const tz = Math.max(-24, Math.min(24, pos.z || 0));
-                if (!initialPositionsSynced && (id === '610708' || id === '691105')) {
-                  chars[id].x = tx;
-                  chars[id].z = tz;
-                  chars[id].yaw = 0;
-                  chars[id].targetYaw = 0;
-                  chars[id].speed = 0;
-                }
+                if (pos.act) chars[id].activity = pos.act;
                 chars[id].targetX = tx;
                 chars[id].targetZ = tz;
-                chars[id].nextWanderAt = performance.now() + (initialPositionsSynced ? 5500 : 3200);
+                chars[id].nextActivityAt = performance.now() + 6500;
               }
             });
-            if (Math.abs(chars['691105'].targetX - chars['610708'].targetX) < 145) {
-              const mid = (chars['610708'].targetX + chars['691105'].targetX) * 0.5;
-              chars['610708'].targetX = Math.max(105, Math.min(330, mid - 75));
-              chars['691105'].targetX = Math.max(250, Math.min(475, chars['610708'].targetX + 150));
-              if (!initialPositionsSynced) {
-                chars['610708'].x = chars['610708'].targetX;
-                chars['691105'].x = chars['691105'].targetX;
-              }
-            }
           }
           initialPositionsSynced = true;
 
@@ -1047,7 +1425,7 @@
               if (act.by !== myId) {
                 if (typeof beep === 'function') beep(580, 0.05);
                 spawnParticles(['❤️', '✨']);
-                say(`👟 ${act.by}님이 광장에서 함께 산책 중이에요!`, 2600);
+                say(`👟 ${act.by}님이 광장에서 함께 활동 중이에요!`, 2600);
               }
             }
           }
@@ -1056,10 +1434,10 @@
     } catch (e) { /* 오프라인 무시 */ }
 
     const WALK_LINES = [
-      '💑 두 분과 미니 머털이·강아지가 나란히 산책해요!',
-      '☝️ 하하하! 오늘도 상쾌하게 산책하며 두뇌운동 화이팅입니다!',
-      '🐶 멍멍! 강아지와 미니 머털도사도 신나서 따라다녀요 🥰',
-      '✨ 오늘 날씨에 딱 맞는 복장으로 기분 좋게 산책해요 💕',
+      '💪 철봉 턱걸이부터 🛌 낮잠·🪑 벤치 휴식·🚶 산책까지 자유롭게 즐겨요!',
+      '☝️ 하하하! 오늘도 상쾌하게 운동하며 두뇌운동 화이팅입니다!',
+      '🐶 멍멍! 강아지와 미니 머털도사도 신나게 뛰어놀아요 🥰',
+      '✨ 터치할 때마다 새로운 무작위 행동과 산책을 함께해요 💕',
     ];
     let walkClickCount = 0;
 
@@ -1067,26 +1445,34 @@
       const rect = cv.getBoundingClientRect();
       const clickX = ((e.clientX - rect.left) / rect.width) * 580;
       const clickY = ((e.clientY - rect.top) / rect.height) * 430;
-      const clampedX = Math.max(95, Math.min(485, clickX));
-      const clampedZ = Math.max(-24, Math.min(24, (clickY - 350) * 0.45));
+      const clampedX = Math.max(85, Math.min(495, clickX));
+      const clampedZ = Math.max(-18, Math.min(18, (clickY - 350) * 0.45));
+      const now = performance.now();
 
-      anim.tapRing = { x: clampedX, y: 382 + clampedZ * 0.75, r: 4, alpha: 1 };
+      anim.tapRing = { x: clampedX, y: 368 + clampedZ * 0.75, r: 4, alpha: 1 };
 
-      const centerTarget = Math.max(180, Math.min(400, clampedX));
-      chars['610708'].targetX = centerTarget - 75;
-      chars['610708'].targetZ = clampedZ;
-      chars['691105'].targetX = centerTarget + 75;
-      chars['691105'].targetZ = Math.max(-24, Math.min(24, clampedZ + 3));
-      chars['610708'].nextWanderAt = performance.now() + 6500;
-      chars['691105'].nextWanderAt = performance.now() + 6500;
-
-      // 미니미 머털도사 & 강아지도 터치 지점 앞쪽으로 쪼르르 달려감!
-      chars.mutul.targetX = Math.max(85, Math.min(495, centerTarget - 55));
-      chars.mutul.targetZ = 8;
-      chars.mutul.nextWanderAt = performance.now() + 4200;
-      chars.puppy.targetX = Math.max(85, Math.min(495, centerTarget + 55));
-      chars.puppy.targetZ = 12;
-      chars.puppy.nextWanderAt = performance.now() + 3800;
+      if (clickX < 165 && clickY < 370) {
+        applyActivityToChar('610708', 'pullup', now, false);
+        applyActivityToChar('mutul', 'pullup', now, false);
+      } else if (clickX > 400 && clickY < 370) {
+        applyActivityToChar('691105', 'sit', now, false);
+        applyActivityToChar('610708', 'sit', now, false);
+      } else {
+        const centerTarget = Math.max(170, Math.min(410, clampedX));
+        ['610708', '691105', 'mutul', 'puppy'].forEach((id) => {
+          chars[id].activity = 'walk';
+          chars[id].nextActivityAt = now + 5500;
+          chars[id].nextWanderAt = now + 4500;
+        });
+        chars['610708'].targetX = centerTarget - 70;
+        chars['610708'].targetZ = clampedZ;
+        chars['691105'].targetX = centerTarget + 70;
+        chars['691105'].targetZ = Math.max(-18, Math.min(18, clampedZ + 3));
+        chars.mutul.targetX = Math.max(85, Math.min(495, centerTarget - 50));
+        chars.mutul.targetZ = 8;
+        chars.puppy.targetX = Math.max(85, Math.min(495, centerTarget + 50));
+        chars.puppy.targetZ = 12;
+      }
 
       if (typeof beep === 'function') beep(580, 0.05);
       spawnParticles(['✨', '❤️', '🐾']);
@@ -1116,86 +1502,53 @@
       }
       const t = now * 0.001;
 
-      // ---- 1) 부모님 (610708, 691105) 자율 산책 & 정면/좌측/우측 3D 방향 전환 ----
-      ['610708', '691105'].forEach((id, idx) => {
+      ['610708', '691105', 'mutul', 'puppy'].forEach((id) => {
+        const isMini = id === 'mutul' || id === 'puppy';
+        const isLeftChar = id === '610708' || id === 'mutul';
         const ch = chars[id];
-        if (now > ch.nextWanderAt) {
-          const other = chars[id === '610708' ? '691105' : '610708'];
-          const minX = idx === 0 ? 105 : 255;
-          const maxX = idx === 0 ? 325 : 475;
-          let nextX = minX + Math.random() * (maxX - minX);
-          if (Math.abs(nextX - other.targetX) < 145) {
-            nextX = idx === 0 ? Math.max(105, other.targetX - 150) : Math.min(475, other.targetX + 150);
-          }
-          ch.targetX = nextX;
-          ch.targetZ = -18 + Math.random() * 34;
-          ch.nextWanderAt = now + 3800 + Math.random() * 2600;
+
+        if (now > ch.nextActivityAt) {
+          pickRandomActivityFor(id, now);
         }
 
         const dx = ch.targetX - ch.x;
         const dz = ch.targetZ - ch.z;
         const dist = Math.hypot(dx, dz);
 
-        if (dist > 3.5) {
-          const moveStep = Math.min(dist, 2.0);
-          ch.x += (dx / dist) * moveStep;
-          ch.z += (dz / dist) * moveStep;
+        if (ch.activity === 'walk' && (dist <= 6 || now > ch.nextWanderAt)) {
+          const minLane = isLeftChar ? 95 : 305;
+          const maxLane = isLeftChar ? 275 : 485;
+          const midLane = (minLane + maxLane) * 0.5;
+          const goRight = ch.x < midLane;
+          ch.targetX = goRight
+            ? (midLane + 30 + Math.random() * 55)
+            : (minLane + Math.random() * 55);
+          ch.targetZ = isMini ? (4 + Math.random() * 12) : (-10 + Math.random() * 16);
+          ch.nextWanderAt = now + 2400 + Math.random() * 1800;
+        }
+
+        const curDx = ch.targetX - ch.x;
+        const curDz = ch.targetZ - ch.z;
+        const curDist = Math.hypot(curDx, curDz);
+
+        if (curDist > 3.2) {
+          const maxSpd = id === 'puppy' ? 2.35 : id === 'mutul' ? 1.95 : 1.85;
+          const moveStep = Math.min(curDist, maxSpd);
+          ch.x += (curDx / curDist) * moveStep;
+          ch.z += (curDz / curDist) * moveStep;
           ch.speed = moveStep;
-          ch.walkPhase += 0.21;
-          ch.targetYaw = dx < -1 ? -1.2 : dx > 1 ? 1.2 : 0;
+          ch.walkPhase += id === 'puppy' ? 0.28 : 0.22;
+          ch.targetYaw = curDx < -0.5 ? -1.2 : curDx > 0.5 ? 1.2 : 0;
         } else {
           ch.speed = 0;
           ch.targetYaw = 0;
         }
 
-        ch.yaw = lerpAngle(ch.yaw, ch.targetYaw, 0.18);
+        ch.yaw = lerpAngle(ch.yaw, ch.targetYaw, 0.2);
 
         if (ch.y < 0 || ch.vy !== 0) {
           ch.y += ch.vy;
-          ch.vy += 0.52;
-          if (ch.y >= 0) {
-            ch.y = 0;
-            ch.vy = 0;
-          }
-        }
-      });
-
-      // ---- 2) 미니미 머털도사(mutul) & 강아지(puppy) 아래쪽 앞마당 활발한 산책 ----
-      ['mutul', 'puppy'].forEach((id, idx) => {
-        const ch = chars[id];
-        if (now > ch.nextWanderAt) {
-          const other = chars[id === 'mutul' ? 'puppy' : 'mutul'];
-          let nextX = 85 + Math.random() * 410;
-          if (Math.abs(nextX - other.targetX) < 110) {
-            nextX = idx === 0 ? Math.max(85, other.targetX - 120) : Math.min(495, other.targetX + 120);
-          }
-          ch.targetX = nextX;
-          ch.targetZ = 2 + Math.random() * 14;
-          ch.nextWanderAt = now + 2000 + Math.random() * 1900;
-        }
-
-        const dx = ch.targetX - ch.x;
-        const dz = ch.targetZ - ch.z;
-        const dist = Math.hypot(dx, dz);
-
-        if (dist > 3.0) {
-          const maxSpd = id === 'puppy' ? 2.35 : 1.95;
-          const moveStep = Math.min(dist, maxSpd);
-          ch.x += (dx / dist) * moveStep;
-          ch.z += (dz / dist) * moveStep;
-          ch.speed = moveStep;
-          ch.walkPhase += id === 'puppy' ? 0.28 : 0.24;
-          ch.targetYaw = dx < -0.8 ? -1.2 : dx > 0.8 ? 1.2 : 0;
-        } else {
-          ch.speed = 0;
-          ch.targetYaw = 0;
-        }
-
-        ch.yaw = lerpAngle(ch.yaw, ch.targetYaw, 0.22);
-
-        if (ch.y < 0 || ch.vy !== 0) {
-          ch.y += ch.vy;
-          ch.vy += 0.56;
+          ch.vy += 0.54;
           if (ch.y >= 0) {
             ch.y = 0;
             ch.vy = 0;
@@ -1205,10 +1558,8 @@
 
       ctx.clearRect(0, 0, 580, 430);
 
-      // 1. 계절·날씨별 풍경 배경 공간 렌더링
       drawSceneryBackground(ctx, t, wx, bgParticles, ripples);
 
-      // 2. 터치 지점 물결 링 표시
       if (anim.tapRing && anim.tapRing.alpha > 0.02) {
         ctx.save();
         ctx.strokeStyle = `rgba(255, 255, 255, ${anim.tapRing.alpha})`;
@@ -1221,22 +1572,19 @@
         anim.tapRing.alpha *= 0.92;
       }
 
-      // 3. z 깊이 순서대로 두 3D Mii 캐릭터 (610708, 691105) 렌더링
       const order = ['610708', '691105'].sort((a, b) => chars[a].z - chars[b].z);
       order.forEach((id) => {
         drawMii3DCharacter(ctx, id, chars[id], t, wx);
       });
 
-      // 4. 두 분 사이 하트
       const midX = (chars['610708'].x + chars['691105'].x) * 0.5;
       const midY = 202 + Math.sin(t * 3.2) * 5;
       ctx.save();
-      ctx.font = '26px sans-serif';
+      ctx.font = '24px sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('❤️', midX, midY);
       ctx.restore();
 
-      // 5. 두 분 아래쪽 앞마당을 돌아다니는 미니미 머털도사(mutul) & 말라뮤트 강아지(puppy)
       const compOrder = ['mutul', 'puppy'].sort((a, b) => chars[a].z - chars[b].z);
       compOrder.forEach((cid) => {
         drawMiniCompanion(ctx, cid, chars[cid], t, wx);
@@ -1262,6 +1610,12 @@
         wxPillEl.textContent = wx.badge;
         say(wx.line);
       },
+      setActivities(actMap, snapImmediate = true) {
+        const now = performance.now();
+        Object.keys(actMap || {}).forEach((id) => {
+          applyActivityToChar(id, actMap[id], now, snapImmediate);
+        });
+      },
       cleanup() {
         if (rafId) cancelAnimationFrame(rafId);
         if (heartbeatTimer) clearInterval(heartbeatTimer);
@@ -1282,5 +1636,11 @@
     }
   }
 
-  window.PET = { mountHomeTamagotchi, onWeather, setPreview, getPetState };
+  function setActivities(actMap, snapImmediate = true) {
+    if (activeMount && typeof activeMount.setActivities === 'function') {
+      activeMount.setActivities(actMap, snapImmediate);
+    }
+  }
+
+  window.PET = { mountHomeTamagotchi, onWeather, setPreview, setActivities, getPetState };
 })();
