@@ -107,16 +107,16 @@
         return { season: getCurrentSeason(), isRain: true, isSnow: false, isCold: false, isHot: false, isNight: false, outfit: 'short', hasUmbrella: true, badge: '☂️ 비 · 우산 산책', line: '☂️ 비가 내려서 두 분 다 우산을 챙겨 들고 산책 중이에요!' };
       }
       if (previewPreset === 'cold') {
-        return { season: 'autumn', isRain: false, isSnow: false, isCold: true, isHot: false, isNight: false, outfit: 'coat', hasUmbrella: false, badge: '🧣 추위 · 코트와 목도리', line: '🧣 날씨가 쌀쌀해서 따뜻한 코트와 목도리를 두르고 산책 중이에요!' };
+        return { season: 'winter', isChristmas: true, isRain: false, isSnow: false, isCold: true, isHot: false, isNight: false, outfit: 'coat', hasUmbrella: false, badge: '🎄 추위 · 코트와 목도리', line: '🎄 크리스마스 겨울 광장! 날씨가 쌀쌀해서 따뜻한 코트와 목도리를 두르고 산책해요!' };
       }
       if (previewPreset === 'snow') {
-        return { season: 'winter', isRain: false, isSnow: true, isCold: true, isHot: false, isNight: false, outfit: 'pad', hasUmbrella: true, badge: '⛄ 눈 · 우산과 패딩', line: '⛄ 함박눈이 내려서 따뜻한 패딩을 입고 우산을 쓰고 걸어요!' };
+        return { season: 'winter', isChristmas: true, isRain: false, isSnow: true, isCold: true, isHot: false, isNight: false, outfit: 'pad', hasUmbrella: true, badge: '🎄 눈 · 우산과 패딩', line: '🎄 화이트 크리스마스! 함박눈이 내려서 패딩을 입고 우산을 쓰고 걸어요!' };
       }
       if (previewPreset === 'hot') {
-        return { season: 'summer', isRain: false, isSnow: false, isCold: false, isHot: true, isNight: false, outfit: 'short', hasUmbrella: false, badge: '☀️ 더움 · 시원한 반팔', line: '☀️ 햇살이 따뜻한 날이라 시원한 반팔 차림으로 산책 중이에요!' };
+        return { season: 'summer', isChristmas: false, isRain: false, isSnow: false, isCold: false, isHot: true, isNight: false, outfit: 'short', hasUmbrella: false, badge: '☀️ 더움 · 시원한 반팔', line: '☀️ 햇살이 따뜻한 날이라 시원한 반팔 차림으로 산책 중이에요!' };
       }
       if (previewPreset === 'spring') {
-        return { season: 'spring', isRain: false, isSnow: false, isCold: false, isHot: false, isNight: false, outfit: 'short', hasUmbrella: false, badge: '🌸 봄꽃 공원 · 반팔', line: '🌸 벚꽃이 살랑살랑 흩날리는 봄날 공원을 함께 걸어요!' };
+        return { season: 'spring', isChristmas: false, isRain: false, isSnow: false, isCold: false, isHot: false, isNight: false, outfit: 'short', hasUmbrella: false, badge: '🌸 봄꽃 공원 · 반팔', line: '🌸 벚꽃이 살랑살랑 흩날리는 봄날 공원을 함께 걸어요!' };
       }
     }
 
@@ -131,13 +131,14 @@
     const isHot = temp >= 23;
 
     let season = getCurrentSeason();
-    if (isSnow || temp <= 2) season = 'winter';
+    if (isSnow || isCold || temp <= 10) season = 'winter';
     else if (isHot) season = 'summer';
-    else if (isCold) season = 'autumn';
+
+    const isChristmas = Boolean(isSnow || isCold || season === 'winter');
 
     let outfit = 'short';
     if (isSnow) outfit = 'pad';
-    else if (isCold) outfit = 'coat';
+    else if (isCold || season === 'winter') outfit = 'coat';
     else outfit = 'short';
 
     const hasUmbrella = isRain || isSnow;
@@ -145,26 +146,26 @@
     let badge = '🌤️ 산책하기 좋은 날';
     let line = '😊 광장에서 산책·턱걸이 운동·의자 휴식·낮잠을 자유롭게 즐겨요!';
     if (isSnow) {
-      badge = `⛄ 눈 (${temp}°) · 패딩과 우산`;
-      line = '⛄ 눈 소식이 있어 따뜻한 패딩에 우산을 챙겨 들고 산책해요!';
+      badge = `🎄 눈 (${temp}°) · 패딩과 우산`;
+      line = '🎄 화이트 크리스마스! 따뜻한 패딩에 우산을 챙겨 들고 산책해요!';
     } else if (isRain && isCold) {
-      badge = `☂️ 찬비 (${temp}°) · 코트와 우산`;
-      line = '☂️ 비가 내리고 쌀쌀해서 코트와 목도리에 우산까지 챙겼어요!';
+      badge = `🎄 찬비 (${temp}°) · 코트와 우산`;
+      line = '🎄 쌀쌀한 겨울비 소식에 코트와 목도리, 우산까지 따뜻하게 챙겼어요!';
     } else if (isRain) {
       badge = `☂️ 비 (${temp}°) · 우산 산책`;
       line = '☂️ 오늘은 비 소식이 있어요! 외출하실 때 우산 꼭 챙기세요 😊';
-    } else if (isCold) {
-      badge = `🧣 쌀쌀함 (${temp}°) · 코트와 목도리`;
-      line = '🧣 날씨가 쌀쌀해서 두 분 다 따뜻한 코트와 목도리를 착용하셨어요!';
+    } else if (isCold || season === 'winter') {
+      badge = `🎄 추위 (${temp}°) · 코트와 목도리`;
+      line = '🎄 크리스마스 겨울 광장! 쌀쌀한 날씨에 따뜻한 코트와 목도리를 착용하셨어요!';
     } else if (isHot) {
       badge = `☀️ 따뜻함 (${temp}°) · 반팔 산책`;
       line = '☀️ 날씨가 따뜻해서 가벼운 반팔 차림으로 상쾌하게 산책해요!';
     } else if (brief && Number.isFinite(brief.temp)) {
-      const seasonKor = { spring: '🌸 봄', summer: '🌿 여름', autumn: '🍁 가을', winter: '❄️ 겨울' }[season];
+      const seasonKor = { spring: '🌸 봄', summer: '🌿 여름', autumn: '🍁 가을', winter: '🎄 겨울' }[season];
       badge = `${seasonKor} ${temp}° · 산책 광장`;
     }
 
-    return { season, isNight, isRain, isSnow, isCold, isHot, outfit, hasUmbrella, badge, line, temp };
+    return { season, isChristmas, isNight, isRain, isSnow, isCold, isHot, outfit, hasUmbrella, badge, line, temp };
   }
 
   function normAngle(a) {
@@ -178,24 +179,33 @@
   }
 
   // ==========================================================
-  // 계절(봄·여름·가을·겨울) & 날씨(맑음·비·눈·밤) 배경 공간 렌더러
+  // 계절(봄·여름·가을·겨울 크리스마스) & 날씨(맑음·비·눈·추위·밤) 배경 공간 렌더러
   // ==========================================================
   function drawSceneryBackground(ctx, t, wx, bgParticles, ripples) {
     const W = 580, H = 430;
     const horizonY = 252;
+    const isXmas = Boolean(wx.isChristmas || wx.isSnow || wx.isCold || wx.season === 'winter');
 
     // 1. 하늘 그라데이션
     const skyGrad = ctx.createLinearGradient(0, 0, 0, horizonY);
     if (wx.isNight) {
       skyGrad.addColorStop(0, '#0F172A');
       skyGrad.addColorStop(1, '#1E3A5F');
-    } else if (wx.isRain) {
+    } else if (wx.isRain && !isXmas) {
       skyGrad.addColorStop(0, '#475569');
       skyGrad.addColorStop(1, '#94A3B8');
-    } else if (wx.isSnow || wx.season === 'winter') {
-      skyGrad.addColorStop(0, '#7DD3FC');
-      skyGrad.addColorStop(0.55, '#BAE6FD');
-      skyGrad.addColorStop(1, '#F1F5F9');
+    } else if (isXmas) {
+      if (wx.isSnow) {
+        // 눈 오는 화이트 크리스마스 하늘
+        skyGrad.addColorStop(0, '#1D4ED8');
+        skyGrad.addColorStop(0.52, '#60A5FA');
+        skyGrad.addColorStop(1, '#E0F2FE');
+      } else {
+        // 추운 날 포근한 겨울 크리스마스 하늘
+        skyGrad.addColorStop(0, '#1E3A8A');
+        skyGrad.addColorStop(0.55, '#3B82F6');
+        skyGrad.addColorStop(1, '#BAE6FD');
+      }
     } else if (wx.season === 'autumn') {
       skyGrad.addColorStop(0, '#38BDF8');
       skyGrad.addColorStop(0.65, '#BAE6FD');
@@ -212,14 +222,37 @@
     ctx.fillStyle = skyGrad;
     ctx.fillRect(0, 0, W, horizonY + 10);
 
+    // 크리스마스 하늘 반짝이는 황금 별빛 & 산타 루돌프 썰매
+    if (isXmas) {
+      ctx.save();
+      const stars = [
+        { x: 64, y: 74, r: 2.2 },
+        { x: 148, y: 92, r: 1.8 },
+        { x: 235, y: 68, r: 2.5 },
+        { x: 342, y: 84, r: 2.0 },
+        { x: 432, y: 66, r: 2.4 },
+        { x: 518, y: 88, r: 1.9 },
+      ];
+      stars.forEach((st, idx) => {
+        const twinkle = 0.45 + 0.55 * Math.sin(t * 3.6 + idx * 1.3);
+        ctx.fillStyle = `rgba(254, 240, 138, ${twinkle})`;
+        ctx.shadowColor = '#FDE047';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(st.x, st.y, st.r * (0.8 + twinkle * 0.4), 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+    }
+
     // 2. 해 / 달 / 구름
     ctx.save();
-    if (wx.isNight) {
+    if (wx.isNight || (isXmas && !wx.isSnow)) {
       ctx.fillStyle = '#FEF08A';
       ctx.shadowColor = '#FEF08A';
-      ctx.shadowBlur = 18;
+      ctx.shadowBlur = 20;
       ctx.beginPath();
-      ctx.arc(485, 82, 22, 0, Math.PI * 2);
+      ctx.arc(488, 84, 20, 0, Math.PI * 2);
       ctx.fill();
     } else if (!wx.isRain && !wx.isSnow) {
       const sunPulse = 1 + Math.sin(t * 2) * 0.05;
@@ -237,7 +270,9 @@
       ? 'rgba(100, 116, 139, 0.82)'
       : wx.isNight
         ? 'rgba(148, 163, 184, 0.25)'
-        : 'rgba(255, 255, 255, 0.82)';
+        : isXmas
+          ? 'rgba(255, 255, 255, 0.68)'
+          : 'rgba(255, 255, 255, 0.82)';
     ctx.fillStyle = cloudColor;
     [
       { baseX: 110, y: 88, s: 1.0, spd: 4 },
@@ -266,7 +301,7 @@
     let lawnBotColor = '#4ADE80';
     let pathColor = '#E2E8F0';
 
-    if (wx.isSnow || wx.season === 'winter') {
+    if (isXmas) {
       farHillColor = '#CBD5E1';
       nearHillColor = '#E2E8F0';
       lawnTopColor = '#F8FAFC';
@@ -332,19 +367,24 @@
     ctx.globalAlpha = 1;
     ctx.restore();
 
-    // 4. 계절별 나무 & 공원 운동기구(철봉) & 원목 의자/벤치 배치
-    drawSeasonTree(ctx, 46, 268, 0.94, wx, t);
-    drawSeasonTree(ctx, 528, 272, 0.92, wx, t + 1.5);
+    // 4. 계절별 나무 (겨울/눈/추위는 화려한 크리스마스 트리!) & 공원 기구 배치
+    if (isXmas) {
+      drawChristmasTree(ctx, 48, 282, 1.02, t, true);
+      drawChristmasTree(ctx, 532, 284, 0.98, t + 1.2, false);
+    } else {
+      drawSeasonTree(ctx, 46, 268, 0.94, wx, t);
+      drawSeasonTree(ctx, 528, 272, 0.92, wx, t + 1.5);
+    }
 
     // 왼쪽 공원 턱걸이 철봉 기구 (x=126, y=348)
-    drawPullupBarStation(ctx, 126, 348, wx);
+    drawPullupBarStation(ctx, 126, 348, wx, t);
 
     // 오른쪽 공원 원목 의자/벤치 & 가로등 (x=446, y=348)
-    drawParkChairStation(ctx, 446, 348, wx);
+    drawParkChairStation(ctx, 446, 348, wx, t);
 
-    // 눈 오는 날 / 겨울에는 귀여운 눈사람 추가 (x=216, y=274)
-    if (wx.isSnow || wx.season === 'winter') {
-      drawSnowman(ctx, 216, 276);
+    // 겨울 크리스마스(눈 오는 날 / 추운 날)에는 산타 모자 쓴 눈사람 & 선물상자 추가 (x=290, y=276)
+    if (isXmas) {
+      drawSnowman(ctx, 290, 276, t);
     }
 
     // 비 오는 날 바닥 물웅덩이 파장(Ripples)
@@ -380,13 +420,29 @@
         ctx.lineTo(p.x - 4, p.y + 15);
         ctx.stroke();
       }
-    } else if (wx.isSnow || wx.season === 'winter') {
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
-      for (const p of bgParticles) {
-        p.y = (p.y + p.v * 0.85) % H;
-        p.x = (p.x + Math.sin(t + p.y * 0.03) * 0.8 + W) % W;
+    } else if (wx.isSnow) {
+      // 눈 오는 크리스마스: 함박눈 + 반짝이는 골드 스파클
+      for (let i = 0; i < bgParticles.length; i++) {
+        const p = bgParticles[i];
+        p.y = (p.y + p.v * 0.9) % H;
+        p.x = (p.x + Math.sin(t + p.y * 0.03) * 0.85 + W) % W;
+        ctx.fillStyle = i % 5 === 0 ? 'rgba(254, 240, 138, 0.9)' : 'rgba(255, 255, 255, 0.94)';
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.s * 2.1, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, p.s * 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (isXmas) {
+      // 추운 날 크리스마스: 잔잔한 눈송이 + 황금빛 크리스마스 반짝이
+      for (let i = 0; i < bgParticles.length; i++) {
+        const p = bgParticles[i];
+        p.y = (p.y + p.v * 0.45) % H;
+        p.x = (p.x + Math.sin(t * 1.2 + i) * 0.6 + W) % W;
+        const pulse = 0.55 + 0.45 * Math.sin(t * 3.5 + i);
+        ctx.fillStyle = i % 2 === 0
+          ? `rgba(254, 240, 138, ${0.85 * pulse})`
+          : `rgba(255, 255, 255, ${0.8 * pulse})`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.s * (1.3 + pulse * 0.6), 0, Math.PI * 2);
         ctx.fill();
       }
     } else if (wx.season === 'spring') {
@@ -429,6 +485,173 @@
     ctx.restore();
   }
 
+  // 겨울(눈 오는 날 · 추운 날) 화려한 크리스마스 트리 + 오너먼트 + 알전구 + 선물상자
+  function drawChristmasTree(ctx, x, y, scale, t, isLeft) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+
+    // 바닥 그림자
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.18)';
+    ctx.beginPath();
+    ctx.ellipse(0, 2, 42, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 나무 기둥
+    ctx.fillStyle = '#78350F';
+    ctx.beginPath();
+    ctx.roundRect(-9, -28, 18, 30, 4);
+    ctx.fill();
+
+    // 3단 전나무 잎 (아래 -> 중간 -> 위) + 가지 끝 하얀 눈
+    const tiers = [
+      { topY: -86, botY: -22, halfW: 44 },
+      { topY: -122, botY: -56, halfW: 36 },
+      { topY: -154, botY: -92, halfW: 27 },
+    ];
+    tiers.forEach((tr) => {
+      const grad = ctx.createLinearGradient(0, tr.topY, 0, tr.botY);
+      grad.addColorStop(0, '#16A34A');
+      grad.addColorStop(1, '#14532D');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(0, tr.topY);
+      ctx.lineTo(tr.halfW, tr.botY);
+      ctx.quadraticCurveTo(0, tr.botY + 8, -tr.halfW, tr.botY);
+      ctx.closePath();
+      ctx.fill();
+
+      // 가지 끝 소복한 눈장식
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.lineWidth = 3.5;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-tr.halfW + 3, tr.botY - 1);
+      ctx.quadraticCurveTo(0, tr.botY + 7, tr.halfW - 3, tr.botY - 1);
+      ctx.stroke();
+    });
+
+    // 황금 가랜드 줄 (Tinsel Garland)
+    ctx.strokeStyle = 'rgba(253, 224, 71, 0.85)';
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.moveTo(-18, -108);
+    ctx.quadraticCurveTo(2, -96, 22, -102);
+    ctx.moveTo(-26, -74);
+    ctx.quadraticCurveTo(0, -60, 28, -68);
+    ctx.moveTo(-34, -40);
+    ctx.quadraticCurveTo(4, -26, 36, -34);
+    ctx.stroke();
+
+    // 컬러 오너먼트 볼 & 반짝이는 크리스마스 알전구
+    const ornaments = [
+      { dx: -12, dy: -112, c: '#EF4444' },
+      { dx: 11, dy: -102, c: '#FACC15' },
+      { dx: -20, dy: -76, c: '#38BDF8' },
+      { dx: 4, dy: -82, c: '#EF4444' },
+      { dx: 20, dy: -70, c: '#F472B6' },
+      { dx: -26, dy: -42, c: '#FACC15' },
+      { dx: -4, dy: -46, c: '#EF4444' },
+      { dx: 16, dy: -38, c: '#38BDF8' },
+      { dx: 28, dy: -44, c: '#4ADE80' },
+    ];
+    ornaments.forEach((ob, idx) => {
+      const glow = 0.5 + 0.5 * Math.sin(t * 4.5 + idx * 1.1);
+      ctx.save();
+      ctx.fillStyle = ob.c;
+      ctx.shadowColor = glow > 0.7 ? '#FEF08A' : ob.c;
+      ctx.shadowBlur = glow * 10;
+      ctx.beginPath();
+      ctx.arc(ob.dx, ob.dy, 4.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
+
+    // 트리 꼭대기 황금 별 (Christmas Star)
+    const starPulse = 1 + Math.sin(t * 3.8) * 0.08;
+    ctx.save();
+    ctx.translate(0, -158);
+    ctx.scale(starPulse, starPulse);
+    ctx.fillStyle = '#FACC15';
+    ctx.strokeStyle = '#FEF08A';
+    ctx.lineWidth = 1.5;
+    ctx.shadowColor = '#FDE047';
+    ctx.shadowBlur = 16;
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const outerA = -Math.PI / 2 + (i * Math.PI * 2) / 5;
+      const innerA = outerA + Math.PI / 5;
+      const ox = Math.cos(outerA) * 12;
+      const oy = Math.sin(outerA) * 12;
+      const ix = Math.cos(innerA) * 5.2;
+      const iy = Math.sin(innerA) * 5.2;
+      if (i === 0) ctx.moveTo(ox, oy);
+      else ctx.lineTo(ox, oy);
+      ctx.lineTo(ix, iy);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+
+    // 트리 아래 크리스마스 선물상자 2개
+    const giftDir = isLeft ? 1 : -1;
+    drawGiftBox(ctx, giftDir * 16, -2, 18, 15, '#EF4444', '#FACC15');
+    drawGiftBox(ctx, giftDir * 31, 0, 14, 12, '#16A34A', '#FCA5A5');
+
+    ctx.restore();
+  }
+
+  function drawGiftBox(ctx, x, y, w, h, boxColor, ribbonColor) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.fillStyle = boxColor;
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(-w / 2, -h, w, h, 2.5);
+    ctx.fill();
+    ctx.stroke();
+
+    // 십자 리본
+    ctx.fillStyle = ribbonColor;
+    ctx.fillRect(-2, -h, 4, h);
+    ctx.fillRect(-w / 2, -h * 0.58, w, 3.2);
+
+    // 상단 리본 매듭
+    ctx.beginPath();
+    ctx.ellipse(-3.5, -h - 2, 4, 2.2, -0.3, 0, Math.PI * 2);
+    ctx.ellipse(3.5, -h - 2, 4, 2.2, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawChristmasWreath(ctx, x, y, r) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.strokeStyle = '#15803D';
+    ctx.lineWidth = r * 0.55;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // 빨간 열매 장식
+    ctx.fillStyle = '#EF4444';
+    [0, 1.6, 3.1, 4.7].forEach((a) => {
+      ctx.beginPath();
+      ctx.arc(Math.cos(a) * r, Math.sin(a) * r, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // 상단 빨간 리본
+    ctx.fillStyle = '#DC2626';
+    ctx.beginPath();
+    ctx.ellipse(-4, -r + 1, 4.5, 2.6, -0.35, 0, Math.PI * 2);
+    ctx.ellipse(4, -r + 1, 4.5, 2.6, 0.35, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
   function drawSeasonTree(ctx, x, y, scale, wx, t) {
     ctx.save();
     ctx.translate(x, y);
@@ -442,10 +665,7 @@
     ctx.fill();
 
     let c1 = '#22C55E', c2 = '#16A34A';
-    if (wx.isSnow || wx.season === 'winter') {
-      c1 = '#15803D';
-      c2 = '#166534';
-    } else if (wx.season === 'spring') {
+    if (wx.season === 'spring') {
       c1 = '#FBCFE8';
       c2 = '#F472B6';
     } else if (wx.season === 'autumn') {
@@ -468,19 +688,13 @@
       ctx.beginPath();
       ctx.arc(pf.dx, pf.dy, pf.r, 0, Math.PI * 2);
       ctx.fill();
-
-      if (wx.isSnow || wx.season === 'winter') {
-        ctx.fillStyle = '#FFFFFF';
-        ctx.beginPath();
-        ctx.arc(pf.dx, pf.dy - 4, pf.r * 0.85, Math.PI * 1.08, Math.PI * 1.92);
-        ctx.fill();
-      }
     });
     ctx.restore();
   }
 
   // 왼쪽 턱걸이 운동기구 (철봉: 성인용 높은 바 + 미니 머털이용 낮은 바)
-  function drawPullupBarStation(ctx, x, y, wx) {
+  function drawPullupBarStation(ctx, x, y, wx, t = 0) {
+    const isXmas = Boolean(wx.isChristmas || wx.isSnow || wx.isCold || wx.season === 'winter');
     ctx.save();
     ctx.translate(x, y);
 
@@ -523,15 +737,31 @@
     ctx.fillRect(31, -6, 10, 8);
     ctx.fillRect(-72, -5, 8, 7);
 
-    if (wx.isSnow || wx.season === 'winter') {
+    if (isXmas) {
       ctx.fillStyle = '#FFFFFF';
       ctx.fillRect(-38, -237, 76, 3);
+      // 철봉 기둥에 크리스마스 리스 장식 & 알전구
+      drawChristmasWreath(ctx, 36, -195, 10);
+      const bulbColors = ['#EF4444', '#FACC15', '#4ADE80', '#38BDF8', '#F472B6'];
+      for (let i = 0; i < 5; i++) {
+        const bx = -30 + i * 15;
+        const pulse = 0.5 + 0.5 * Math.sin(t * 4.5 + i);
+        ctx.save();
+        ctx.fillStyle = bulbColors[i];
+        ctx.shadowColor = bulbColors[i];
+        ctx.shadowBlur = 6 * pulse;
+        ctx.beginPath();
+        ctx.arc(bx, -236, 2.8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
     }
     ctx.restore();
   }
 
   // 오른쪽 공원 원목 의자/벤치 & 가로등
-  function drawParkChairStation(ctx, x, y, wx) {
+  function drawParkChairStation(ctx, x, y, wx, t = 0) {
+    const isXmas = Boolean(wx.isChristmas || wx.isSnow || wx.isCold || wx.season === 'winter');
     ctx.save();
     ctx.translate(x, y);
 
@@ -543,15 +773,20 @@
     ctx.lineTo(58, -135);
     ctx.stroke();
 
-    ctx.fillStyle = (wx.isNight || wx.isRain || wx.isSnow) ? '#FDE047' : '#FEF9C3';
-    if (wx.isNight || wx.isRain || wx.isSnow) {
+    ctx.fillStyle = (wx.isNight || wx.isRain || isXmas) ? '#FDE047' : '#FEF9C3';
+    if (wx.isNight || wx.isRain || isXmas) {
       ctx.shadowColor = '#FDE047';
-      ctx.shadowBlur = 16;
+      ctx.shadowBlur = 18;
     }
     ctx.beginPath();
-    ctx.arc(58, -140, 9, 0, Math.PI * 2);
+    ctx.arc(58, -140, 9.5, 0, Math.PI * 2);
     ctx.fill();
     ctx.shadowBlur = 0;
+
+    // 크리스마스 시즌 가로등 리스 장식
+    if (isXmas) {
+      drawChristmasWreath(ctx, 58, -112, 10);
+    }
 
     // 벤치 그림자
     ctx.fillStyle = 'rgba(15, 23, 42, 0.16)';
@@ -579,7 +814,7 @@
     ctx.roundRect(-50, -21, 100, 9, 3);
     ctx.fill();
 
-    if (wx.isSnow || wx.season === 'winter') {
+    if (isXmas) {
       ctx.fillStyle = '#FFFFFF';
       ctx.fillRect(-48, -48, 96, 3.5);
     }
@@ -684,28 +919,78 @@
     ctx.restore();
   }
 
+  // 산타 모자와 목도리를 두른 크리스마스 눈사람 + 캔디케인 + 선물상자
   function drawSnowman(ctx, x, y) {
     ctx.save();
     ctx.translate(x, y);
+
+    // 그림자
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.16)';
+    ctx.beginPath();
+    ctx.ellipse(0, 2, 22, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 눈사람 몸통 & 머리
     ctx.fillStyle = '#FFFFFF';
     ctx.strokeStyle = '#CBD5E1';
-    ctx.lineWidth = 1.2;
+    ctx.lineWidth = 1.4;
     ctx.beginPath();
-    ctx.arc(0, -12, 14, 0, Math.PI * 2);
+    ctx.arc(0, -14, 16, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
     ctx.beginPath();
-    ctx.arc(0, -31, 10, 0, Math.PI * 2);
+    ctx.arc(0, -35, 11.5, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
-    ctx.fillStyle = '#EF4444';
-    ctx.fillRect(-9, -23, 18, 4.5);
+
+    // 눈 & 당근 코 & 단추
+    ctx.fillStyle = '#1E293B';
+    ctx.beginPath();
+    ctx.arc(-4, -37, 1.5, 0, Math.PI * 2);
+    ctx.arc(4, -37, 1.5, 0, Math.PI * 2);
+    ctx.arc(0, -17, 1.6, 0, Math.PI * 2);
+    ctx.arc(0, -10, 1.6, 0, Math.PI * 2);
+    ctx.fill();
+
     ctx.fillStyle = '#F97316';
     ctx.beginPath();
-    ctx.moveTo(0, -31);
-    ctx.lineTo(7, -29);
-    ctx.lineTo(0, -28);
+    ctx.moveTo(0, -35);
+    ctx.lineTo(8, -33);
+    ctx.lineTo(0, -31.5);
     ctx.fill();
+
+    // 빨강·초록 크리스마스 목도리
+    ctx.fillStyle = '#DC2626';
+    ctx.beginPath();
+    ctx.roundRect(-10, -26, 20, 5.5, 2.5);
+    ctx.fill();
+    ctx.fillStyle = '#16A34A';
+    ctx.fillRect(-5, -26, 3.5, 5.5);
+    ctx.fillRect(2, -26, 3.5, 5.5);
+    ctx.fillStyle = '#DC2626';
+    ctx.fillRect(4, -23, 4.5, 10);
+
+    // 귀여운 빨간 산타 모자 (Santa Hat)
+    ctx.fillStyle = '#DC2626';
+    ctx.beginPath();
+    ctx.moveTo(-11, -43);
+    ctx.quadraticCurveTo(2, -60, 14, -48);
+    ctx.lineTo(10, -43);
+    ctx.closePath();
+    ctx.fill();
+
+    // 산타 모자 흰색 털 테두리 & 방울
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    ctx.roundRect(-12, -45, 24, 5, 2.5);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(14, -48, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 옆에 놓인 크리스마스 미니 선물상자
+    drawGiftBox(ctx, -22, 0, 13, 11, '#EF4444', '#FDE047');
+
     ctx.restore();
   }
 
