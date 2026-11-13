@@ -656,7 +656,7 @@
   function hasPendingTeach(member = typeof currentMember !== 'undefined' ? currentMember : null) {
     if (!member || !member.trainMemory) return false;
     const tm = member.trainMemory;
-    return Number.isFinite(tm.taskId) && tm.learnedDay && tm.learnedDay !== todayKey() && tm.taughtDay !== todayKey();
+    return Number.isFinite(tm.taskId) && Boolean(tm.learnedDay) && tm.learnedDay !== todayKey() && !tm.taughtDay;
   }
 
   // 오늘의 코스 2번째 스테이지가 '왜라고 질문하기(why)'인지 '선배·후배 교육(train)'인지 결정
@@ -1253,7 +1253,12 @@
             tip('🎉 <b>후배가 선배님 검토를 완벽히 통과해서 내가 큰 칭찬을 받았어요!</b>', 'good');
 
             if (typeof currentMember !== 'undefined' && currentMember && currentMember.trainMemory) {
+              const wasPendingTeach = hasPendingTeach(currentMember);
               currentMember.trainMemory.taughtDay = todayKey();
+              if (wasPendingTeach) {
+                currentMember.workplaceStageDay = todayKey();
+                currentMember.workplaceStageType = 'train';
+              }
               if (typeof saveMember === 'function') saveMember();
             }
 
