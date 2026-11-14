@@ -4226,8 +4226,19 @@ function showFinalResult(){
   v.querySelector('#retry').addEventListener('click', onRetry);
   if(passed){
     v.querySelector('#home').addEventListener('click', onHome);
-    // 통과 기준 점수 이상일 때만 3개 상자 선택 보너스 모달 팝업
-    chestTimer = setTimeout(() => { showChestRewardModal(); }, 650);
+    // 통과 기준 점수 이상일 때만 3~4일 1회 아바타 의상 선물 확인 후 3개 상자 선택 보너스 모달 팝업
+    chestTimer = setTimeout(() => {
+      if (!v.isConnected) return;
+      const wardrobeDrop = window.WARDROBE ? WARDROBE.tryAwardClearDrop() : null;
+      if (wardrobeDrop && window.WARDROBE) {
+        WARDROBE.showRewardCelebration(wardrobeDrop.item, {
+          nextIntervalDays: wardrobeDrop.nextIntervalDays,
+          onDone: () => showChestRewardModal(),
+        });
+      } else {
+        showChestRewardModal();
+      }
+    }, 650);
   } else if (isGlassReadyToBreak()) {
     chestTimer = setTimeout(() => {
       if (isGlassReadyToBreak()) {
@@ -4508,6 +4519,10 @@ async function renderAdminDashboard(){
           <button class="btn btn-ghost btn-small" id="testVerseBtn" style="margin-top:0;font-size:14px;padding:12px 8px;">📖 말씀카드<br><span style="font-size:11px;color:var(--ink-soft);">15%</span></button>
           <button class="btn btn-ghost btn-small" id="testMeoteolBtn" style="margin-top:0;font-size:14px;padding:12px 8px;">🎴 머털도사<br><span style="font-size:11px;color:var(--ink-soft);">5%</span></button>
         </div>
+        <div class="btn-row" style="margin-top:8px;">
+          <button class="btn btn-ghost btn-small" id="testWardrobeDropBtn" style="margin-top:0;font-size:13px;padding:10px 8px;">🎩 의상 축하 미리보기</button>
+          <button class="btn btn-ghost btn-small" id="testWardrobeInvBtn" style="margin-top:0;font-size:13px;padding:10px 8px;">🎒 내 옷장 열기</button>
+        </div>
       </div>
 
       <div class="admin-panel">
@@ -4552,6 +4567,18 @@ async function renderAdminDashboard(){
   v.querySelector('#testMeoteolBtn').addEventListener('click', ()=>{
     if(!currentMember){ showToast('머털도사 카드 지급 테스트는 이 기기에 회원으로 로그인한 상태에서만 가능해요'); return; }
     showMeoteolRewardScreen();
+  });
+  const testWbDropBtn = v.querySelector('#testWardrobeDropBtn');
+  if (testWbDropBtn) testWbDropBtn.addEventListener('click', () => {
+    if (!window.WARDROBE) return;
+    const pool = WARDROBE.ALL_ITEMS;
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    WARDROBE.showRewardCelebration(pick, { nextIntervalDays: Math.random() < 0.5 ? 3 : 4 });
+  });
+  const testWbInvBtn = v.querySelector('#testWardrobeInvBtn');
+  if (testWbInvBtn) testWbInvBtn.addEventListener('click', () => {
+    if (!currentMember) { showToast('회원 로그인 후 내 옷장을 열 수 있어요'); return; }
+    if (window.WARDROBE) WARDROBE.openInventoryModal();
   });
   v.querySelector('#toLibrary').addEventListener('click',renderAdminLibrary);
   v.querySelector('#exportCards').addEventListener('click', exportCardsToFile);
@@ -4918,13 +4945,14 @@ function clearBackground() {
 // ---------- INIT ----------
 (function init(){ renderLoginScreen(); })();
 </script>
-<script src="benchmark.js?v=7"></script>
+<script src="benchmark.js?v=8"></script>
 <script src="coop.js?v=4"></script>
 <script src="recall.js?v=1"></script>
 <script src="radio.js?v=3"></script>
 <script src="glass.js?v=7"></script>
 <script src="weather.js?v=4"></script>
-<script src="pet.js?v=15"></script>
+<script src="wardrobe.js?v=1"></script>
+<script src="pet.js?v=16"></script>
 <script src="video.js?v=2"></script>
 <script src="clean.js?v=6"></script>
 <script src="why.js?v=10"></script>

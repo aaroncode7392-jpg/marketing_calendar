@@ -87,6 +87,12 @@
       .pet-fx-layer{position:absolute;inset:0;pointer-events:none;z-index:5;overflow:hidden;}
       .pet-float-item{position:absolute;font-size:24px;animation:petFloatUp .95s ease-out forwards;pointer-events:none;filter:drop-shadow(0 2px 6px rgba(0,0,0,.2));}
       @keyframes petFloatUp{0%{opacity:1;transform:translate(-50%,0) scale(.6);}40%{opacity:1;transform:translate(-50%,-28px) scale(1.2);}100%{opacity:0;transform:translate(-50%,-64px) scale(.9);}}
+      .pet-wardrobe-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:8px 10px;background:linear-gradient(135deg,#FFFBEB,#FEF3C7);border-top:1.5px solid rgba(251,191,36,.35);}
+      .pet-wb-chips{display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex:1;min-width:0;}
+      .pet-wb-chip{display:inline-flex;align-items:center;gap:4px;padding:4px 9px;border-radius:999px;font-size:12px;font-weight:700;background:#FFF;color:#64748B;border:1px solid #E2E8F0;max-width:215px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;}
+      .pet-wb-chip.active{background:#FEF9C3;color:#92400E;border-color:#F59E0B;}
+      .pet-wb-open{border:0;border-radius:999px;padding:7px 13px;font-family:'Jua';font-size:13.5px;color:#fff;background:linear-gradient(135deg,#F59E0B,#D97706);box-shadow:0 3px 0 #B45309;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+      .pet-wb-open:active{transform:translateY(2px);box-shadow:0 1px 0 #B45309;}
     `;
     document.head.appendChild(st);
   }
@@ -116,19 +122,54 @@
   }
 
   const playerState = {
-    '610708': { playing: false, gameLabel: '두뇌운동', crownDate: null, crownOverride: null },
-    '691105': { playing: false, gameLabel: '두뇌운동', crownDate: null, crownOverride: null },
+    '610708': { playing: false, gameLabel: '두뇌운동', crownDate: null, crownOverride: null, wardrobe: { hatId: null, mufflerId: null } },
+    '691105': { playing: false, gameLabel: '두뇌운동', crownDate: null, crownOverride: null, wardrobe: { hatId: null, mufflerId: null } },
   };
 
-  // 로컬스토리지에 저장된 오늘의 왕관 기록 복원
+  // 로컬스토리지에 저장된 오늘의 왕관 및 착용 의상 기록 복원
   ['610708', '691105'].forEach((id) => {
     try {
       const savedDate = localStorage.getItem('petCrownDate:' + id);
       if (savedDate === getTodayLocalYMD()) {
         playerState[id].crownDate = savedDate;
       }
+      const savedWb = JSON.parse(localStorage.getItem('petWardrobe:' + id) || 'null');
+      if (savedWb && typeof savedWb === 'object') {
+        playerState[id].wardrobe = { hatId: savedWb.hatId || null, mufflerId: savedWb.mufflerId || null };
+      }
     } catch (e) { /* 무시 */ }
   });
+
+  function getWardrobeFor(charId) {
+    const id = String(charId || '');
+    const st = playerState[id];
+    if (st && st.wardrobeOverride) {
+      return { hatId: st.wardrobeOverride.hatId || null, mufflerId: st.wardrobeOverride.mufflerId || null };
+    }
+    const m = typeof currentMember !== 'undefined' ? currentMember : null;
+    if (m && String(m.birthdate || m.id || '') === id && m.wardrobe && m.wardrobe.equipped) {
+      return {
+        hatId: m.wardrobe.equipped.hatId || null,
+        mufflerId: m.wardrobe.equipped.mufflerId || null,
+      };
+    }
+    return (st && st.wardrobe) ? { hatId: st.wardrobe.hatId || null, mufflerId: st.wardrobe.mufflerId || null } : { hatId: null, mufflerId: null };
+  }
+
+  function setWardrobe(charId, equipped = {}, opts = {}) {
+    const id = String(charId || getMyId());
+    if (!playerState[id]) return;
+    const clean = { hatId: equipped.hatId || null, mufflerId: equipped.mufflerId || null };
+    playerState[id].wardrobeOverride = null;
+    playerState[id].wardrobe = clean;
+    try { localStorage.setItem('petWardrobe:' + id, JSON.stringify(clean)); } catch (e) { /* 무시 */ }
+    if (activeMount && typeof activeMount.onWardrobeChanged === 'function') {
+      activeMount.onWardrobeChanged(id);
+    }
+    if (opts.push !== false) {
+      syncPlayerStateToFirestore();
+    }
+  }
 
   // 현재 시각 기준(자정 전까지) 해당 캐릭터가 왕관을 써야 하는지 판별
   function hasCrownNow(charId) {
@@ -163,6 +204,9 @@
         },
         crowns: {
           [myId]: hasCrownNow(myId) ? getTodayLocalYMD() : null,
+        },
+        wardrobe: {
+          [myId]: getWardrobeFor(myId),
         },
         ...(extraPayload || {}),
       };
@@ -1861,8 +1905,24 @@
     ctx.restore();
   }
 
+  // 공용 아바타 착용 모자 + 머플러 렌더링 헬퍼 (정면/측면/앉기/턱걸이/게임중 공통)
+  function drawCharWardrobeOverlay(ctx, charId, opts = {}) {
+    if (!window.WARDROBE) return { crownOffsetY: 0, headCx: 0 };
+    const wb = opts.wardrobe || getWardrobeFor(charId);
+    const metrics = WARDROBE.getAnchorMetrics(charId, opts);
+    if (wb && wb.mufflerId && !opts.hatOnly) {
+      WARDROBE.drawMuffler(ctx, wb.mufflerId, { metrics, t: opts.t || 0 });
+    }
+    let crownOffsetY = 0;
+    if (wb && wb.hatId) {
+      const res = WARDROBE.drawHat(ctx, wb.hatId, { metrics, t: opts.t || 0 });
+      crownOffsetY = (res && res.crownOffsetY) || 0;
+    }
+    return { crownOffsetY, headCx: metrics.headCx };
+  }
+
   // 이불 덮고 잠드는 침구(매트 + 베개 + 포근한 퀼팅 이불 + Zzz) 렌더링
-  function drawSleepingBedAndBlanket(ctx, charId, img, targetW, targetH, t, isMini, hasCrown = false) {
+  function drawSleepingBedAndBlanket(ctx, charId, img, targetW, targetH, t, isMini, hasCrown = false, sleepOpts = null) {
     const breath = 1 + Math.sin(t * 2.5) * 0.028;
     const lieScale = isMini ? 0.78 : 0.66;
     const charLen = targetH * lieScale;
@@ -1901,8 +1961,17 @@
     ctx.rotate(-Math.PI * 0.48);
     ctx.scale(lieScale, lieScale * breath);
     ctx.drawImage(img, -targetW / 2, -targetH + 6, targetW, targetH);
+    let sleepCrownLiftY = 0;
+    let sleepCrownX = 0;
+    if (!isMini && (charId === '610708' || charId === '691105')) {
+      const wRes = drawCharWardrobeOverlay(ctx, charId, {
+        pH: targetH, targetW, footY: 6, outfit: (sleepOpts && sleepOpts.outfit) || 'short', isSideView: false, t,
+      });
+      sleepCrownLiftY = wRes.crownOffsetY;
+      sleepCrownX = wRes.headCx;
+    }
     if (hasCrown) {
-      drawGoldenCrown(ctx, 0, -targetH + 14, 0.96, t);
+      drawGoldenCrown(ctx, sleepCrownX, -targetH + 14 - sleepCrownLiftY, 0.96, t);
     }
     ctx.restore();
 
@@ -2138,9 +2207,16 @@
       ctx.shadowBlur = 0;
     }
 
-    // 4) 오늘 게임 완료 시 머리 위 황금 왕관!
+    // 4) 착용 중인 머플러 & 모자 + 오늘 게임 완료 시 머리 위 황금 왕관!
+    let armlessCrownLiftY = 0;
+    if (!isMini && !isMutul) {
+      const wRes = drawCharWardrobeOverlay(ctx, charId, {
+        pH, targetW: pH * 0.44, footY, outfit, isSideView: false, armless: true, t,
+      });
+      armlessCrownLiftY = wRes.crownOffsetY;
+    }
     if (hasCrown) {
-      drawGoldenCrown(ctx, 0, topY + (isFather ? 13 : 15) * u, isMini ? 0.75 : 0.92, t);
+      drawGoldenCrown(ctx, 0, topY + (isFather ? 13 : 15) * u - armlessCrownLiftY, isMini ? 0.75 : 0.92, t);
     }
 
     ctx.restore();
@@ -2429,7 +2505,7 @@
     if (act === 'sleep') {
       ctx.save();
       ctx.translate(cx, groundY + jumpY);
-      drawSleepingBedAndBlanket(ctx, charId, img, targetW, targetH, t, false, hasCrown);
+      drawSleepingBedAndBlanket(ctx, charId, img, targetW, targetH, t, false, hasCrown, { outfit });
       ctx.restore();
       return;
     }
@@ -2526,8 +2602,12 @@
       ctx.drawImage(img, -targetW / 2, -targetH + 6 + legSwing * 0.2, targetW, targetH);
       ctx.shadowBlur = 0;
 
+      const sitWRes = drawCharWardrobeOverlay(ctx, charId, {
+        pH: targetH, targetW, footY: 6 + legSwing * 0.2, outfit, isSideView: false, t,
+      });
+
       if (hasCrown) {
-        drawGoldenCrown(ctx, 0, -targetH + (isFather ? 14 : 16) + legSwing * 0.2, 0.98, t);
+        drawGoldenCrown(ctx, sitWRes.headCx || 0, -targetH + (isFather ? 14 : 16) + legSwing * 0.2 - sitWRes.crownOffsetY, 0.98, t);
       }
 
       if (wx.hasUmbrella) {
@@ -2587,8 +2667,12 @@
     ctx.shadowBlur = 0;
     ctx.shadowOffsetY = 0;
 
+    const walkWRes = drawCharWardrobeOverlay(ctx, charId, {
+      pH: targetH, targetW, footY: 6, outfit, isSideView, t,
+    });
+
     if (hasCrown) {
-      drawGoldenCrown(ctx, isSideView ? 4 : 0, -targetH + (isFather ? 14 : 16), 1.0, t);
+      drawGoldenCrown(ctx, isSideView ? (walkWRes.headCx || 4) : (walkWRes.headCx || 0), -targetH + (isFather ? 14 : 16) - walkWRes.crownOffsetY, 1.0, t);
     }
 
     if (wx.hasUmbrella) {
@@ -2856,9 +2940,40 @@
         <canvas class="pet-canvas" id="petCanvas" width="580" height="430"></canvas>
         <div class="pet-fx-layer" id="petFxLayer"></div>
       </div>
+      <div class="pet-wardrobe-bar" id="petWardrobeBar"></div>
     `;
 
     hero.appendChild(stageBox);
+
+    const wardrobeBarEl = stageBox.querySelector('#petWardrobeBar');
+    function renderWardrobeBar() {
+      if (!wardrobeBarEl) return;
+      if (!window.WARDROBE) {
+        wardrobeBarEl.style.display = 'none';
+        return;
+      }
+      wardrobeBarEl.style.display = 'flex';
+      const curMem = typeof currentMember !== 'undefined' ? currentMember : null;
+      const sum = WARDROBE.getSummaryFor(curMem);
+      const hatLabel = sum.hat ? sum.hat.name : '모자 미착용';
+      const mufLabel = sum.muffler ? sum.muffler.name : '머플러 미착용';
+      wardrobeBarEl.innerHTML = `
+        <div class="pet-wb-chips">
+          <span class="pet-wb-chip ${sum.hat ? 'active' : ''}">🧢 ${hatLabel}</span>
+          <span class="pet-wb-chip ${sum.muffler ? 'active' : ''}">🧣 ${mufLabel}</span>
+        </div>
+        <button type="button" class="pet-wb-open" id="petOpenWardrobeBtn">🎒 내 옷장 (${sum.ownedCount}/${sum.totalCount})</button>`;
+      const openInv = (ev) => {
+        ev.stopPropagation();
+        WARDROBE.openInventoryModal(null, () => renderWardrobeBar());
+      };
+      const openBtn = wardrobeBarEl.querySelector('#petOpenWardrobeBtn');
+      if (openBtn) openBtn.addEventListener('click', openInv);
+      wardrobeBarEl.querySelectorAll('.pet-wb-chip').forEach((chip) => {
+        chip.addEventListener('click', openInv);
+      });
+    }
+    renderWardrobeBar();
 
     const bubbleEl = stageBox.querySelector('#petBubble');
     const syncPillEl = stageBox.querySelector('#petSyncPill');
@@ -3009,12 +3124,18 @@
       applyActivityToChar(id, nextAct, now, false);
     }
 
-    // 홈 화면에 진입했으므로 내 캐릭터의 게임중 상태는 해제 및 오늘 완료 여부 체크
+    // 홈 화면에 진입했으므로 내 캐릭터의 게임중 상태는 해제 및 오늘 완료/착용 의상 동기화
     if (playerState[myId]) {
       playerState[myId].playing = false;
       const curMem = typeof currentMember !== 'undefined' ? currentMember : null;
       if (curMem && hasMemberCompletedToday(curMem)) {
         playerState[myId].crownDate = getTodayLocalYMD();
+      }
+      if (curMem && window.WARDROBE) {
+        const eq = WARDROBE.ensureState(curMem).equipped;
+        playerState[myId].wardrobe = { hatId: eq.hatId || null, mufflerId: eq.mufflerId || null };
+        try { localStorage.setItem('petWardrobe:' + myId, JSON.stringify(playerState[myId].wardrobe)); } catch (e) {}
+        renderWardrobeBar();
       }
     }
 
@@ -3105,6 +3226,9 @@
         crowns: {
           [myId]: hasCrownNow(myId) ? getTodayLocalYMD() : null,
         },
+        wardrobe: {
+          [myId]: getWardrobeFor(myId),
+        },
       };
       if (actionData) {
         payload.lastAction = {
@@ -3136,6 +3260,17 @@
             playerState[id].crownDate = today;
             try { localStorage.setItem('petCrownDate:' + id, today); } catch (e) {}
           }
+          if (
+            id !== myId &&
+            mData.wardrobe &&
+            mData.wardrobe.equipped &&
+            typeof mData.wardrobe.equipped === 'object' &&
+            !(mSnap.metadata && mSnap.metadata.hasPendingWrites)
+          ) {
+            const eq = mData.wardrobe.equipped;
+            playerState[id].wardrobe = { hatId: eq.hatId || null, mufflerId: eq.mufflerId || null };
+            try { localStorage.setItem('petWardrobe:' + id, JSON.stringify(playerState[id].wardrobe)); } catch (e) {}
+          }
         }, () => {});
         unsubMember61 = watchMemberCrown('610708');
         unsubMember69 = watchMemberCrown('691105');
@@ -3151,6 +3286,17 @@
               if (data.crowns[id] === today) {
                 playerState[id].crownDate = today;
                 try { localStorage.setItem('petCrownDate:' + id, today); } catch (e) {}
+              }
+            });
+          }
+
+          // 1-2) 상대방 착용 의상 실시간 동기화
+          if (data.wardrobe && typeof data.wardrobe === 'object' && !(snap.metadata && snap.metadata.hasPendingWrites)) {
+            ['610708', '691105'].forEach((id) => {
+              if (id !== myId && data.wardrobe[id] && typeof data.wardrobe[id] === 'object') {
+                const eq = data.wardrobe[id];
+                playerState[id].wardrobe = { hatId: eq.hatId || null, mufflerId: eq.mufflerId || null };
+                try { localStorage.setItem('petWardrobe:' + id, JSON.stringify(playerState[id].wardrobe)); } catch (e) {}
               }
             });
           }
@@ -3428,6 +3574,9 @@
           applyActivityToChar(id, 'gaming', now, true);
         }
       },
+      onWardrobeChanged(id) {
+        if (!id || id === myId) renderWardrobeBar();
+      },
       cleanup() {
         if (rafId) cancelAnimationFrame(rafId);
         if (heartbeatTimer) clearInterval(heartbeatTimer);
@@ -3471,6 +3620,18 @@
         playerState[id].crownOverride = cfg.crown;
         playerState[id].crownDate = cfg.crown ? today : null;
       }
+      if (cfg.wardrobe && typeof cfg.wardrobe === 'object') {
+        const clean = {
+          hatId: cfg.wardrobe.hatId || null,
+          mufflerId: cfg.wardrobe.mufflerId || null,
+        };
+        playerState[id].wardrobeOverride = clean;
+        playerState[id].wardrobe = clean;
+        try { localStorage.setItem('petWardrobe:' + id, JSON.stringify(clean)); } catch (e) {}
+        if (activeMount && typeof activeMount.onWardrobeChanged === 'function') {
+          activeMount.onWardrobeChanged(id);
+        }
+      }
       if (activeMount && typeof activeMount.onPlayerStateChanged === 'function') {
         activeMount.onPlayerStateChanged(id);
       }
@@ -3485,6 +3646,8 @@
     setPlayingState,
     markCompletedToday,
     setPlayerStatus,
+    setWardrobe,
+    getWardrobe: getWardrobeFor,
     hasCrownNow,
     getTodayLocalYMD,
     getPetState,

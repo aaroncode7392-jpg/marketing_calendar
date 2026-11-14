@@ -351,13 +351,29 @@
       NEWS.openFeed('right');
     });
     v.querySelector('#bmMore').addEventListener('click', () => leave(() => (games ? games() : renderHome())));
-    if (ready) {
-      v.querySelector('#bmGlass').addEventListener('click', toGlass);
+    const startReadyTimer = () => {
+      if (!ready) return;
       timer = setInterval(() => {
+        if (moved) { clearInterval(timer); return; }
         left--;
         const c = v.querySelector('#bmCount'); if (c) c.textContent = left;
         if (left <= 0) toGlass();
       }, 1000);
+    };
+    if (ready) {
+      v.querySelector('#bmGlass').addEventListener('click', toGlass);
+    }
+    const wardrobeDrop = window.WARDROBE ? WARDROBE.tryAwardClearDrop() : null;
+    if (wardrobeDrop && window.WARDROBE) {
+      setTimeout(() => {
+        if (!v.isConnected || moved) return;
+        WARDROBE.showRewardCelebration(wardrobeDrop.item, {
+          nextIntervalDays: wardrobeDrop.nextIntervalDays,
+          onDone: () => startReadyTimer(),
+        });
+      }, 500);
+    } else {
+      startReadyTimer();
     }
   }
 
